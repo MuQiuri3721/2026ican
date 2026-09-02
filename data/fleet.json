@@ -1,0 +1,1 @@
+[{"id":"DR-01","role":"reconnaissance","battery":82,"payload":0,"status":"执行中"},{"id":"DR-02","role":"firefighting","battery":75,"payload":80,"status":"待命"},{"id":"DR-03","role":"support","battery":91,"payload":120,"status":"待命"}]

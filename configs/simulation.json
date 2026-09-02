@@ -1,0 +1,10 @@
+{
+  "reference_fire_area_m2": 2500,
+  "reference_smoke_area_m2": 6500,
+  "reference_wind_speed_mps": 12,
+  "weights": {"fire_area": 0.45, "smoke_area": 0.2, "wind_speed": 0.2, "growth_rate": 0.15},
+  "level_thresholds": [0.3, 0.6, 0.8],
+  "resource": {"base_liters_per_m2": 0.025, "level_factors": [0.8, 1.0, 1.35, 1.8], "environment_factor": 1.15, "safety_factor": 1.1, "target_minutes": 18},
+  "minimum_battery_percent": 25,
+  "battery_reserve_percent": 18
+}
