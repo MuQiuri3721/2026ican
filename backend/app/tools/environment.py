@@ -9,7 +9,10 @@ class EnvironmentTool(BaseTool):
     description = "读取指定森林场景的风场、地形、水源和海拔。"
     source = "demo-data"
     def run(self, scene_id: str = "forest-demo-01") -> Dict[str, Any]:
-        state = load_demo_state(scene_id)
+        try:
+            state = load_demo_state(scene_id)
+        except ValueError as error:
+            raise ToolError("scene_not_found", str(error), {"scene_id": scene_id}) from error
         scene = state["scene"]
         return {"scene_id": scene_id, "name": scene["name"], "wind_speed": scene["wind_speed"], "wind_direction": scene["wind_direction"], "altitude": scene["altitude"], "terrain": scene["terrain"], "water_sources": scene["water_sources"]}
 

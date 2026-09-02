@@ -2,7 +2,6 @@ from typing import Any, Dict, Optional
 
 from ..agents.plan_executor import PlanExecutor
 from ..agents.planner import AnalysisPlanner
-from ..domain.models import StepStatus
 from ..pipeline import run_demo_analysis
 from ..tools.registry import ToolRegistry, build_registry
 
@@ -26,7 +25,7 @@ class FireAnalysisSkill:
             "dispatch": lambda context: {"status": "delegated-to-pipeline"},
         }
         plan = PlanExecutor().run(plan, handlers, {"scene_id": scene_id, "image_name": image_name})
-        return {"plan": plan, "analysis": run_demo_analysis(scene_id, image_name)}
+        return {"plan": plan.as_dict(), "analysis": run_demo_analysis(scene_id, image_name)}
 
 
 class SkillRegistry:
