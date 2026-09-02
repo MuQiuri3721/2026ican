@@ -1,5 +1,6 @@
 from typing import Any, Dict, Optional
 
+from ..agents.plan_executor import PlanExecutor
 from ..agents.planner import AnalysisPlanner
 from ..domain.models import StepStatus
 from ..pipeline import run_demo_analysis
@@ -12,18 +13,19 @@ class FireAnalysisSkill:
         self.registry = registry or build_registry()
         self.planner = planner or AnalysisPlanner()
     def run(self, scene_id: str = "forest-demo-01", image_name: Optional[str] = None) -> Dict[str, Any]:
+        if isinstance(scene_id, dict):
+            context = scene_id
+            scene_id = context.get("scene_id", "forest-demo-01")
+            image_name = context.get("image_name")
         plan = self.planner.create_plan()
-        tool_environment = self.registry.execute("get_environment", {"scene_id": scene_id})
-        if not tool_environment.get("ok"):
-            raise ValueError(tool_environment["error"]["message"])
-        for step in plan.steps:
-            step.status = StepStatus.RUNNING
-            if step.id == "ingest": step.result = {"image_name": image_name, "accepted": True}
-            elif step.id == "vision": step.result = {"mode": "demo", "provider": "yolo-pending"}
-            elif step.id == "environment": step.result = tool_environment["data"]
-            elif step.id == "assessment": step.result = {"mode": "rules", "status": "delegated-to-pipeline"}
-            elif step.id == "dispatch": step.result = {"status": "delegated-to-pipeline"}
-            step.status = StepStatus.SUCCEEDED
+        handlers = {
+            "ingest": lambda context: {"image_name": image_name, "accepted": True},
+            "vision": lambda context: {"mode": "demo", "provider": "yolo-pending"},
+            "environment": lambda context: self.registry.execute("get_environment", {"scene_id": scene_id}),
+            "assessment": lambda context: {"mode": "rules", "status": "delegated-to-pipeline"},
+            "dispatch": lambda context: {"status": "delegated-to-pipeline"},
+        }
+        plan = PlanExecutor().run(plan, handlers, {"scene_id": scene_id, "image_name": image_name})
         return {"plan": plan, "analysis": run_demo_analysis(scene_id, image_name)}
 
 

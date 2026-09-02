@@ -1,7 +1,8 @@
 from typing import Any, Dict, Iterable
 
 from .base import BaseTool
-from .core import build_core_tools, get_environment, get_fleet_status, get_inventory
+from .core import build_core_tools
+from .environment import EnvironmentTool, FleetStatusTool, InventoryTool
 
 
 class ToolRegistry:
@@ -27,16 +28,9 @@ class ToolRegistry:
 
 
 def build_registry() -> ToolRegistry:
-    registry = ToolRegistry()
-    for name, handler, description in [("get_environment", get_environment, "读取场景环境"), ("get_fleet_status", get_fleet_status, "读取无人机状态"), ("get_inventory", get_inventory, "读取物资库存")]:
-        registry.register(CallableTool(name, handler, description, "demo-data"))
+    registry = ToolRegistry([EnvironmentTool(), FleetStatusTool(), InventoryTool()])
     for tool in build_core_tools():
         registry.register(tool)
     return registry
 
 
-class CallableTool(BaseTool):
-    def __init__(self, name, handler, description, source):
-        self.name, self.handler, self.description, self.source = name, handler, description, source
-    def run(self, **payload):
-        return self.handler(**payload)

@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from .domain.schemas import AnalysisInput, AnalysisEnvelope, MonitorInput
@@ -94,10 +95,18 @@ async def analyze_upload(scene_id: str = "forest-demo-01", use_vlm: bool = False
         raise HTTPException(status_code=415, detail="仅支持 JPG、PNG 或 MP4 文件")
     safe_name = Path(file.filename or "upload.bin").name
     target = UPLOAD_DIR / (uuid4().hex[:12] + "-" + safe_name)
-    content = await file.read()
-    if len(content) > MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=413, detail="文件大小不能超过 200MB")
-    target.write_bytes(content)
+    total = 0
+    with target.open("wb") as output:
+        while True:
+            chunk = await file.read(1024 * 1024)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > MAX_UPLOAD_BYTES:
+                output.close()
+                target.unlink(missing_ok=True)
+                raise HTTPException(status_code=413, detail="文件大小不能超过 200MB")
+            output.write(chunk)
     request = AnalysisInput(scene_id=scene_id, image_name=safe_name, image_path=str(target), use_vlm=use_vlm)
     item = analysis_store.create(request.dict())
     analysis_store.update(item.analysis_id, status="running")
