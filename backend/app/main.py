@@ -106,6 +106,7 @@ async def analyze_upload(scene_id: str = "forest-demo-01", use_vlm: bool = False
         raise HTTPException(status_code=415, detail="仅支持 JPG、PNG 或 MP4 文件")
     safe_name = Path(file.filename or "upload.bin").name
     target = UPLOAD_DIR / (uuid4().hex[:12] + "-" + safe_name)
+    target.parent.mkdir(parents=True, exist_ok=True)
     total = 0
     with target.open("wb") as output:
         while True:
@@ -151,6 +152,7 @@ def _update_monitor_state(analysis_id: str, item, monitor_result: dict) -> None:
     analysis_store.update(analysis_id, status=status, result=updated)
 
 
+@app.post("/api/monitor/{analysis_id}")
 def monitor(analysis_id: str, request: MonitorRequest):
     item = analysis_store.get(analysis_id)
     if item is None or not item.result:
