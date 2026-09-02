@@ -16,7 +16,13 @@ class FirePerceptionSkill(BaseSkill):
         return {"observation": {"fire_area_m2": 1800, "smoke_area_m2": 4200, "growth_rate": 0.42, "confidence": 0.91, "source": "demo-stub", "detector": result}}
 class EnvironmentAssessmentSkill(BaseSkill):
     name = "environment_assessment"
-    def run(self, context): return self.registry.execute("get_environment", {"scene_id": context.get("scene_id", "forest-demo-01")})
+    def run(self, context):
+        scene_id = context.get("scene_id", "forest-demo-01")
+        environment = self.registry.execute("get_environment", {"scene_id": scene_id})
+        if not environment.get("ok"): return environment
+        scene = environment["data"]
+        source = scene.get("water_sources", [{}])[0]
+        return {"environment": scene, "water_sources": self.registry.execute("get_water_sources", {"scene_id": scene_id}), "wind_vector": self.registry.execute("calculate_wind_vector", {"wind_speed": scene["wind_speed"], "wind_direction_deg": scene.get("wind_direction_deg", 315)}), "spread": self.registry.execute("predict_spread", {"origin": scene.get("fire_origin", {"x": 0, "y": 0}), "wind_vector": {"x": 0.5, "y": 0.5}}), "nearest_water_distance_m": source.get("distance_m", 0)}
 class FireAssessmentSkill(BaseSkill):
     name = "fire_assessment"
     def run(self, context):
@@ -27,29 +33,46 @@ class FireAssessmentSkill(BaseSkill):
 class ResourceMatchingSkill(BaseSkill):
     name = "resource_matching"
     def run(self, context):
-        inventory = self.registry.execute("get_inventory", {"scene_id": context.get("scene_id", "forest-demo-01")})
-        assessment = context.get("fire_assessment", {}).get("assessment", {})
-        need = self.registry.execute("calculate_resource_need", {"fire_area_m2": assessment.get("fire_area_m2", 1800), "level_factor": 1.0})
-        return {"inventory": inventory, "need": need}
+        scene_id = context.get("scene_id", "forest-demo-01")
+        inventory = self.registry.execute("get_inventory", {"scene_id": scene_id})
+        assessment = context.get("fire_assessment", {}).get("assessment", {}).get("data", {})
+        environment = context.get("environment_assessment", {})
+        need = self.registry.execute("calculate_resource_need", {"fire_area_m2": assessment.get("fire_area_m2", 1800), "level_factor": [0.8, 1.0, 1.35, 1.8][max(1, assessment.get("level", 2)) - 1]})
+        material = self.registry.execute("match_extinguisher", {"water_available": bool(environment.get("water_sources", {}).get("data", {}).get("sources")), "inventory_liters": inventory.get("data", {}).get("inventory", {}).get("water_liters", 0)})
+        return {"inventory": inventory, "need": need, "material": material}
 class DroneDispatchSkill(BaseSkill):
     name = "drone_dispatch"
     def run(self, context):
         fleet = self.registry.execute("get_fleet_status", {"scene_id": context.get("scene_id", "forest-demo-01")})
-        need = context.get("resource_matching", {}).get("need", {})
-        count = self.registry.execute("calculate_drone_count", {"resource_liters": need.get("total_liters", 80)})
-        assigned = self.registry.execute("assign_tasks", {"fleet": fleet.get("data", {}).get("fleet", []), "required_drones": count.get("data", {}).get("required_drones", 1)})
-        return {"fleet": fleet, "count": count, "assignment": assigned}
+        need = context.get("resource_matching", {}).get("need", {}).get("data", {})
+        candidates = fleet.get("data", {}).get("fleet", [])
+        count = self.registry.execute("calculate_drone_count", {"resource_liters": need.get("total_liters", 80), "available_count": len([d for d in candidates if d.get("role") == "firefighting"])})
+        assigned = self.registry.execute("assign_tasks", {"fleet": candidates, "required_drones": count.get("data", {}).get("required_drones", 1)})
+        tasks = assigned.get("data", {}).get("tasks", [])
+        validation = self.registry.execute("validate_plan", {"tasks": tasks, "fleet": candidates, "required_liters": need.get("total_liters", 0)})
+        return {"fleet": fleet, "count": count, "assignment": assigned, "validation": validation}
 class RoutePlanningSkill(BaseSkill):
     name = "route_planning"
     def run(self, context):
-        assignment = context.get("drone_dispatch", {}).get("assignment", {})
-        return {"status": "demo", "route": "direct-line", "assigned_tasks": assignment.get("data", {}).get("tasks", []), "source": "demo-stub"}
+        assignment = context.get("drone_dispatch", {}).get("assignment", {}).get("data", {})
+        return {"status": "demo", "route": self.registry.execute("plan_route", {"origin": {"x": 0, "y": 0}, "target": {"x": 800, "y": 0}}), "assigned_tasks": assignment.get("tasks", []), "source": "rules"}
 class TaskExecutionSkill(BaseSkill):
     name = "task_execution"
-    def run(self, context): return {"status": "simulated", "message": "未连接真实飞控，仅记录演示执行。"}
+    def run(self, context):
+        fire = context.get("fire_perception", {}).get("observation", {})
+        resource = context.get("resource_matching", {}).get("need", {}).get("data", {})
+        execution = self.registry.execute("execute_firefighting", {"area_m2": fire.get("fire_area_m2", 1800), "extinguishing_liters": min(resource.get("total_liters", 40), 40)})
+        return {"status": "simulated", "execution": execution, "message": "未连接真实飞控，仅记录演示执行。"}
 class ClosedLoopSkill(BaseSkill):
     name = "closed_loop_monitoring"
-    def run(self, context): return {"status": "ready", "next_action": "continue", "source": "rules"}
+    def run(self, context):
+        fire = context.get("fire_perception", {}).get("observation", {})
+        execution = context.get("task_execution", {}).get("execution", {}).get("data", {})
+        growth = self.registry.execute("estimate_growth", {"area_m2": fire.get("fire_area_m2", 1800), "growth_rate": fire.get("growth_rate", 0.42), "wind_speed": context.get("environment_assessment", {}).get("environment", {}).get("wind_speed", 6.5)})
+        state = self.registry.execute("update_fire_state", {"area_m2": fire.get("fire_area_m2", 1800), "growth_area_m2": growth.get("data", {}).get("growth_area_m2", 0), "extinguished_area_m2": execution.get("extinguished_area_m2", 0)})
+        evaluation = self.registry.execute("evaluate_result", {"previous_area_m2": fire.get("fire_area_m2", 1800), "next_area_m2": state.get("data", {}).get("area_m2", 1800)})
+        decision = self.registry.execute("make_next_decision", {"next_area_m2": state.get("data", {}).get("area_m2", 1800), "inventory_liters": context.get("resource_matching", {}).get("inventory", {}).get("data", {}).get("inventory", {}).get("water_liters", 0)})
+        return {"growth": growth, "state": state, "evaluation": evaluation, "decision": decision, "source": "rules"}
 class EvacuationSkill(BaseSkill):
     name = "evacuation"
     status = "extension"
