@@ -31,6 +31,7 @@ const fileInput = ref(null)
 const progress = ref(0)
 const errorMessage = ref('')
 const analysisResult = ref(null)
+const analysisId = ref('')
 const taskStatus = ref('待命')
 const currentStage = ref('等待影像接入')
 const monitorResult = ref(null)
@@ -195,6 +196,7 @@ async function startAnalysis() {
     const response = await fetch('/api/analyze/upload', { method: 'POST', body: formData })
     if (!response.ok) throw new Error(`分析服务返回 ${response.status}`)
     const payload = await response.json()
+    analysisId.value = payload.analysis_id || ''
     analysisResult.value = payload.result || payload
     taskStatus.value = '执行中'
     currentStage.value = '调度方案已生成'
@@ -217,13 +219,13 @@ async function startAnalysis() {
 }
 
 async function runMonitor() {
-  if (!analysisResult.value?.analysis_id) return
+  if (!analysisId.value) return
   try {
-    const response = await fetch(`/api/monitor/${analysisResult.value.analysis_id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ elapsed_minutes: 5, extinguishing_liters: 40 }) })
+    const response = await fetch(`/api/monitor/${analysisId.value}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ elapsed_minutes: 5, extinguishing_liters: 40 }) })
     if (!response.ok) throw new Error('监测接口不可用')
     monitorResult.value = await response.json()
+    taskStatus.value = monitorResult.value.status === 'completed' ? '已完成' : monitorResult.value.status === 'action_required' ? '需要处置' : '执行中'
     addLog(`第 2 轮监测完成 · 下一步：${monitorResult.value.action}`)
-    if (monitorResult.value.action === 'finish') taskStatus.value = '已完成'
   } catch (error) {
     errorMessage.value = '监测服务暂不可用。'
     addLog('闭环监测失败 · 保持当前任务状态')
@@ -232,6 +234,8 @@ async function runMonitor() {
 
 function resetAnalysis() {
   analysisResult.value = null
+  analysisId.value = ''
+  monitorResult.value = null
   selectedFile.value = null
   uploaded.value = false
   progress.value = 0
