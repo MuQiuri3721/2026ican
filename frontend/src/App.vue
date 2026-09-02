@@ -195,11 +195,11 @@ async function startAnalysis() {
     const response = await fetch('/api/analyze/upload', { method: 'POST', body: formData })
     if (!response.ok) throw new Error(`分析服务返回 ${response.status}`)
     const payload = await response.json()
-    analysisResult.value = payload
+    analysisResult.value = payload.result || payload
     taskStatus.value = '执行中'
     currentStage.value = '调度方案已生成'
-    if (payload.fleet) {
-      drones.value = payload.fleet.map((drone) => ({ ...drone, label: drone.role === 'reconnaissance' ? '侦察蜂' : drone.role === 'firefighting' ? '灭火蜂' : '支援蜂', color: drone.role === 'reconnaissance' ? 'blue' : drone.role === 'firefighting' ? 'orange' : 'green', task: payload.dispatch_plan.tasks.find((task) => task.drone_id === drone.id)?.task || '待命' }))
+    if (analysisResult.value.fleet) {
+      drones.value = analysisResult.value.fleet.map((drone) => ({ ...drone, label: drone.role === 'reconnaissance' ? '侦察蜂' : drone.role === 'firefighting' ? '灭火蜂' : '支援蜂', color: drone.role === 'reconnaissance' ? 'blue' : drone.role === 'firefighting' ? 'orange' : 'green', task: analysisResult.value.dispatch_plan.tasks.find((task) => task.drone_id === drone.id)?.task || '待命' }))
     }
     progress.value = 100
     addLog('研判完成 · 建议立即处置')

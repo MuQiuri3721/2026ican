@@ -1,3 +1,4 @@
+import mimetypes
 from datetime import datetime
 from typing import Optional
 from pathlib import Path
@@ -42,6 +43,16 @@ class AnalyzeRequest(AnalysisInput):
 class MonitorRequest(MonitorInput):
     pass
 
+
+def _validate_upload_signature(path: Path, content_type: str) -> None:
+    with path.open("rb") as source:
+        header = source.read(16)
+    if content_type == "image/jpeg" and not header.startswith(b"\xff\xd8\xff"):
+        raise HTTPException(status_code=415, detail="文件内容不是有效的 JPEG 图片")
+    if content_type == "image/png" and header[:8] != b"\x89PNG\r\n\x1a\n":
+        raise HTTPException(status_code=415, detail="文件内容不是有效的 PNG 图片")
+    if content_type == "video/mp4" and b"ftyp" not in header[4:16]:
+        raise HTTPException(status_code=415, detail="文件内容不是有效的 MP4 视频")
 
 @app.get("/api/health")
 def health():
@@ -107,6 +118,7 @@ async def analyze_upload(scene_id: str = "forest-demo-01", use_vlm: bool = False
                 target.unlink(missing_ok=True)
                 raise HTTPException(status_code=413, detail="文件大小不能超过 200MB")
             output.write(chunk)
+    _validate_upload_signature(target, file.content_type)
     request = AnalysisInput(scene_id=scene_id, image_name=safe_name, image_path=str(target), use_vlm=use_vlm)
     item = analysis_store.create(request.dict())
     analysis_store.update(item.analysis_id, status="running")
@@ -123,15 +135,30 @@ async def analyze_upload(scene_id: str = "forest-demo-01", use_vlm: bool = False
         raise HTTPException(status_code=422, detail=str(error)) from error
 
 
-@app.post("/api/monitor/{analysis_id}")
+def _update_monitor_state(analysis_id: str, item, monitor_result: dict) -> None:
+    current = item.result or {}
+    fire = dict(current.get("fire_assessment", {}))
+    fire["fire_area_m2"] = monitor_result["next_fire_area_m2"]
+    updated = dict(current)
+    updated["fire_assessment"] = fire
+    updated["monitor"] = monitor_result
+    if monitor_result["action"] == "finish":
+        status = "completed"
+    elif monitor_result["action"] in {"return", "resupply"}:
+        status = "action_required"
+    else:
+        status = "running"
+    analysis_store.update(analysis_id, status=status, result=updated)
+
+
 def monitor(analysis_id: str, request: MonitorRequest):
     item = analysis_store.get(analysis_id)
     if item is None or not item.result:
         raise HTTPException(status_code=404, detail="分析任务不存在或尚未完成")
     result = simulate_monitor(item.result, request.elapsed_minutes, request.extinguishing_liters)
-    analysis_store.update(analysis_id, result={**item.result, "monitor": result})
+    _update_monitor_state(analysis_id, item, result)
     analysis_store.add_event(analysis_id, "monitor", "闭环监测完成：" + result["action"], "rules")
-    return {"analysis_id": analysis_id, "status": "succeeded", **result}
+    return {"analysis_id": analysis_id, "status": analysis_store.get(analysis_id).status, **result}
 
 
 @app.post("/api/analyze")
