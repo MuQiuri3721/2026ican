@@ -1,17 +1,15 @@
 import mimetypes
 from datetime import datetime
-from typing import Optional
 from pathlib import Path
+from typing import Optional
 from uuid import uuid4
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 
-from .domain.schemas import AnalysisInput, AnalysisEnvelope, MonitorInput
+from .domain.schemas import AnalysisInput, MonitorInput
 from .domain.store import analysis_store
-from .pipeline import run_demo_analysis, simulate_monitor
+from .pipeline import simulate_monitor
 from .skills.fire_analysis import build_skill_registry
 from .skills.orchestrator import SkillOrchestrator
 from .services.analysis_service import AnalysisService
@@ -89,7 +87,11 @@ def run_skill(skill_name: str, request: AnalyzeRequest):
 @app.get("/api/analyzes")
 def list_analyses():
     items = analysis_store.list()
-    return {"items": [item.model_dump() if hasattr(item, "model_dump") else item.dict() for item in items]}
+    return {"items": [_dump(item) for item in items]}
+
+
+def _dump(value):
+    return value.model_dump() if hasattr(value, "model_dump") else value.dict()
 
 
 @app.get("/api/analyze/{analysis_id}")
@@ -97,7 +99,7 @@ def get_analysis(analysis_id: str):
     item = analysis_store.get(analysis_id)
     if item is None:
         raise HTTPException(status_code=404, detail="分析任务不存在")
-    return item.model_dump() if hasattr(item, "model_dump") else item.dict()
+    return _dump(item)
 
 
 @app.get("/api/analyze/{analysis_id}/events")
@@ -105,7 +107,7 @@ def get_analysis_events(analysis_id: str):
     item = analysis_store.get(analysis_id)
     if item is None:
         raise HTTPException(status_code=404, detail="分析任务不存在")
-    return {"analysis_id": analysis_id, "events": [event.model_dump() if hasattr(event, "model_dump") else event.dict() for event in item.events]}
+    return {"analysis_id": analysis_id, "events": [_dump(event) for event in item.events]}
 
 
 @app.post("/api/analyze/upload")
@@ -161,6 +163,9 @@ def monitor(analysis_id: str, request: MonitorRequest):
 
 @app.post("/api/analyze")
 def analyze(request: AnalyzeRequest):
-    return analysis_service.create_and_run(request)
+    try:
+        return analysis_service.create_and_run(request)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
 
