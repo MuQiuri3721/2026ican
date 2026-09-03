@@ -1,0 +1,25 @@
+{
+  "default": {
+    "fire_area_m2": 1800,
+    "smoke_area_m2": 4200,
+    "growth_rate": 0.42,
+    "confidence": 0.91,
+    "fire_center": {"x": 118.78, "y": 32.04},
+    "image_width": 1920,
+    "image_height": 1080,
+    "detections": [
+      {"class_name": "fire", "confidence": 0.93, "box": [820, 410, 1130, 760]},
+      {"class_name": "smoke", "confidence": 0.89, "box": [650, 180, 1420, 820]}
+    ]
+  },
+  "small-fire": {
+    "fire_area_m2": 260,
+    "smoke_area_m2": 620,
+    "growth_rate": 0.08,
+    "confidence": 0.96,
+    "fire_center": {"x": 118.781, "y": 32.041},
+    "image_width": 1280,
+    "image_height": 720,
+    "detections": [{"class_name": "fire", "confidence": 0.96, "box": [540, 260, 700, 390]}]
+  }
+}

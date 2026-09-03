@@ -12,8 +12,10 @@ class BaseSkill:
 class FirePerceptionSkill(BaseSkill):
     name = "fire_perception"
     def run(self, context):
-        result = self.registry.execute("detect_fire", {"image_path": context.get("image_path"), "image_name": context.get("image_name")})
-        return {"observation": {"fire_area_m2": 1800, "smoke_area_m2": 4200, "growth_rate": 0.42, "confidence": 0.91, "source": "demo-stub", "detector": result}}
+        result = self.registry.execute("detect_fire", {"image_path": context.get("image_path"), "image_name": context.get("image_name", "default")})
+        metrics = self.registry.execute("calculate_fire_metrics", {"detections": result.get("data", {}).get("detections", []), "image_width": result.get("data", {}).get("image_width", 1920), "image_height": result.get("data", {}).get("image_height", 1080)})
+        observation = result.get("data", {})
+        return {"observation": {"fire_area_m2": observation.get("fire_area_m2", metrics.get("data", {}).get("fire_area_m2", 1800)), "smoke_area_m2": observation.get("smoke_area_m2", metrics.get("data", {}).get("smoke_area_m2", 4200)), "growth_rate": observation.get("growth_rate", 0.42), "confidence": observation.get("confidence", 0.91), "fire_center": observation.get("fire_center", {"x": 118.78, "y": 32.04}), "source": "vision-observation-fixture", "detector": result, "metrics": metrics}}
 class EnvironmentAssessmentSkill(BaseSkill):
     name = "environment_assessment"
     def run(self, context):
@@ -22,7 +24,9 @@ class EnvironmentAssessmentSkill(BaseSkill):
         if not environment.get("ok"): return environment
         scene = environment["data"]
         source = scene.get("water_sources", [{}])[0]
-        return {"environment": scene, "water_sources": self.registry.execute("get_water_sources", {"scene_id": scene_id}), "wind_vector": self.registry.execute("calculate_wind_vector", {"wind_speed": scene["wind_speed"], "wind_direction_deg": scene.get("wind_direction_deg", 315)}), "spread": self.registry.execute("predict_spread", {"origin": scene.get("fire_origin", {"x": 0, "y": 0}), "wind_vector": {"x": 0.5, "y": 0.5}}), "nearest_water_distance_m": source.get("distance_m", 0)}
+        wind_vector = self.registry.execute("calculate_wind_vector", {"wind_speed": scene["wind_speed"], "wind_direction_deg": scene.get("wind_direction_deg", 315)})
+        spread = self.registry.execute("predict_spread", {"origin": scene.get("fire_origin", {"x": 0, "y": 0}), "wind_vector": wind_vector.get("data", {"x": 0, "y": 0})})
+        return {"environment": scene, "water_sources": self.registry.execute("get_water_sources", {"scene_id": scene_id}), "wind_vector": wind_vector, "spread": spread, "nearest_water_distance_m": source.get("distance_m", 0)}
 class FireAssessmentSkill(BaseSkill):
     name = "fire_assessment"
     def run(self, context):

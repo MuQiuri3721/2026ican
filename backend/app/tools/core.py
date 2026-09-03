@@ -30,6 +30,27 @@ def not_implemented(**_: Any) -> Dict[str, Any]:
     return {"status": "not_implemented", "message": "真实适配器尚未接入，当前保留接口契约。"}
 
 
+def demo_observation(image_name: str = "default", image_path: str = None, **_: Any) -> Dict[str, Any]:
+    observations = read_json("data/vision_observations.json")
+    key = "small-fire" if image_name and "small" in image_name.lower() else "default"
+    observation = dict(observations[key])
+    observation.update({"image_name": image_name, "image_path": image_path, "mode": "demo", "source": "vision-observation-fixture"})
+    return observation
+
+
+def calculate_fire_metrics(detections: list, image_width: int, image_height: int, area_scale: float = 0.018, **_: Any) -> Dict[str, Any]:
+    if image_width <= 0 or image_height <= 0:
+        raise ToolError("invalid_input", "图片尺寸必须大于 0")
+    fire_pixels = smoke_pixels = 0
+    for detection in detections:
+        box = detection.get("box", [])
+        if len(box) != 4: continue
+        pixels = max(0, box[2] - box[0]) * max(0, box[3] - box[1])
+        if detection.get("class_name") == "fire": fire_pixels += pixels
+        if detection.get("class_name") == "smoke": smoke_pixels += pixels
+    return {"fire_area_m2": round(fire_pixels * area_scale, 2), "smoke_area_m2": round(smoke_pixels * area_scale, 2), "fire_pixels": fire_pixels, "smoke_pixels": smoke_pixels, "source": "demo-metric"}
+
+
 def get_water_sources(scene_id: str = "forest-demo-01", max_distance_m: float = 5000, **_: Any) -> Dict[str, Any]:
     positive(max_distance_m, "max_distance_m")
     return {"sources": [source for source in scene_data(scene_id)["water_sources"] if source["distance_m"] <= max_distance_m]}
@@ -151,5 +172,5 @@ def make_next_decision(next_area_m2: float, target_area_m2: float = 300, invento
 
 
 def build_core_tools():
-    handlers = {"extract_frames": not_implemented, "detect_fire": not_implemented, "calculate_fire_metrics": not_implemented, "analyze_visual_trend": not_implemented, "analyze_with_vlm": not_implemented, "get_water_sources": get_water_sources, "calculate_wind_vector": calculate_wind_vector, "predict_spread": predict_spread, "retrieve_scene_knowledge": not_implemented, "assess_fire_level": assess_fire_level, "estimate_growth": estimate_growth, "match_extinguisher": match_extinguisher, "calculate_resource_need": calculate_resource_need, "validate_plan": validate_plan, "calculate_drone_count": calculate_drone_count, "assign_tasks": assign_tasks, "calculate_distance": calculate_distance, "plan_route": plan_route, "check_battery": check_battery, "check_payload": check_payload, "execute_firefighting": execute_firefighting, "resupply": resupply, "return_to_charge": return_to_charge, "update_fire_state": update_fire_state, "evaluate_result": evaluate_result, "make_next_decision": make_next_decision}
+    handlers = {"extract_frames": not_implemented, "detect_fire": demo_observation, "calculate_fire_metrics": calculate_fire_metrics, "analyze_visual_trend": not_implemented, "analyze_with_vlm": not_implemented, "get_water_sources": get_water_sources, "calculate_wind_vector": calculate_wind_vector, "predict_spread": predict_spread, "retrieve_scene_knowledge": not_implemented, "assess_fire_level": assess_fire_level, "estimate_growth": estimate_growth, "match_extinguisher": match_extinguisher, "calculate_resource_need": calculate_resource_need, "validate_plan": validate_plan, "calculate_drone_count": calculate_drone_count, "assign_tasks": assign_tasks, "calculate_distance": calculate_distance, "plan_route": plan_route, "check_battery": check_battery, "check_payload": check_payload, "execute_firefighting": execute_firefighting, "resupply": resupply, "return_to_charge": return_to_charge, "update_fire_state": update_fire_state, "evaluate_result": evaluate_result, "make_next_decision": make_next_decision}
     return [FunctionTool(name, handler, "方案定义的可插拔 Tool；未接入模型的视觉能力返回 not_implemented。", "rules" if handler is not not_implemented else "demo-stub") for name, handler in handlers.items()]

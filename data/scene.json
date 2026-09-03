@@ -1,1 +1,11 @@
-{"scene_id":"forest-demo-01","name":"青龙山演示林区","wind_speed":6.5,"wind_direction":"西北","altitude":320,"terrain":"丘陵","water_sources":[{"name":"北侧蓄水池","distance_m":800,"available":true}]}
+{
+  "scene_id": "forest-demo-01",
+  "name": "青龙山演示林区",
+  "wind_speed": 6.5,
+  "wind_direction": "西北",
+  "wind_direction_deg": 315,
+  "altitude": 320,
+  "terrain": "丘陵",
+  "fire_origin": {"x": 118.78, "y": 32.04},
+  "water_sources": [{"name": "北侧蓄水池", "distance_m": 800, "available": true, "position": {"x": 118.788, "y": 32.04}}]
+}

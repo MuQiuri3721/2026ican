@@ -127,6 +127,7 @@ async def analyze_upload(scene_id: str = "forest-demo-01", use_vlm: bool = False
     try:
         result = run_demo_analysis(scene_id, safe_name)
         chain = skill_orchestrator.run_analysis({"scene_id": scene_id, "image_name": safe_name, "image_path": str(target)})
+        result["fire_assessment"].update({key: chain["skill_chain"]["fire_assessment"]["assessment"]["data"].get(key, result["fire_assessment"].get(key)) for key in ["fire_area_m2", "smoke_area_m2", "growth_rate", "confidence", "risk_score", "level", "label"]})
         result["agent"] = chain
         analysis_store.update(item.analysis_id, status="succeeded", result=result, stages=result.get("pipeline_stages", []))
         analysis_store.add_event(item.analysis_id, "dispatch", "规则调度方案已生成", "rules")
@@ -168,6 +169,8 @@ def analyze(request: AnalyzeRequest):
     try:
         result = run_demo_analysis(request.scene_id, request.image_name or request.image_path)
         result["agent"] = skill_orchestrator.run_analysis({"scene_id": request.scene_id, "image_name": request.image_name, "image_path": request.image_path})
+        assessment = result["agent"]["skill_chain"]["fire_assessment"]["assessment"].get("data", {})
+        result["fire_assessment"].update({key: assessment[key] for key in ["fire_area_m2", "smoke_area_m2", "growth_rate", "confidence", "risk_score", "level", "label"] if key in assessment})
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     item = analysis_store.create(request.dict())
