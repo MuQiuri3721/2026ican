@@ -26,6 +26,8 @@ class EnvironmentAssessmentSkill(BaseSkill):
             "longitude": context.get("longitude"),
             "water_radius_m": context.get("water_search_radius_m", 3000),
             "road_radius_m": context.get("road_search_radius_m", 3000),
+            "environment_mode": context.get("environment_mode"),
+            "metadata": context.get("metadata"),
         })
         if not environment.get("ok"): return environment
         scene = environment["data"]
@@ -39,12 +41,13 @@ class EnvironmentAssessmentSkill(BaseSkill):
         spread = self.registry.execute("predict_spread", {"origin": scene.get("fire_origin", {"x": 0, "y": 0}), "wind_vector": wind_vector.get("data", {"x": 0, "y": 0})})
         water_sources = scene.get("water_sources", [])
         water_ok = scene.get("mode") == "demo" or bool(water_sources)
-        return {"environment": scene, "environment_source": {"mode": scene.get("mode"), "source": scene.get("source"), "status": scene.get("status")}, "water_sources": {"ok": water_ok, "data": {"sources": water_sources}, "source": scene.get("source")}, "wind_vector": wind_vector, "spread": spread, "nearest_water_distance_m": (nearest or {}).get("distance_m")}
+        return {"environment": scene, "environment_source": {"mode": scene.get("mode"), "source": scene.get("source"), "status": scene.get("status"), "stale": scene.get("stale", False), "location": scene.get("location")}, "water_sources": {"ok": water_ok, "data": {"sources": water_sources}, "source": scene.get("source")}, "wind_vector": wind_vector, "spread": spread, "nearest_water_distance_m": (nearest or {}).get("distance_m")}
 class FireAssessmentSkill(BaseSkill):
     name = "fire_assessment"
     def run(self, context):
         observation = context.get("fire_perception", {}).get("observation", {})
-        environment = context.get("environment_assessment", {}).get("data", {})
+        environment_result = context.get("environment_assessment", {})
+        environment = environment_result.get("environment") or environment_result.get("data") or {}
         result = self.registry.execute("assess_fire_level", {"fire_area_m2": observation.get("fire_area_m2", 1800), "smoke_area_m2": observation.get("smoke_area_m2", 4200), "wind_speed": environment.get("wind_speed", 6.5), "growth_rate": observation.get("growth_rate", 0.42)})
         return {"status": "rules", "assessment": result}
 class ResourceMatchingSkill(BaseSkill):

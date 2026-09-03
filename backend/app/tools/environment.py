@@ -1,7 +1,13 @@
 from typing import Any, Dict, Optional
 
 from ..pipeline import load_demo_state
+from ..services.environment_cache import environment_cache
 from .base import BaseTool, ToolError
+
+
+# 紫金山天文台附近的公开演示坐标；真实项目应优先使用影像元数据。
+DEFAULT_LATITUDE = 32.1256451
+DEFAULT_LONGITUDE = 118.9584748
 
 
 class EnvironmentTool(BaseTool):
@@ -16,16 +22,40 @@ class EnvironmentTool(BaseTool):
         longitude: Optional[float] = None,
         water_radius_m: int = 3000,
         road_radius_m: int = 3000,
+        environment_mode: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        mode = (environment_mode or ("real" if latitude is not None or longitude is not None else "demo")).lower()
+        if mode not in {"demo", "real", "auto", "offline"}:
+            return self._fallback(scene_id, "invalid_mode", "environment_mode 必须是 demo、real、auto 或 offline")
+        if mode == "offline":
+            return self._demo(scene_id, metadata={**(metadata or {}), "offline": True})
+        if mode == "demo":
+            return self._demo(scene_id, metadata=metadata)
+        # auto uses the real adapter when coordinates are supplied, otherwise demo.
+        if latitude is None and longitude is None and mode == "auto":
+            return self._demo(scene_id, metadata=metadata)
+        if latitude is None and longitude is None:
+            latitude, longitude = DEFAULT_LATITUDE, DEFAULT_LONGITUDE
         # Keep the heavy geospatial stack out of application startup.
         if latitude is not None or longitude is not None:
             if latitude is None or longitude is None:
                 return self._fallback(scene_id, "invalid_coordinates", "latitude 和 longitude 必须同时提供")
+            cache_key = ""
             try:
                 latitude, longitude = float(latitude), float(longitude)
                 if not -90 <= latitude <= 90 or not -180 <= longitude <= 180:
                     return self._fallback(scene_id, "invalid_coordinates", "经纬度超出有效范围")
                 from ..services import environment_service
+                fn = environment_service.get_environment
+                fn_marker = f"{getattr(getattr(fn, '__code__', None), 'co_filename', '')}:{getattr(getattr(fn, '__code__', None), 'co_firstlineno', '')}:{id(fn)}"
+                cache_key = f"{latitude:.6f}:{longitude:.6f}:{water_radius_m}:{road_radius_m}:{fn_marker}"
+                cached, stale = environment_cache.get_with_stale(cache_key)
+                if cached is not None and not stale:
+                    result = dict(cached)
+                    if metadata:
+                        result["metadata"] = metadata
+                    return result
                 raw = environment_service.get_environment(
                     latitude, longitude,
                     water_radius_m=water_radius_m,
@@ -33,10 +63,23 @@ class EnvironmentTool(BaseTool):
                 )
                 if raw.get("status") == "invalid_input":
                     return self._fallback(scene_id, "invalid_coordinates", raw.get("error", "经纬度无效"), raw)
-                return self._normalize(scene_id, raw, mode="real", source="environment_service")
+                data = self._normalize(scene_id, raw, mode="real", source="environment_service")
+                data["location"] = raw.get("location", {"latitude": latitude, "longitude": longitude})
+                if metadata:
+                    data["metadata"] = metadata
+                environment_cache.set(cache_key, data)
+                return data
             except Exception as error:
+                stale_value, is_stale = environment_cache.get_with_stale(cache_key)
+                if stale_value is not None and is_stale:
+                    stale = dict(stale_value)
+                    stale["status"] = "stale"
+                    stale["stale"] = True
+                    stale["fallback"] = {"code": "environment_unavailable", "message": str(error)}
+                    return stale
                 return self._fallback(scene_id, "environment_unavailable", str(error))
 
+    def _demo(self, scene_id: str, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         try:
             state = load_demo_state(scene_id)
         except ValueError as error:
@@ -50,6 +93,8 @@ class EnvironmentTool(BaseTool):
             "preferred_water": scene["water_sources"][0] if scene["water_sources"] else None,
             "road_context": None, "landcover": None,
         }
+        if metadata:
+            data["metadata"] = metadata
         data["raw"] = dict(data)
         return data
 

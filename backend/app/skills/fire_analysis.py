@@ -27,6 +27,7 @@ class FireAnalysisSkill:
                 "longitude": context.get("longitude"),
                 "water_radius_m": context.get("water_search_radius_m", 3000),
                 "road_radius_m": context.get("road_search_radius_m", 3000),
+                "environment_mode": context.get("environment_mode"),
             }),
             "assessment": lambda context: {"mode": "rules", "status": "delegated-to-pipeline"},
             "dispatch": lambda context: {"status": "delegated-to-pipeline"},

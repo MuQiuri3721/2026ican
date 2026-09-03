@@ -28,6 +28,7 @@ class ToolRegistry:
 
 
 def build_registry() -> ToolRegistry:
+    """Build the backward-compatible registry plus deterministic V1 core tools."""
     registry = ToolRegistry([EnvironmentTool(), FleetStatusTool(), InventoryTool()])
     for tool in build_core_tools():
         registry.register(tool)
