@@ -11,6 +11,9 @@ from .schemas import AnalysisEnvelope, TaskEvent
 class AnalysisStore:
     def __init__(self):
         self._items: Dict[str, AnalysisEnvelope] = {}
+        # Resource state is owned by the task, never re-read from the global fixture.
+        self._fleet_snapshots: Dict[str, List[dict]] = {}
+        self._inventory_snapshots: Dict[str, dict] = {}
         self._lock = RLock()
 
     def create(self, request_data: dict) -> AnalysisEnvelope:
@@ -24,6 +27,11 @@ class AnalysisStore:
         )
         with self._lock:
             self._items[item.analysis_id] = item
+            # Import lazily to avoid a pipeline/store import cycle.
+            from ..pipeline import load_demo_state
+            state = load_demo_state(request_data.get("scene_id", "forest-demo-01"))
+            self._fleet_snapshots[item.analysis_id] = self._normalize_fleet(state["fleet"])
+            self._inventory_snapshots[item.analysis_id] = self._normalize_inventory(state["inventory"])
         return item.model_copy(deep=True)
 
     def get(self, analysis_id: str) -> Optional[AnalysisEnvelope]:
@@ -84,13 +92,39 @@ class AnalysisStore:
             events = [TaskEvent(stage=stage, message=message, source=source), *item.events]
             return self.update(analysis_id, events=events)
 
-    def fleet(self) -> List[dict]:
-        path = Path(__file__).resolve().parents[3] / "data" / "fleet.json"
-        return json.loads(path.read_text(encoding="utf-8"))
+    def fleet(self, analysis_id: Optional[str] = None) -> List[dict]:
+        with self._lock:
+            if analysis_id:
+                if analysis_id not in self._items: raise KeyError(analysis_id)
+                return self._normalize_fleet(self._fleet_snapshots.get(analysis_id, []))
+            path = Path(__file__).resolve().parents[3] / "data" / "fleet.json"
+            return self._normalize_fleet(json.loads(path.read_text(encoding="utf-8")))
 
-    def inventory(self) -> dict:
-        path = Path(__file__).resolve().parents[3] / "data" / "inventory.json"
-        return json.loads(path.read_text(encoding="utf-8"))
+    def inventory(self, analysis_id: Optional[str] = None) -> dict:
+        with self._lock:
+            if analysis_id:
+                if analysis_id not in self._items: raise KeyError(analysis_id)
+                return self._normalize_inventory(self._inventory_snapshots.get(analysis_id, {}))
+            path = Path(__file__).resolve().parents[3] / "data" / "inventory.json"
+            return self._normalize_inventory(json.loads(path.read_text(encoding="utf-8")))
+
+    def update_resources(self, analysis_id: str, fleet: Optional[List[dict]] = None, inventory: Optional[dict] = None) -> None:
+        with self._lock:
+            if analysis_id not in self._items: raise KeyError(analysis_id)
+            if fleet is not None:
+                self._fleet_snapshots[analysis_id] = self._normalize_fleet(fleet)
+            if inventory is not None:
+                self._inventory_snapshots[analysis_id] = self._normalize_inventory(inventory)
+
+    @staticmethod
+    def _normalize_fleet(fleet: Any) -> List[dict]:
+        from ..pipeline import normalize_fleet
+        return json.loads(json.dumps(normalize_fleet(fleet or [])))
+
+    @staticmethod
+    def _normalize_inventory(inventory: Any) -> dict:
+        from ..pipeline import normalize_inventory
+        return json.loads(json.dumps(normalize_inventory(inventory or {})))
 
     def lock_resources(self, analysis_id: str, uav_ids: List[str]) -> List[str]:
         with self._lock:
@@ -106,11 +140,22 @@ class AnalysisStore:
             item = self._items.get(analysis_id)
             if item: item.resource_locks = []
 
-    def approval(self, analysis_id: str, action: str, plan_id: Optional[str] = None, constraints: Optional[dict] = None, reason: Optional[str] = None) -> AnalysisEnvelope:
+    def approval(self, analysis_id: str, action: str, plan_id: Optional[str] = None, constraints: Optional[dict] = None, reason: Optional[str] = None, idempotency_key: Optional[str] = None) -> AnalysisEnvelope:
         with self._lock:
             item = self._items.get(analysis_id)
             if item is None: raise KeyError(analysis_id)
+            if idempotency_key and item.approval:
+                if item.approval.get("idempotency_key") == idempotency_key and item.approval.get("action") == action:
+                    return item.model_copy(deep=True)
+                # A new action (for example adjust after approve) is a new
+                # idempotent command and is allowed to carry a new key.
             if item.status in {"completed", "terminated", "failed"}: raise ValueError("终态任务禁止审批")
+            if action == "approve" and item.status not in {"awaiting_confirmation", "replanning", "approved"}:
+                raise ValueError("当前任务状态不允许批准")
+            if action == "reject" and item.status not in {"awaiting_confirmation", "replanning"}:
+                raise ValueError("当前任务状态不允许驳回")
+            if action == "adjust" and item.status not in {"awaiting_confirmation", "approved", "executing", "replanning"}:
+                raise ValueError("当前任务状态不允许调整")
             plan = (item.plan_versions[-1] if item.plan_versions else item.result.get("dispatch_plan") if item.result else None)
             current = plan.get("plan_id") if plan else None
             if plan_id and current and plan_id != current: raise ValueError("方案版本不是当前版本")
@@ -125,12 +170,18 @@ class AnalysisStore:
                 if not selected:
                     raise ValueError("当前方案没有可锁定的灭火无人机")
                 self.lock_resources(analysis_id, selected)
-                status = "approved"
+                # Approval is the execution gate: a task is executable immediately
+                # after its plan has been locked and approved.
+                status = "executing"
             elif action == "reject": self.release_resources(analysis_id); status = "awaiting_confirmation"
-            elif action == "adjust": status = "replanning"
+            elif action == "adjust":
+                # The service generates the replacement plan; never keep locks for
+                # a plan which is no longer current.
+                self.release_resources(analysis_id)
+                status = "replanning"
             else: self.release_resources(analysis_id); status = "terminated"
             event = TaskEvent(stage="approval", message=f"方案审批：{action}", source="user")
-            item.events = [event, *item.events]; item.approval = {"action": action, "plan_id": current, "constraints": constraints, "reason": reason}
+            item.events = [event, *item.events]; item.approval = {"action": action, "plan_id": current, "constraints": constraints, "reason": reason, "idempotency_key": idempotency_key}
             item.status = status; item.updated_at = datetime.now().isoformat(timespec="seconds")
             return item.model_copy(deep=True)
 

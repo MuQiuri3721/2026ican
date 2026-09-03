@@ -13,8 +13,9 @@ class SkillOrchestrator:
 
     CORE_ORDER = [
         "fire_perception", "environment_assessment", "fire_assessment",
-        "resource_matching", "drone_dispatch", "route_planning",
-        "task_execution", "closed_loop_monitoring",
+        "people_assessment", "candidate_generation", "constraint_filtering",
+        "dispatch_scoring", "route_planning", "approval_preparation",
+        "task_execution", "closed_loop_monitoring", "report_archiving",
     ]
 
     def __init__(self, registry: SkillRegistry = None):
@@ -28,9 +29,24 @@ class SkillOrchestrator:
 
     def run_core_chain(self, context: Dict[str, Any]) -> Dict[str, Any]:
         results = {}
-        for name in self.CORE_ORDER:
+        # Custom/legacy registries may only expose the original chain.
+        order = [name for name in self.CORE_ORDER if name in self.registry.list()]
+        if not order:
+            order = [name for name in self.LEGACY_ORDER if name in self.registry.list()]
+        for name in order:
             results[name] = self.run(name, {**context, **results})
+            # New planning skills retain the legacy context keys consumed by
+            # route/execution/monitoring skills.
+            if name == "candidate_generation":
+                results.setdefault("resource_matching", results[name].get("resource_matching", {}))
+                results.setdefault("drone_dispatch", results[name].get("drone_dispatch", {}))
         return results
+
+    LEGACY_ORDER = [
+        "fire_perception", "environment_assessment", "fire_assessment",
+        "resource_matching", "drone_dispatch", "route_planning",
+        "task_execution", "closed_loop_monitoring",
+    ]
 
     def run_analysis(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """总编排入口：执行 Skill 链，并将规则结果作为最终安全输出。"""

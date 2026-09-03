@@ -12,10 +12,19 @@ class BaseSkill:
 class FirePerceptionSkill(BaseSkill):
     name = "fire_perception"
     def run(self, context):
-        result = self.registry.execute("detect_fire", {"image_path": context.get("image_path"), "image_name": context.get("image_name", "default")})
-        metrics = self.registry.execute("calculate_fire_metrics", {"detections": result.get("data", {}).get("detections", []), "image_width": result.get("data", {}).get("image_width", 1920), "image_height": result.get("data", {}).get("image_height", 1080)})
-        observation = result.get("data", {})
-        return {"observation": {"fire_area_m2": observation.get("fire_area_m2", metrics.get("data", {}).get("fire_area_m2", 1800)), "smoke_area_m2": observation.get("smoke_area_m2", metrics.get("data", {}).get("smoke_area_m2", 4200)), "growth_rate": observation.get("growth_rate", 0.42), "confidence": observation.get("confidence", 0.91), "fire_center": observation.get("fire_center", {"x": 118.78, "y": 32.04}), "source": "vision-observation-fixture", "detector": result, "metrics": metrics}}
+        result = self.registry.execute("detect_fire", {"image_path": context.get("image_path"), "image_name": context.get("image_name", "default"), "strict_real": context.get("strict_real", False)})
+        detector_data = result.get("data") if isinstance(result.get("data"), dict) else {}
+        if not result.get("ok") or detector_data.get("status") == "error":
+            return {"ok": False, "status": "error", "error": detector_data.get("error") or result.get("error"), "source": detector_data.get("source", "detector")}
+        metrics = self.registry.execute("calculate_fire_metrics", {"detections": detector_data.get("detections", []), "image_width": detector_data.get("image_width", 1920), "image_height": detector_data.get("image_height", 1080)})
+        metrics_data = metrics.get("data") if isinstance(metrics.get("data"), dict) else {}
+        observation = detector_data
+        explanation = {}
+        explanation_result = None
+        if context.get("use_vlm", True):
+            explanation_result = self.registry.execute("analyze_with_vlm", {"observation": observation, "environment": (context.get("environment_assessment") or {}).get("environment", {}), "people_status": context.get("people_status", "unknown"), "strict_real": context.get("strict_real", False)})
+            explanation = explanation_result.get("data") if isinstance(explanation_result.get("data"), dict) else {}
+        return {"observation": {"fire_area_m2": observation.get("fire_area_m2", metrics_data.get("fire_area_m2", 1800)), "smoke_area_m2": observation.get("smoke_area_m2", metrics_data.get("smoke_area_m2", 4200)), "growth_rate": observation.get("growth_rate", 0.42), "confidence": observation.get("confidence", 0.91), "fire_center": context.get("fire_center") or observation.get("fire_center") or {"x": 118.78, "y": 32.04}, "source": observation.get("source", "vision-observation-fixture"), "detector": result, "metrics": metrics}, "explanation": explanation, "vlm_used": bool(context.get("use_vlm", True))}
 class EnvironmentAssessmentSkill(BaseSkill):
     name = "environment_assessment"
     def run(self, context):
@@ -31,6 +40,8 @@ class EnvironmentAssessmentSkill(BaseSkill):
         })
         if not environment.get("ok"): return environment
         scene = environment["data"]
+        if scene.get("status") == "error" and context.get("strict_real"):
+            return {"ok": False, "error": scene.get("error", {"code": "environment_unavailable", "message": "真实环境服务不可用"}), "environment": scene, "environment_source": {"mode": scene.get("mode"), "source": scene.get("source"), "status": scene.get("status")}}
         nearest = scene.get("nearest_water")
         if nearest is None:
             sources = scene.get("water_sources")
@@ -98,6 +109,92 @@ class EvacuationSkill(BaseSkill):
     status = "extension"
     def run(self, context): return {"status": "not_implemented", "message": "人群疏散属于扩展能力。"}
 
+class PeopleAssessmentSkill(BaseSkill):
+    name = "people_assessment"
+    def run(self, context):
+        status = context.get("people_status", "unknown")
+        if status not in {"confirmed", "absent", "unknown"}: status = "unknown"
+        return {"status": status, "confirmed": status != "unknown", "requires_confirmation": status == "unknown", "source": "user-or-fallback"}
+
+
+class CandidateGenerationSkill(BaseSkill):
+    name = "candidate_generation"
+    def run(self, context):
+        """Generate candidates exclusively through the deterministic V1 dispatcher.
+
+        The surrounding skills may enrich perception/environment context, but they
+        must not introduce a second assignment algorithm.  The returned legacy
+        keys are adapters for older downstream skills and API consumers.
+        """
+        from ..pipeline import deterministic_v1_dispatch, load_demo_state, normalize_fleet, normalize_inventory
+
+        state = load_demo_state(context.get("scene_id", "forest-demo-01"))
+        if context.get("fleet"):
+            state["fleet"] = normalize_fleet(context["fleet"])
+        if context.get("inventory"):
+            state["inventory"] = normalize_inventory(context["inventory"])
+        perception = context.get("fire_perception", {}).get("observation", {})
+        assessment = context.get("fire_assessment", {}).get("assessment", {}).get("data", {})
+        environment = context.get("environment_assessment", {}).get("environment", {})
+        fire = {
+            **perception,
+            **assessment,
+            "fire_type": context.get("fire_type", "vegetation"),
+            "wind_speed": environment.get("wind_speed", state["scene"].get("wind_speed", 0)),
+        }
+        plan = deterministic_v1_dispatch(
+            state,
+            fire,
+            context.get("people_status", "unknown"),
+            constraints=context.get("constraints"),
+        )
+        tasks = plan.get("tasks", [])
+        legacy_resource = {"need": {"data": {"total_liters": plan.get("material_amount", 0)}}, "source": "v1-dispatch"}
+        legacy_dispatch = {
+            "fleet": {"data": {"fleet": state["fleet"]}},
+            "count": {"data": {"required_drones": plan.get("required_drones", 1)}},
+            "assignment": {"data": {"tasks": tasks}},
+            "validation": {"data": {"valid": plan.get("feasibility", False), "errors": [g for g in plan.get("resource_gap", []) if g.get("resource_gap")]}},
+            "v1_plan": plan,
+        }
+        return {
+            "v1_dispatch": plan,
+            "resource_matching": legacy_resource,
+            "drone_dispatch": legacy_dispatch,
+            "candidates": tasks,
+            "selected_uavs": plan.get("selected_uavs", []),
+            "source": "deterministic-v1",
+        }
+
+
+class ConstraintFilteringSkill(BaseSkill):
+    name = "constraint_filtering"
+    def run(self, context):
+        candidate = context.get("candidate_generation", {})
+        plan = candidate.get("v1_dispatch", {})
+        errors = [gap for gap in plan.get("resource_gap", []) if gap.get("resource_gap")]
+        return {"valid": bool(plan.get("feasibility", False)), "errors": errors, "candidates": candidate.get("candidates", []), "plan": plan, "source": "hard-constraints"}
+
+
+class DispatchScoringSkill(BaseSkill):
+    name = "dispatch_scoring"
+    def run(self, context):
+        plan = context.get("constraint_filtering", {}).get("plan") or context.get("candidate_generation", {}).get("v1_dispatch", {})
+        return {"score": (plan.get("scoring", {}).get("chosen", {}).get("score") if isinstance(plan.get("scoring"), dict) else None), "lower_is_better": True, "candidate_count": len(context.get("candidate_generation", {}).get("candidates", [])), "selected": plan, "source": "rules"}
+
+
+class ApprovalPreparationSkill(BaseSkill):
+    name = "approval_preparation"
+    def run(self, context):
+        people = context.get("people_assessment", {})
+        constraints = context.get("constraint_filtering", {})
+        return {"status": "awaiting_confirmation", "requires_user_confirmation": True, "people_confirmed": people.get("confirmed", False), "constraints_valid": constraints.get("valid", True), "plan": context.get("dispatch_scoring", {}).get("selected", {}), "source": "rules"}
+
+
+class ReportArchivingSkill(BaseSkill):
+    name = "report_archiving"
+    def run(self, context):
+        return {"status": "archived", "skill_count": len(context), "chain_keys": sorted(context), "source": "in-memory-report"}
 class SkillRegistry:
     def __init__(self, skills=None): self._skills = {skill.name: skill for skill in (skills or [])}
     def register(self, skill):
@@ -108,5 +205,6 @@ class SkillRegistry:
         if name not in self._skills: raise KeyError("未知 Skill: " + name)
         return self._skills[name]
 
+
 def build_skill_registry():
-    return SkillRegistry([klass() for klass in [FirePerceptionSkill, EnvironmentAssessmentSkill, FireAssessmentSkill, ResourceMatchingSkill, DroneDispatchSkill, RoutePlanningSkill, TaskExecutionSkill, ClosedLoopSkill, EvacuationSkill]])
+    return SkillRegistry([klass() for klass in [FirePerceptionSkill, EnvironmentAssessmentSkill, FireAssessmentSkill, PeopleAssessmentSkill, CandidateGenerationSkill, ConstraintFilteringSkill, DispatchScoringSkill, ApprovalPreparationSkill, ResourceMatchingSkill, DroneDispatchSkill, RoutePlanningSkill, TaskExecutionSkill, ClosedLoopSkill, ReportArchivingSkill, EvacuationSkill]])

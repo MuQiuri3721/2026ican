@@ -6,5 +6,23 @@
   "level_thresholds": [0.3, 0.6, 0.8],
   "resource": {"base_liters_per_m2": 0.025, "level_factors": [0.8, 1.0, 1.35, 1.8], "environment_factor": 1.15, "safety_factor": 1.1, "target_minutes": 18},
   "minimum_battery_percent": 25,
-  "battery_reserve_percent": 18
+  "battery_reserve_percent": 18,
+  "v1": {
+    "grid_cell_m2": 100,
+    "wind_bands": [{"max_mps": 4.0, "k_wind": 1.0, "label": "0–4 m/s"}, {"max_mps": 6.0, "k_wind": 1.2, "label": "4–6 m/s"}, {"max_mps": 8.0, "k_wind": 1.5, "label": "6–8 m/s"}],
+    "k_wind_over": 1.5,
+    "fuel_factors": {"sparse_grass": 0.8, "general_forest": 1.0, "dense_fuel": 1.3},
+    "slope_bands": [{"max_deg": 15.0, "k_slope": 1.0}, {"max_deg": 30.0, "k_slope": 1.15}, {"max_deg": 90.0, "k_slope": 1.3}],
+    "kappa": {"vegetation": {"water_20l": 1.0, "co2_6kg": 0.25}, "electrical": {"water_20l": 0.0, "co2_6kg": 1.5}},
+    "drop_efficiency": {"clear": 0.9, "moderate": 0.75, "poor": 0.55},
+    "weather_efficiency": {"band0": 1.0, "band1": 0.85, "band2": 0.65},
+    "scoring_weights": {"time": 0.4, "residual": 0.3, "energy": 0.15, "material": 0.1, "change": 0.05},
+    "scoring_refs": {"time_ref_minutes": 120, "energy_ref_per_uav": 100, "material_ref_liters": 80, "change_ref_rounds": 4},
+    "charging": {"base_soc_per_hour": 100, "forward_soc_per_hour": 60, "battery_swap_minutes": 5, "battery_swap_soc": 95},
+    "return_soc_percent": 25, "emergency_soc_percent": 15, "new_task_floor_soc_percent": 35,
+    "spray": {"water_20l": {"quantity": 20.0, "rate_per_minute": 4.0, "minutes": 5}, "co2_6kg": {"quantity": 6.0, "rate_per_minute": 1.5, "minutes": 4}},
+    "refill_minutes": {"base": 4, "onsite": 8},
+    "evacuation": {"cell_meters": 20, "walk_speed_mps": 1.2},
+    "round_minutes": 5, "replan_increase_ratio": 0.2
+  }
 }

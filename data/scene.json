@@ -6,6 +6,9 @@
   "wind_direction_deg": 315,
   "altitude": 320,
   "terrain": "丘陵",
+  "slope_deg": 12,
+  "fuel_type": "general_forest",
+  "fire_type": "vegetation",
   "fire_origin": {"x": 118.78, "y": 32.04},
   "water_sources": [{"name": "北侧蓄水池", "distance_m": 800, "available": true, "position": {"x": 118.788, "y": 32.04}}]
 }

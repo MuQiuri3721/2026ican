@@ -62,16 +62,32 @@ def test_unknown_scene_returns_tool_error():
     assert result["error"]["code"] == "scene_not_found"
 
 
-def test_analysis_can_be_retrieved_and_monitored():
+def test_analysis_requires_approval_before_monitoring_and_rounds():
     client = TestClient(app)
     response = client.post("/api/analyze", json={"scene_id": "forest-demo-01", "image_name": "demo.jpg"})
     assert response.status_code == 200
     payload = response.json()
     analysis_id = payload["analysis_id"]
+    assert payload["status"] == "awaiting_confirmation"
     assert client.get("/api/analyze/" + analysis_id).status_code == 200
+
+    monitor = client.post("/api/monitor/" + analysis_id, json={"elapsed_minutes": 5, "extinguishing_liters": 40})
+    assert monitor.status_code == 409
+    round_response = client.post(f"/api/tasks/{analysis_id}/rounds", json={"round": 1})
+    assert round_response.status_code == 409
+
+    plan = client.get(f"/api/tasks/{analysis_id}/plan").json()["plan"]
+    approved = client.post(
+        f"/api/tasks/{analysis_id}/approval",
+        json={"action": "approve", "plan_id": plan["plan_id"], "idempotency_key": "approve-once"},
+    )
+    assert approved.status_code == 200
+    assert approved.json()["status"] == "executing"
+
     monitor = client.post("/api/monitor/" + analysis_id, json={"elapsed_minutes": 5, "extinguishing_liters": 40})
     assert monitor.status_code == 200
     assert monitor.json()["action"] in {"continue", "resupply", "reinforce", "return", "finish"}
+    assert client.post(f"/api/tasks/{analysis_id}/approval", json={"action": "terminate"}).status_code == 200
 
 
 def test_fleet_and_inventory_contract_are_2_plus_4_plus_2_and_non_negative():
@@ -120,17 +136,23 @@ def test_offline_task_plan_approval_round_and_report_contract():
 
     approved = client.post(f"/api/tasks/{task_id}/approval", json={"action": "approve", "plan_id": plan["plan_id"]})
     assert approved.status_code == 200
-    assert approved.json()["status"] == "approved"
-    assert approved.json()["approval"]["action"] == "approve"
+    approved_payload = approved.json()
+    assert approved_payload["status"] == "executing"
+    assert approved_payload["approval"]["action"] == "approve"
+    assert approved_payload["resource_locks"]
 
     round_one = client.post(f"/api/tasks/{task_id}/rounds", json={
         "round": 1, "fire_load_flp": 60, "growth_rate": 0.1,
         "wind_speed": 5, "people_status": "absent", "elapsed_minutes": 5,
         "extinguishing_liters": 20,
     })
-    assert round_one.status_code == 200
-    assert round_one.json()["round"] == 1
-    assert "before" in round_one.json() and "after" in round_one.json()
+    round_payload = round_one.json()
+    assert round_payload["round"] == 1
+    assert {"before", "after", "changes", "next_action"}.issubset(round_payload)
+    assert round_payload["before"]["fleet"]
+    assert round_payload["after"]["fleet"]
+    assert round_payload["changes"]["action"]
+    assert round_payload["next_action"] in {"awaiting_confirmation", "continue", "resupply", "reinforce", "return", "finish"}
 
     report = client.get(f"/api/tasks/{task_id}/report")
     assert report.status_code == 200
@@ -140,13 +162,40 @@ def test_offline_task_plan_approval_round_and_report_contract():
     assert report.json()["events"]
 
 
-def test_task_rejects_stale_plan_duplicate_round_and_terminal_operations():
+def test_task_state_machine_adjust_replan_idempotency_and_terminal_operations():
     client = TestClient(app)
     task_id, plan = _create_offline_task(client)
+
+    # Stale plans and execution before approval are rejected.
     stale = client.post(f"/api/tasks/{task_id}/approval", json={"action": "approve", "plan_id": "plan-stale"})
     assert stale.status_code == 409
+    assert client.post(f"/api/tasks/{task_id}/replan", json={"triggers": ["manual"]}).status_code == 200
+    replacement = client.get(f"/api/tasks/{task_id}/plan").json()["plan"]
+    assert replacement["plan_id"] != plan["plan_id"]
+    assert replacement["plan_version"] == plan.get("plan_version", 1) + 1
+    assert client.get(f"/api/analyze/{task_id}").json()["resource_locks"] == []
 
-    assert client.post(f"/api/tasks/{task_id}/approval", json={"action": "approve", "plan_id": plan["plan_id"]}).status_code == 200
+    approval_body = {"action": "approve", "plan_id": replacement["plan_id"], "idempotency_key": "approve-1"}
+    approved = client.post(f"/api/tasks/{task_id}/approval", json=approval_body)
+    assert approved.status_code == 200
+    assert approved.json()["status"] == "executing"
+    repeated = client.post(f"/api/tasks/{task_id}/approval", json=approval_body)
+    assert repeated.status_code == 200
+    assert repeated.json()["status"] == "executing"
+    assert repeated.json()["resource_locks"] == approved.json()["resource_locks"]
+
+    adjusted = client.post(
+        f"/api/tasks/{task_id}/approval",
+        json={"action": "adjust", "constraints": {"max_rounds": 3}, "idempotency_key": "adjust-1"},
+    )
+    assert adjusted.status_code == 200
+    assert adjusted.json()["plan"]["plan_version"] == replacement["plan_version"] + 1
+    assert adjusted.json()["plan"]["plan_id"] != replacement["plan_id"]
+    assert adjusted.json()["versions"][-1]["plan_id"] == adjusted.json()["plan"]["plan_id"]
+    assert client.get(f"/api/analyze/{task_id}").json()["resource_locks"] == []
+
+    new_plan = adjusted.json()["plan"]
+    assert client.post(f"/api/tasks/{task_id}/approval", json={"action": "approve", "plan_id": new_plan["plan_id"]}).status_code == 200
     duplicate_round = client.post(f"/api/tasks/{task_id}/rounds", json={"round": 1, "extinguishing_liters": 0})
     assert duplicate_round.status_code == 200
     duplicate_round_again = client.post(f"/api/tasks/{task_id}/rounds", json={"round": 1, "extinguishing_liters": 0})
@@ -155,9 +204,12 @@ def test_task_rejects_stale_plan_duplicate_round_and_terminal_operations():
     terminated = client.post(f"/api/tasks/{task_id}/approval", json={"action": "terminate", "reason": "合同测试"})
     assert terminated.status_code == 200
     assert terminated.json()["status"] == "terminated"
+    assert terminated.json()["resource_locks"] == []
     assert client.post(f"/api/tasks/{task_id}/rounds", json={"round": 2}).status_code == 409
     assert client.post(f"/api/tasks/{task_id}/approval", json={"action": "approve"}).status_code == 409
+    assert client.post(f"/api/tasks/{task_id}/approval", json={"action": "adjust"}).status_code == 409
     assert client.post(f"/api/tasks/{task_id}/replan", json={"triggers": ["wind_band_changed"]}).status_code == 409
+    assert client.post(f"/api/monitor/{task_id}", json={"elapsed_minutes": 5}).status_code == 409
 
 
 def test_domain_contract_rejects_invalid_payload_and_negative_inventory():

@@ -25,18 +25,18 @@ class EnvironmentTool(BaseTool):
         environment_mode: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        mode = (environment_mode or ("real" if latitude is not None or longitude is not None else "demo")).lower()
+        mode = (environment_mode or ("auto" if latitude is not None or longitude is not None else "demo")).lower()
         if mode not in {"demo", "real", "auto", "offline"}:
             return self._fallback(scene_id, "invalid_mode", "environment_mode 必须是 demo、real、auto 或 offline")
         if mode == "offline":
-            return self._demo(scene_id, metadata={**(metadata or {}), "offline": True})
+            return self._demo(scene_id, metadata={**(metadata or {}), "offline": True, "network": "disabled"})
         if mode == "demo":
             return self._demo(scene_id, metadata=metadata)
         # auto uses the real adapter when coordinates are supplied, otherwise demo.
         if latitude is None and longitude is None and mode == "auto":
             return self._demo(scene_id, metadata=metadata)
         if latitude is None and longitude is None:
-            latitude, longitude = DEFAULT_LATITUDE, DEFAULT_LONGITUDE
+            return self._error(scene_id, "coordinates_required", "real 模式必须同时提供 latitude 和 longitude")
         # Keep the heavy geospatial stack out of application startup.
         if latitude is not None or longitude is not None:
             if latitude is None or longitude is None:
@@ -62,7 +62,7 @@ class EnvironmentTool(BaseTool):
                     road_radius_m=road_radius_m,
                 )
                 if raw.get("status") == "invalid_input":
-                    return self._fallback(scene_id, "invalid_coordinates", raw.get("error", "经纬度无效"), raw)
+                    return self._error(scene_id, "invalid_coordinates", raw.get("error", "经纬度无效"), raw) if mode == "real" else self._fallback(scene_id, "invalid_coordinates", raw.get("error", "经纬度无效"), raw)
                 data = self._normalize(scene_id, raw, mode="real", source="environment_service")
                 data["location"] = raw.get("location", {"latitude": latitude, "longitude": longitude})
                 if metadata:
@@ -77,7 +77,7 @@ class EnvironmentTool(BaseTool):
                     stale["stale"] = True
                     stale["fallback"] = {"code": "environment_unavailable", "message": str(error)}
                     return stale
-                return self._fallback(scene_id, "environment_unavailable", str(error))
+                return self._error(scene_id, "environment_unavailable", str(error)) if mode == "real" else self._fallback(scene_id, "environment_unavailable", str(error))
 
     def _demo(self, scene_id: str, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         try:
@@ -130,6 +130,10 @@ class EnvironmentTool(BaseTool):
             "preferred_water": water.get("preferred"),
             "road_context": road, "landcover": landcover, "raw": raw,
         }
+
+    def _error(self, scene_id: str, code: str, message: str, raw: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Return a structured real/partial error without fabricating demo data."""
+        return {"scene_id": scene_id, "mode": "real", "status": "error", "source": "environment-service-real", "partial": bool(raw), "error": {"code": code, "message": message}, "raw": raw}
 
     def _fallback(self, scene_id: str, code: str, message: str, raw: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         try:

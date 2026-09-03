@@ -3,6 +3,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from .domain.schemas import AnalysisInput, MonitorInput, ApprovalRequest, ReplanRequest, FeedbackRoundInput
@@ -100,12 +101,20 @@ def run_skill(skill_name: str, request: AnalysisInput):
 
 @app.get("/api/fleet")
 def fleet(task_id: str | None = None):
-    return {"schema_version": "fleet-v1", "fleet": analysis_store.fleet(), "count": len(analysis_store.fleet()), "task_id": task_id}
+    try:
+        data = analysis_store.fleet(task_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="任务不存在") from error
+    return {"schema_version": "fleet-v1", "fleet": data, "count": len(data), "task_id": task_id}
 
 
 @app.get("/api/inventory")
-def inventory():
-    return analysis_store.inventory()
+def inventory(task_id: str | None = None):
+    try:
+        data = analysis_store.inventory(task_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="任务不存在") from error
+    return {**data, **({"task_id": task_id} if task_id else {})}
 
 
 @app.get("/api/tasks/{task_id}/plan")
@@ -139,6 +148,15 @@ def task_round(task_id: str, request: FeedbackRoundInput):
 def task_report(task_id: str):
     try: return analysis_service.report(task_id)
     except KeyError as error: raise HTTPException(status_code=404, detail="任务不存在") from error
+
+
+@app.get("/api/tasks/{task_id}/report/download")
+def download_task_report(task_id: str):
+    try:
+        path = analysis_service.report_path(task_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="任务不存在") from error
+    return FileResponse(path, media_type="application/json", filename="dispatch_plan.json")
 
 
 @app.get("/api/analyzes")

@@ -103,6 +103,9 @@ class AnalysisInput(BaseModel):
     water_search_radius_m: int = Field(default=3000, gt=0, le=50000, validation_alias=AliasChoices("water_search_radius_m", "water_radius_m"))
     road_search_radius_m: int = Field(default=3000, gt=0, le=50000, validation_alias=AliasChoices("road_search_radius_m", "road_radius_m"))
     metadata: Optional[Dict[str, Any]] = None
+    fire_type: str = "vegetation"
+    people_status: PeopleStatus = PeopleStatus.UNKNOWN
+    constraints: Optional[Dict[str, Any]] = None
 
 
 class MonitorInput(BaseModel):
@@ -156,6 +159,7 @@ class ReplanRequest(BaseModel):
     triggers: List[str] = Field(default_factory=list)
     constraints: Optional[Dict[str, Any]] = None
     observation: Optional[Dict[str, Any]] = None
+    people_status: Optional[PeopleStatus] = None
 
 
 class FeedbackRoundInput(BaseModel):

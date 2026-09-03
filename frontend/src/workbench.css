@@ -2,12 +2,10 @@
 .environment-panel{grid-column:1/-1}.environment-controls{display:flex;justify-content:space-between;align-items:center;margin-top:15px;color:#8a969e;font:9px 'DM Mono'}.environment-controls label{display:flex;align-items:center;gap:7px}.environment-controls select{border:1px solid #dce3e6;border-radius:4px;padding:5px 7px;background:#fff;color:#52636b;font:9px 'DM Mono'}.environment-refresh{margin-top:0}.environment-meta{display:flex;gap:15px;flex-wrap:wrap;margin-top:12px;color:#9aa5ab;font:9px 'DM Mono'}.environment-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-top:14px}.environment-item{padding:10px;background:#f7f9fa;border-radius:5px}.environment-item span{display:block;color:#98a3aa;font-size:9px}.environment-item strong{display:block;margin-top:6px;font-size:11px}@media(max-width:700px){.environment-grid{grid-template-columns:repeat(2,1fr)}.environment-meta{gap:8px}.environment-controls{align-items:flex-start;gap:10px;flex-direction:column}}
 
 .coordinate-editor{display:flex;align-items:center;gap:7px}.coordinate-editor label{gap:4px}.coordinate-editor input{width:106px;border:1px solid #dce3e6;border-radius:4px;padding:5px 6px;background:#fff;color:#52636b;font:9px 'DM Mono'}.coordinate-editor .outline-btn{margin-top:0;padding:5px 8px}.coordinate-error{margin-top:8px;color:#bd5737;font:9px 'DM Mono'}.map-node.road{color:#c26b32;background:#fff7ef}.environment-item strong{line-height:1.45}@media(max-width:700px){.coordinate-editor{flex-wrap:wrap}.coordinate-editor input{width:94px}}
+.drone-telemetry,.fleet-detail-meta{display:flex;gap:8px;flex-wrap:wrap;color:#8a969e;font:9px 'DM Mono'}.drone-telemetry span,.fleet-detail-meta span{padding:3px 5px;background:#f7f9fa;border-radius:3px}.drone-telemetry b,.fleet-detail-meta b{color:#52636b;font-weight:500}.round-list{display:grid;gap:7px;margin-top:10px}.round-list>div{display:flex;gap:10px;flex-wrap:wrap;padding:8px;background:#f7f9fa;border-left:2px solid #765392;color:#7b8790;font:9px 'DM Mono'}.round-list b{color:#765392}.fleet-detail-meta{margin:9px 0}.fleet-detail-meta span{display:inline-flex;gap:4px}.drone-telemetry{grid-column:4;align-items:center}@media(max-width:900px){.drone-telemetry{grid-column:auto}}
+
 .model-status {
   gap: 12px;
-  margin-top: 12px;
-  color: #9aa5ab;
-  font: 9px 'DM Mono';
-}
 
 .model-status span {
   display: inline-flex;

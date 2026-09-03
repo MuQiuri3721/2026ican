@@ -1,11 +1,19 @@
 from typing import Any, Dict, Optional
 
+import json
 from uuid import uuid4
 from datetime import datetime
+from pathlib import Path
+
 from ..domain.schemas import AnalysisInput, MonitorInput, TaskEvent, FeedbackRoundInput, ReplanRequest
 from ..domain.store import analysis_store
 from ..pipeline import run_demo_analysis, simulate_monitor
 from ..skills.orchestrator import SkillExecutionError, SkillOrchestrator
+from ..tools.core import analyze_with_vlm, resolve_wind_band
+
+ROOT = Path(__file__).resolve().parents[3]
+REPORTS_DIR = ROOT / "data" / "reports"
+REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class AnalysisService:
@@ -33,10 +41,30 @@ class AnalysisService:
                 "environment_mode": request.environment_mode,
                 "water_search_radius_m": request.water_search_radius_m,
                 "road_search_radius_m": request.road_search_radius_m,
+                "metadata": request.metadata,
+                "use_vlm": request.use_vlm,
+                "fire_type": request.fire_type,
+                "people_status": request.people_status.value,
+                "constraints": request.constraints,
+                "strict_real": request.environment_mode == "real",
+                "fire_center": ({"latitude": request.latitude, "longitude": request.longitude} if request.latitude is not None and request.longitude is not None else None),
             }
             agent = self.orchestrator.run_analysis(context)
-            result = run_demo_analysis(request.scene_id, request.image_name or request.image_path)
+            # 观测数据显式驱动规则管线：小火上传按小火计算，而不是固定默认火情。
+            chain = agent.get("skill_chain", {})
+            observation = chain.get("fire_perception", {}).get("observation", {})
+            fire_override = {key: observation[key] for key in ("fire_area_m2", "smoke_area_m2", "growth_rate") if observation.get(key) is not None}
+            result = run_demo_analysis(
+                request.scene_id,
+                request.image_name or request.image_path,
+                fire_override=fire_override or None,
+                fire_type=request.fire_type,
+                people_status=request.people_status.value,
+                constraints=request.constraints,
+                dispatch_override=chain.get("candidate_generation", {}).get("v1_dispatch"),
+            )
             self._merge_agent_result(result, agent)
+            analysis_store.update_resources(item.analysis_id, result.get("fleet"), result.get("inventory"))
             analysis_store.update(
                 item.analysis_id,
                 status="awaiting_confirmation",
@@ -45,6 +73,7 @@ class AnalysisService:
                 plan_versions=[{"schema_version": "uav-dispatch-v1", "plan_id": "plan-" + uuid4().hex[:10], "task_id": item.analysis_id, "generated_at": datetime.now().isoformat(timespec="seconds"), **result.get("dispatch_plan", {})}],
             )
             analysis_store.add_event(item.analysis_id, "dispatch", "分析链完成并生成调度方案", "rules")
+            self._persist_dispatch_report(item.analysis_id)
         except Exception as error:
             try:
                 analysis_store.update(item.analysis_id, status="failed", error={"error_code": "analysis_failed", "message": str(error), "stage": "agent_chain"})
@@ -65,14 +94,20 @@ class AnalysisService:
 
     def monitor_and_update(self, analysis_id: str, request: MonitorInput) -> Dict[str, Any]:
         def calculate(item):
+            if item.status not in {"executing"}:
+                raise ValueError("任务尚未批准执行，禁止监测")
             if not item.result:
                 raise ValueError("分析任务尚未完成，不能监测")
+            # The task-owned snapshots are authoritative.  Client snapshots are
+            # accepted for backwards compatibility but must not fork task state.
+            fleet_snapshot = analysis_store.fleet(analysis_id)
+            inventory_snapshot = analysis_store.inventory(analysis_id)
             monitor_result = simulate_monitor(
                 item.result,
                 request.elapsed_minutes,
                 request.extinguishing_liters,
-                fleet_snapshot=request.fleet_snapshot,
-                inventory=request.inventory,
+                fleet_snapshot=fleet_snapshot,
+                inventory=inventory_snapshot,
                 image_name=request.image_name,
             )
             updated = dict(item.result)
@@ -80,31 +115,40 @@ class AnalysisService:
             updated["fire_assessment"]["fire_area_m2"] = monitor_result["next_fire_area_m2"]
             updated["fleet"] = monitor_result["next_fleet"]
             updated["inventory"] = monitor_result["next_inventory"]
+            analysis_store.update_resources(analysis_id, monitor_result["next_fleet"], monitor_result["next_inventory"])
             updated["dispatch_plan"] = {
                 **updated.get("dispatch_plan", {}),
                 "selected_uavs": updated.get("dispatch_plan", {}).get("selected_uavs", []),
+                "fire_load_flp": monitor_result.get("next_fire_load_flp", updated.get("dispatch_plan", {}).get("fire_load_flp")),
                 "battery_plan": monitor_result.get("battery_plan", updated.get("dispatch_plan", {}).get("battery_plan", [])),
                 "resource_gap": monitor_result.get("resource_gap", updated.get("dispatch_plan", {}).get("resource_gap", [])),
             }
             return {
-                "status": "completed" if monitor_result["action"] == "finish" else "running",
+                "status": "completed" if monitor_result["action"] == "finish" else "executing",
                 "result": updated | {"monitor": monitor_result},
-                "events": [
-                    TaskEvent(stage="monitor", message="闭环监测完成：" + monitor_result["action"], source="rules"),
-                    *item.events,
-                ],
+                "events": [TaskEvent(stage="monitor", message="闭环监测完成：" + monitor_result["action"], source="rules"), *item.events],
             }
 
         updated = analysis_store.monitor_update(analysis_id, calculate)
+        self._persist_dispatch_report(analysis_id)
         return {**updated.model_dump(), "action": updated.result["monitor"]["action"]}
 
     def approve(self, analysis_id: str, request) -> Dict[str, Any]:
-        return analysis_store.approval(analysis_id, request.action, request.plan_id, request.constraints, request.reason).model_dump()
+        approved = analysis_store.approval(analysis_id, request.action, request.plan_id, request.constraints, request.reason, request.idempotency_key)
+        # Adjust is a transactional replacement: release the old lock and create
+        # a new version which must be approved separately.
+        if request.action == "adjust":
+            return self.replan(analysis_id, ReplanRequest(constraints=request.constraints, triggers=["manual_adjust"]))
+        self._persist_dispatch_report(analysis_id)
+        return approved.model_dump()
 
     def replan(self, analysis_id: str, request: ReplanRequest) -> Dict[str, Any]:
         item = analysis_store.get(analysis_id)
         if not item: raise KeyError(analysis_id)
         if item.status in {"completed", "terminated", "failed"}: raise ValueError("终态任务禁止重规划")
+        # Replanning invalidates the old reservation before generating a new plan.
+        analysis_store.release_resources(analysis_id)
+        analysis_store.update(analysis_id, status="replanning")
         from ..pipeline import deterministic_v1_dispatch, load_demo_state, normalize_fleet, normalize_inventory
         state = load_demo_state(item.input.scene_id)
         result = dict(item.result or {})
@@ -113,59 +157,107 @@ class AnalysisService:
         fire = dict(result.get("fire_assessment", {}))
         observation = request.observation or {}
         fire.update({k: observation[k] for k in ("fire_area_m2", "smoke_area_m2", "growth_rate", "fire_load_flp") if k in observation})
-        plan = deterministic_v1_dispatch(state, fire, result.get("dispatch_plan", {}).get("people_branch", "unknown"))
+        people_status = request.people_status.value if request.people_status else result.get("dispatch_plan", {}).get("people_branch", item.input.people_status.value)
+        plan = deterministic_v1_dispatch(state, fire, people_status, constraints=request.constraints or result.get("constraints"))
         version = len(item.plan_versions) + 1
         plan.update({"plan_id": "plan-" + uuid4().hex[:10], "task_id": analysis_id, "plan_version": version, "generated_at": datetime.now().isoformat(timespec="seconds"), "replan_trigger": request.triggers})
         if request.constraints: plan["constraints"] = request.constraints
-        analysis_store.update(analysis_id, status="awaiting_confirmation", plan_versions=[*item.plan_versions, plan])
+        result["dispatch_plan"] = dict(plan)
+        result["constraints"] = request.constraints or result.get("constraints")
+        result["skill_chain"] = dict(result.get("skill_chain") or {})
+        result["skill_chain"]["candidate_generation"] = {
+            "v1_dispatch": plan,
+            "candidates": plan.get("tasks", []),
+            "selected_uavs": plan.get("selected_uavs", []),
+            "source": "deterministic-v1",
+        }
+        analysis_store.update(analysis_id, status="awaiting_confirmation", result=result, plan_versions=[*item.plan_versions, plan])
         analysis_store.add_event(analysis_id, "replan", "已基于当前资源和约束重新生成方案", "rules")
+        self._persist_dispatch_report(analysis_id)
         return self.get_plan(analysis_id)
 
     def add_round(self, analysis_id: str, request: FeedbackRoundInput) -> Dict[str, Any]:
         item = analysis_store.get(analysis_id)
         if not item: raise KeyError(analysis_id)
+        if item.status not in {"executing"}:
+            raise ValueError("任务尚未批准执行，禁止反馈")
         if item.status in {"completed", "terminated", "failed"}: raise ValueError("终态任务禁止反馈")
-        if request.round <= item.monitor_round: raise ValueError("轮次必须递增")
+        if request.round != item.monitor_round + 1:
+            raise ValueError("轮次必须按任务当前轮次递增")
         # 将本轮观测显式注入闭环计算，避免继续使用首轮固定参数。
         current = analysis_store.get(analysis_id)
+        # before is always the Store-owned state, never client supplied values.
+        before = {
+            "fire_load_flp": (current.result or {}).get("dispatch_plan", {}).get("fire_load_flp"),
+            "growth_rate": (current.result or {}).get("fire_assessment", {}).get("growth_rate"),
+            "wind_speed": (current.result or {}).get("environment", {}).get("wind_speed"),
+            "people_status": (current.result or {}).get("dispatch_plan", {}).get("people_branch", current.input.people_status.value),
+            "fleet": analysis_store.fleet(analysis_id),
+            "inventory": analysis_store.inventory(analysis_id),
+        }
         observed = dict(current.result or {})
         observed["fire_assessment"] = dict(observed.get("fire_assessment", {}))
         if request.fire_load_flp is not None:
             observed["dispatch_plan"] = dict(observed.get("dispatch_plan", {}), fire_load_flp=request.fire_load_flp)
         observed["fire_assessment"].update({k: v for k, v in (("growth_rate", request.growth_rate),) if v is not None})
+        if request.fire_load_flp is not None and request.growth_rate is not None:
+            observed["fire_assessment"]["growth_flp_per_hour"] = round(request.fire_load_flp * request.growth_rate, 2)
+            observed["dispatch_plan"] = dict(observed["dispatch_plan"], growth_flp_per_hour=round(request.fire_load_flp * request.growth_rate, 2))
         observed["environment"] = dict(observed.get("environment", {}))
         if request.wind_speed is not None:
             observed["environment"]["wind_speed"] = request.wind_speed
         if request.people_status is not None:
             observed["dispatch_plan"] = dict(observed.get("dispatch_plan", {}), people_branch=request.people_status.value)
         analysis_store.update(analysis_id, result=observed)
-        result = self.monitor_and_update(analysis_id, MonitorInput(elapsed_minutes=request.elapsed_minutes, extinguishing_liters=request.extinguishing_liters, fleet_snapshot=request.fleet_snapshot, inventory=request.inventory))
+        previous_wind = (current.result or {}).get("environment", {}).get("wind_speed")
+        previous_flp = float((current.result or {}).get("dispatch_plan", {}).get("fire_load_flp", request.fire_load_flp or 0))
+        result = self.monitor_and_update(analysis_id, MonitorInput(elapsed_minutes=request.elapsed_minutes, extinguishing_liters=request.extinguishing_liters, fleet_snapshot=analysis_store.fleet(analysis_id), inventory=analysis_store.inventory(analysis_id)))
+        monitor_data = result.get("result", {}).get("monitor", {})
+        action = result.get("action")
+        # 关键事件判定：风速按档位（0–4/4–6/6–8 m/s）而非数值比较。
+        triggers = list(monitor_data.get("replan_triggers", []))
+        if request.fire_load_flp is not None and previous_flp > 0 and request.fire_load_flp > previous_flp * 1.2 and "fire_load_increase_over_20_percent" not in triggers:
+            triggers.append("fire_load_increase_over_20_percent")
+        if request.wind_speed is not None and previous_wind is not None:
+            previous_band = resolve_wind_band(float(previous_wind))["band"]
+            current_band = resolve_wind_band(float(request.wind_speed))["band"]
+            if previous_band != current_band and "wind_band_changed" not in triggers:
+                triggers.append("wind_band_changed")
+        if request.people_status is not None and "people_status_changed" not in triggers:
+            triggers.append("people_status_changed")
+        if action in {"resupply", "return"} and "resource_or_soc" not in triggers:
+            triggers.append("resource_or_soc")
         round_data = {
             "round": request.round,
-            "before": {
-                "fire_load_flp": request.fire_load_flp,
-                "growth_rate": request.growth_rate,
-                "wind_speed": request.wind_speed,
-                "people_status": request.people_status.value if request.people_status else None,
+            "before": before,
+            "after": {
+                **monitor_data,
+                "fleet": analysis_store.fleet(analysis_id),
+                "inventory": analysis_store.inventory(analysis_id),
             },
-            "after": result.get("result", {}).get("monitor", {}),
-            "replan_required": result.get("action") in {"reinforce", "resupply", "return"},
-            "replan_triggers": [
-                *(["flp_increase"] if request.fire_load_flp is not None and request.fire_load_flp > float((item.result or {}).get("dispatch_plan", {}).get("fire_load_flp", request.fire_load_flp)) * 1.2 else []),
-                *(["wind_band_changed"] if request.wind_speed is not None and request.wind_speed != (item.result or {}).get("environment", {}).get("wind_speed") else []),
-                *(["growth_rate_changed"] if request.growth_rate is not None else []),
-                *(["people_status_changed"] if request.people_status is not None else []),
-                *(["resource_or_soc"] if result.get("action") in {"resupply", "return"} else []),
-            ],
+            "changes": {
+                "fire_load_flp": ((monitor_data.get("next_fire_load_flp"), before.get("fire_load_flp")) if monitor_data.get("next_fire_load_flp") != before.get("fire_load_flp") else None),
+                "action": action,
+            },
+            "replan_required": bool(triggers) or action in {"reinforce", "resupply", "return"},
+            "replan_triggers": triggers,
+            "next_action": "awaiting_confirmation" if triggers else action,
         }
         latest = analysis_store.get(analysis_id); analysis_store.update(analysis_id, rounds=[*latest.rounds, round_data])
+        if triggers:
+            analysis_store.add_event(analysis_id, "replan", "触发重规划关键事件：" + "、".join(triggers), "rules")
+            # Generate and persist a new version immediately; it remains gated by
+            # approval, so monitoring cannot continue on an unapproved plan.
+            self.replan(analysis_id, ReplanRequest(triggers=triggers))
+            round_data["next_action"] = "awaiting_confirmation"
+        self._persist_dispatch_report(analysis_id)
         return round_data
 
     def report(self, analysis_id: str) -> Dict[str, Any]:
         item = analysis_store.get(analysis_id)
         if not item:
             raise KeyError(analysis_id)
-        return {
+        report = {
             "task_id": analysis_id,
             "input": item.input.model_dump(),
             "status": item.status,
@@ -174,12 +266,52 @@ class AnalysisService:
             "events": [e.model_dump() for e in item.events],
             "result": item.result,
         }
+        self._persist_dispatch_report(analysis_id)
+        return report
+
+    def report_path(self, analysis_id: str) -> Path:
+        item = analysis_store.get(analysis_id)
+        if not item:
+            raise KeyError(analysis_id)
+        self._persist_dispatch_report(analysis_id)
+        return REPORTS_DIR / analysis_id / "dispatch_plan.json"
+
+    @staticmethod
+    def _persist_dispatch_report(analysis_id: str) -> None:
+        item = analysis_store.get(analysis_id)
+        if not item:
+            return
+        target = REPORTS_DIR / analysis_id / "dispatch_plan.json"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        payload = json.dumps({
+            "task_id": analysis_id,
+            "schema_version": "uav-dispatch-v1",
+            "input": item.input.model_dump(),
+            "status": item.status,
+            "plan_versions": item.plan_versions,
+            "rounds": item.rounds,
+            "events": [event.model_dump() for event in item.events],
+            "result": item.result,
+            "approval": item.approval,
+            "resource_locks": item.resource_locks,
+        }, ensure_ascii=False, indent=2, default=str)
+        temporary = target.with_name(f".{target.name}.{uuid4().hex}.tmp")
+        try:
+            temporary.write_text(payload, encoding="utf-8")
+            temporary.replace(target)
+        finally:
+            temporary.unlink(missing_ok=True)
+
 
     @staticmethod
     def _merge_agent_result(result: Dict[str, Any], agent: Dict[str, Any]) -> None:
         chain = agent.get("skill_chain", {})
         result["agent"] = agent
         observation = chain.get("fire_perception", {}).get("observation", {})
+        explanation = chain.get("fire_perception", {}).get("explanation")
+        if explanation:
+            result["vlm_explanation"] = explanation
+            result["explanation"] = explanation.get("summary") or result.get("explanation")
         assessment = chain.get("fire_assessment", {}).get("assessment", {}).get("data", {})
         if observation:
             result["fire_assessment"].update(

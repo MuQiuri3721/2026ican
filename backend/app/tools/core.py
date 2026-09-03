@@ -1,7 +1,11 @@
 import json
 import math
+import os
+import urllib.request
+from collections import deque
+from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional, Tuple
 
 from .base import BaseTool, ToolError, FunctionTool
 
@@ -28,6 +32,55 @@ def positive(value: float, name: str) -> float:
 
 def not_implemented(**_: Any) -> Dict[str, Any]:
     return {"status": "not_implemented", "message": "真实适配器尚未接入，当前保留接口契约。"}
+
+
+def extract_frames(video_path: str = None, interval_seconds: float = 1.0, **_: Any) -> Dict[str, Any]:
+    """Extract video frames when OpenCV is installed; never silently fabricates frames."""
+    if not video_path:
+        return {"status": "not_available", "code": "video_path_required", "frames": []}
+    try:
+        import cv2
+    except ImportError:
+        return {"status": "not_available", "code": "opencv_not_available", "message": "OpenCV 未安装，无法抽帧。", "frames": []}
+    if interval_seconds <= 0:
+        raise ToolError("invalid_input", "interval_seconds 必须大于 0")
+    capture = cv2.VideoCapture(video_path)
+    if not capture.isOpened():
+        return {"status": "not_available", "code": "video_unavailable", "frames": []}
+    fps = capture.get(cv2.CAP_PROP_FPS) or 0
+    step = max(1, round(fps * interval_seconds)) if fps else 1
+    frames, index = [], 0
+    try:
+        while True:
+            ok, _ = capture.read()
+            if not ok:
+                break
+            if index % step == 0:
+                frames.append({"frame_index": index, "timestamp_seconds": round(index / fps, 3) if fps else None})
+            index += 1
+    finally:
+        capture.release()
+    return {"status": "ok", "frames": frames, "fps": fps, "frame_count": index}
+
+
+def analyze_visual_trend(observations: list = None, **_: Any) -> Dict[str, Any]:
+    """Summarize multi-frame fire area and center movement using deterministic statistics."""
+    rows = observations or []
+    areas = [float(row.get("fire_area_m2", 0)) for row in rows if isinstance(row, dict)]
+    if len(areas) < 2:
+        return {"status": "insufficient_data", "sample_count": len(areas), "trend": "unknown", "growth_rate": None}
+    delta = areas[-1] - areas[0]
+    trend = "growing" if delta > 0 else "shrinking" if delta < 0 else "stable"
+    return {"status": "ok", "sample_count": len(areas), "trend": trend, "area_delta_m2": round(delta, 2), "growth_rate": round(delta / max(areas[0], 1), 4), "areas_m2": areas}
+
+
+def retrieve_scene_knowledge(scene_id: str = "forest-demo-01", keywords: list = None, **_: Any) -> Dict[str, Any]:
+    scene = scene_data(scene_id)
+    terms = [str(item).lower() for item in (keywords or [])]
+    knowledge = [{"topic": "scene", "text": f"{scene.get('name', scene_id)}，地形为{scene.get('terrain', '未知')}。"}, {"topic": "wind", "text": f"风速 {scene.get('wind_speed', '—')} m/s，风向 {scene.get('wind_direction', '—')}。"}, {"topic": "water", "text": f"可用水源 {len(scene.get('water_sources', []))} 处。"}]
+    if terms:
+        knowledge = [item for item in knowledge if any(term in item["text"].lower() or term in item["topic"] for term in terms)]
+    return {"status": "ok", "scene_id": scene_id, "knowledge": knowledge, "source": "local-scene-json"}
 
 
 def demo_observation(image_name: str = "default", image_path: str = None, **_: Any) -> Dict[str, Any]:
@@ -171,7 +224,32 @@ def make_next_decision(next_area_m2: float, target_area_m2: float = 300, invento
     return {"action": "continue", "reason": "当前处置有效，继续灭火并复评。"}
 
 
-# ----------------------------- V1 deterministic rules -----------------------------
+# ----------------------------- V1.1 wind band, grid FLP, simulation, charging -----------------------------
+
+@lru_cache(maxsize=1)
+def v1_config() -> Dict[str, Any]:
+    try:
+        return read_json("configs/simulation.json").get("v1", {})
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def resolve_wind_band(wind_speed: float = 0, **_: Any) -> Dict[str, Any]:
+    ws = positive(wind_speed, "wind_speed")
+    bands = v1_config().get("wind_bands") or [{"max_mps": 4.0, "k_wind": 1.0, "label": "0–4 m/s"}, {"max_mps": 6.0, "k_wind": 1.2, "label": "4–6 m/s"}, {"max_mps": 8.0, "k_wind": 1.5, "label": "6–8 m/s"}]
+    for band in bands:
+        if ws < band["max_mps"]:
+            return {"band": bands.index(band), "label": band["label"], "k_wind": band["k_wind"], "wind_speed": ws}
+    return {"band": len(bands), "label": ">8 m/s", "k_wind": v1_config().get("k_wind_over", 1.5), "wind_speed": ws}
+
+
+def resolve_slope_factor(slope_deg: float = 0, **_: Any) -> Dict[str, Any]:
+    value = positive(slope_deg, "slope_deg")
+    bands = v1_config().get("slope_bands") or [{"max_deg": 15.0, "k_slope": 1.0}, {"max_deg": 30.0, "k_slope": 1.15}, {"max_deg": 90.0, "k_slope": 1.3}]
+    for band in bands:
+        if value < band["max_deg"]:
+            return {"k_slope": band["k_slope"], "slope_deg": value}
+    return {"k_slope": bands[-1]["k_slope"], "slope_deg": value}
 
 def normalize_uav_record(record: Dict[str, Any], **_: Any) -> Dict[str, Any]:
     """Normalize legacy fleet fields while keeping legacy aliases in the response."""
@@ -283,11 +361,270 @@ def calculate_resource_gap(required: float, available: float, resource: str = "a
     return {"resource": resource, "required": required, "available": available, "gap": gap, "resource_gap": gap > 0}
 
 
+def build_fire_grid(fire_area_m2: float, wind_speed: float = 0, slope_deg: float = 0, fuel_type: str = "general_forest", intensity: float = 2, **_: Any) -> Dict[str, Any]:
+    """按 100 m² 网格折算火情负荷 B_total = Σ 10×I×K_fuel×K_wind×K_slope。"""
+    positive(fire_area_m2, "fire_area_m2")
+    config = v1_config()
+    cell_area = float(config.get("grid_cell_m2", 100))
+    cell_count = max(1, math.ceil(fire_area_m2 / cell_area))
+    band = resolve_wind_band(wind_speed)
+    slope = resolve_slope_factor(slope_deg)
+    fuel_factors = config.get("fuel_factors") or {"sparse_grass": 0.8, "general_forest": 1.0, "dense_fuel": 1.3}
+    k_fuel = float(fuel_factors.get(fuel_type, 1.0))
+    cells = [{"cell_id": index, "intensity": intensity, "k_fuel": k_fuel, "k_wind": band["k_wind"], "k_slope": slope["k_slope"]} for index in range(cell_count)]
+    loads = calculate_flp_load(cells)["cell_loads_flp"]
+    return {
+        "cell_area_m2": cell_area, "cell_count": cell_count, "cells": cells,
+        "cell_loads_flp": loads, "fire_load_flp": round(sum(loads), 2),
+        "intensity": intensity, "k_fuel": k_fuel, "k_wind": band["k_wind"], "k_slope": slope["k_slope"],
+        "wind_band": band, "fuel_type": fuel_type,
+    }
+
+
+def simulate_dispatch_candidate(selected: List[Dict[str, Any]] = None, fire_load_flp: float = 0, growth_flp_per_hour: float = 0, module: str = "water_20l", origin: Dict[str, float] = None, inventory: Dict[str, Any] = None, wind_speed: float = 0, round_minutes: float = 5, max_rounds: int = 24, **_: Any) -> Dict[str, Any]:
+    """对单个候选组合做 5 分钟离散仿真：喷洒、补给、换电、返航 SOC 硬约束。
+
+    返回控制时间、剩余 FLP、物资与换电消耗，供多目标评分 J 使用。
+    """
+    config = v1_config()
+    spray = (config.get("spray") or {}).get(module) or {"quantity": 20.0 if module == "water_20l" else 6.0, "rate_per_minute": 4.0 if module == "water_20l" else 1.5, "minutes": 5 if module == "water_20l" else 4}
+    quantity = float(spray["quantity"]); spray_minutes = float(spray["minutes"])
+    refill_minutes = float((config.get("refill_minutes") or {}).get("base", 4))
+    swap_minutes = float((config.get("charging") or {}).get("battery_swap_minutes", 5))
+    swap_soc = float((config.get("charging") or {}).get("battery_swap_soc", 95))
+    return_soc = float(config.get("return_soc_percent", 25))
+    kappa, compatible = _agent_kappa(module, fire_type="vegetation")
+    band = resolve_wind_band(wind_speed)
+    weather = (config.get("weather_efficiency") or {}).get(f"band{band['band']}", 1.0)
+    eta = (config.get("drop_efficiency") or {}).get("clear", 0.9) * weather
+    stock = dict(inventory or {})
+    if module == "water_20l":
+        loads_left = min(float(stock.get("water_liters", 0)) // quantity, float(stock.get("water_modules_w20", 0)))
+    else:
+        loads_left = float(stock.get("co2_modules_c6", 0))
+    packs_left = float(stock.get("battery_packs", 0))
+    origin = origin or {"x": 0, "y": 0}
+    growth_per_round = growth_flp_per_hour * round_minutes / 60
+    drones = []
+    for uav in selected or []:
+        pos = uav.get("position") or origin
+        distance = math.hypot(pos.get("x", 0) - origin.get("x", 0), pos.get("y", 0) - origin.get("y", 0))
+        outbound = distance / max(float(uav.get("speed_mps", 8)), 0.1) / 60
+        drones.append({"uav_id": uav.get("uav_id", "?"), "soc": float(uav.get("soc", 0)), "agent": min(quantity, float(uav.get("agent_remaining", quantity))), "energy_rate": float(uav.get("energy_rate_percent_per_hour", 270)), "payload_capacity_kg": float(uav.get("payload_capacity_kg", 25)), "outbound_minutes": outbound, "sortie_soc_cost": 0.0, "state": "ready", "sorties": 0, "swaps": 0, "refills": 0})
+    load = max(0.0, float(fire_load_flp))
+    rounds_used = 0; suppression_total = 0.0; material_used = 0.0; extra_minutes = 0.0
+    stalled_reason = None
+    per_uav = {drone["uav_id"]: drone for drone in drones}
+    max_rounds = max(1, int(max_rounds))
+    while load > 0 and rounds_used < max_rounds:
+        rounds_used += 1
+        suppression = 0.0
+        for drone in drones:
+            if drone["state"] != "ready" or load <= 0:
+                continue
+            load_ratio = min(quantity / max(drone["payload_capacity_kg"], 1), 1.0)
+            cost = drone["energy_rate"] * (1 + 0.45 * load_ratio) * (2 * drone["outbound_minutes"] + spray_minutes) / 60
+            drone["sortie_soc_cost"] = round(cost, 2)
+            if drone["agent"] < quantity:
+                if loads_left >= 1:
+                    loads_left -= 1; drone["agent"] = quantity; drone["refills"] += 1; extra_minutes += refill_minutes
+                else:
+                    drone["state"] = "out_of_agent"; stalled_reason = stalled_reason or "agent_insufficient"; continue
+            if drone["soc"] - cost < return_soc:
+                if packs_left >= 1:
+                    packs_left -= 1; drone["soc"] = swap_soc; drone["swaps"] += 1; extra_minutes += swap_minutes
+                else:
+                    drone["state"] = "out_of_energy"; stalled_reason = stalled_reason or "soc_below_return"; continue
+            drone["soc"] = round(drone["soc"] - cost, 2)
+            drone["agent"] = round(drone["agent"] - quantity, 2)
+            drone["sorties"] += 1
+            material_used += quantity
+            suppression += quantity * kappa * eta
+        suppression_total += suppression
+        load = max(0.0, load + growth_per_round - suppression)
+        if load > 0 and all(drone["state"] != "ready" for drone in drones):
+            break
+    flight_overhead = 2 * max((drone["outbound_minutes"] for drone in drones), default=0.0)
+    control_minutes = rounds_used * round_minutes + flight_overhead + extra_minutes if rounds_used else 0.0
+    controlled = load <= 0
+    return {
+        "controlled": controlled, "control_minutes": round(control_minutes, 1) if controlled else None,
+        "rounds_used": rounds_used, "residual_flp": round(load, 2), "suppression_flp": round(suppression_total, 2),
+        "growth_unchecked": not controlled and suppression <= growth_per_round,
+        "material_used": round(material_used, 2), "module": module, "kappa": kappa, "eta": round(eta, 3),
+        "swaps": sum(d["swaps"] for d in drones), "refills": sum(d["refills"] for d in drones),
+        "stalled_reason": stalled_reason, "compatible": compatible,
+        "per_uav": [{key: drone[key] for key in ("uav_id", "soc", "sortie_soc_cost", "sorties", "swaps", "refills", "state")} for drone in drones],
+    }
+
+
 def score_dispatch_plan(time_norm: float = 0, residual_norm: float = 0, energy_norm: float = 0, material_norm: float = 0, change_norm: float = 0, **_: Any) -> Dict[str, Any]:
     score = 0.40 * time_norm + 0.30 * residual_norm + 0.15 * energy_norm + 0.10 * material_norm + 0.05 * change_norm
     return {"score": round(score, 6), "lower_is_better": True}
 
 
-def build_core_tools():
-    handlers = {"extract_frames": not_implemented, "detect_fire": demo_observation, "calculate_fire_metrics": calculate_fire_metrics, "analyze_visual_trend": not_implemented, "analyze_with_vlm": not_implemented, "get_water_sources": get_water_sources, "calculate_wind_vector": calculate_wind_vector, "predict_spread": predict_spread, "retrieve_scene_knowledge": not_implemented, "assess_fire_level": assess_fire_level, "estimate_growth": estimate_growth, "match_extinguisher": match_extinguisher, "calculate_resource_need": calculate_resource_need, "validate_plan": validate_plan, "calculate_drone_count": calculate_drone_count, "assign_tasks": assign_tasks, "calculate_distance": calculate_distance, "plan_route": plan_route, "check_battery": check_battery, "check_payload": check_payload, "execute_firefighting": execute_firefighting, "resupply": resupply, "return_to_charge": return_to_charge, "update_fire_state": update_fire_state, "evaluate_result": evaluate_result, "make_next_decision": make_next_decision, "normalize_uav_record": normalize_uav_record, "get_fleet_status_v1": get_fleet_status_v1, "get_inventory_v1": get_inventory_v1, "calculate_energy_consumption": calculate_energy_consumption, "calculate_soc_need": calculate_soc_need, "check_uav_feasibility": check_uav_feasibility, "select_water_source": select_water_source, "calculate_flp_load": calculate_flp_load, "calculate_agent_effective_flp": calculate_agent_effective_flp, "simulate_fire_round": simulate_fire_round, "simulate_supply_cycle": simulate_supply_cycle, "transition_uav_state": transition_uav_state, "calculate_resource_gap": calculate_resource_gap, "score_dispatch_plan": score_dispatch_plan}
-    return [FunctionTool(name, handler, "V1 确定性规则 Tool。", "rules" if handler is not not_implemented else "demo-stub") for name, handler in handlers.items()]
+def score_candidate_plan(control_minutes: Optional[float], residual_flp: float, fire_load_flp: float, energy_total: float, uav_count: int, material_used: float, changes: int, **_: Any) -> Dict[str, Any]:
+    """按 J = 0.40T + 0.30B + 0.15E + 0.10M + 0.05N 归一化评分，J 越小越优。"""
+    config = v1_config()
+    weights = config.get("scoring_weights") or {"time": 0.4, "residual": 0.3, "energy": 0.15, "material": 0.1, "change": 0.05}
+    refs = config.get("scoring_refs") or {"time_ref_minutes": 120, "energy_ref_per_uav": 100, "material_ref_liters": 80, "change_ref_rounds": 4}
+    time_norm = min(max((control_minutes or refs["time_ref_minutes"] * 2) / refs["time_ref_minutes"], 0), 1) if control_minutes else 1.0
+    residual_norm = min(max(residual_flp / max(fire_load_flp, 1), 0), 1)
+    energy_norm = min(max(energy_total / max(uav_count * refs["energy_ref_per_uav"], 1), 0), 1)
+    material_norm = min(max(material_used / refs["material_ref_liters"], 0), 1)
+    change_norm = min(max(changes / refs["change_ref_rounds"], 0), 1)
+    score = weights["time"] * time_norm + weights["residual"] * residual_norm + weights["energy"] * energy_norm + weights["material"] * material_norm + weights["change"] * change_norm
+    return {"score": round(score, 4), "lower_is_better": True, "parts": {"time": round(time_norm, 3), "residual": round(residual_norm, 3), "energy": round(energy_norm, 3), "material": round(material_norm, 3), "change": round(change_norm, 3)}}
+
+
+def charge_battery(soc: float, minutes: float, mode: str = "base", **_: Any) -> Dict[str, Any]:
+    positive(soc, "soc"); positive(minutes, "minutes")
+    config = v1_config().get("charging") or {}
+    rate = float(config.get("forward_soc_per_hour", 60) if mode == "forward" else config.get("base_soc_per_hour", 100))
+    return {"mode": mode, "soc_per_hour": rate, "minutes": minutes, "soc_after": round(min(100.0, soc + rate * minutes / 60), 2)}
+
+
+def swap_battery(**_: Any) -> Dict[str, Any]:
+    config = v1_config().get("charging") or {}
+    return {"minutes": float(config.get("battery_swap_minutes", 5)), "soc_after": float(config.get("battery_swap_soc", 95)), "requires_battery_pack": True, "note": "同型号电池换电，库存-1，旧包进入 charging"}
+
+
+def plan_evacuation_route(start: List[int] = None, exit_cell: List[int] = None, blocked: List[List[int]] = None, grid_cols: int = 12, grid_rows: int = 12, cell_meters: float = 20, walk_speed_mps: float = 1.2, **_: Any) -> Dict[str, Any]:
+    """小型网格 BFS 疏散路线：避开火点/烟雾风险网格，输出路径与预估时间。"""
+    start = tuple(start or [0, 0]); goal = tuple(exit_cell or [grid_cols - 1, grid_rows - 1])
+    blocked_set = {tuple(cell) for cell in (blocked or [])}
+    if start in blocked_set or goal in blocked_set:
+        return {"found": False, "reason": "起点或出口位于风险网格内", "path": [], "estimated_minutes": None}
+    queue = deque([(start, [start])]); visited = {start}
+    while queue:
+        (x, y), path = queue.popleft()
+        if (x, y) == goal:
+            minutes = (len(path) - 1) * cell_meters / walk_speed_mps / 60
+            return {"found": True, "path": [list(cell) for cell in path], "steps": len(path) - 1, "estimated_minutes": round(minutes, 2), "cell_meters": cell_meters}
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < grid_cols and 0 <= ny < grid_rows and (nx, ny) not in blocked_set and (nx, ny) not in visited:
+                visited.add((nx, ny)); queue.append(((nx, ny), path + [(nx, ny)]))
+    return {"found": False, "reason": "风险网格封死了全部出口路径", "path": [], "estimated_minutes": None}
+
+
+def _agent_kappa(module: str, fire_type: str = "vegetation") -> Tuple[float, bool]:
+    kappa_table = v1_config().get("kappa") or {"vegetation": {"water_20l": 1.0, "co2_6kg": 0.25}, "electrical": {"water_20l": 0.0, "co2_6kg": 1.5}}
+    kappa = float((kappa_table.get(fire_type) or {}).get(module, 0.0))
+    return kappa, kappa > 0
+
+
+def vlm_explain_fire(observation: Dict[str, Any] = None, environment: Dict[str, Any] = None, people_status: str = "unknown", **_: Any) -> Dict[str, Any]:
+    """规则回退版结构化火情解释：只复述既有观测数字，不生成任何关键数值。"""
+    observation = observation or {}
+    detections = observation.get("detections") or []
+    fires = [d for d in detections if d.get("class_name") == "fire"]
+    smokes = [d for d in detections if d.get("class_name") == "smoke"]
+    confidence = observation.get("confidence")
+    conflicts, anomalies = [], []
+    if fires and not smokes:
+        conflicts.append("检测到明火但未见烟雾：请复核影像时间戳或拍摄角度。")
+    if smokes and not fires:
+        anomalies.append("仅见烟雾未定位明火：火点可能在烟雾下方或影像覆盖之外，建议侦察机抵近复核。")
+    if confidence is not None and float(confidence) < 0.6:
+        anomalies.append("检测置信度偏低：建议侦察无人机低空复核后再生成方案。")
+    summary = (
+        f"影像共识别明火 {len(fires)} 处、烟雾 {len(smokes)} 处；"
+        f"火情面积约 {observation.get('fire_area_m2', '—')} m²，烟雾覆盖约 {observation.get('smoke_area_m2', '—')} m²。"
+    )
+    people = people_status if people_status in {"confirmed", "absent", "unknown"} else "unknown"
+    if people == "unknown":
+        conflicts.append("人员状态不确定：方案生成前需要用户确认是否有人。")
+    road = (environment or {}).get("road_context") or {}
+    nearest_road = road.get("nearest_transport") or {}
+    return {
+        "summary": summary,
+        "people": people,
+        "buildings": "影像中未见明显建筑目标" if not any(d.get("class_name") == "building" for d in detections) else "影像中检测到建筑目标，需评估火势蔓延风险",
+        "roads": nearest_road.get("name") or "暂无道路数据",
+        "obstacles": "未见明显障碍物" if not any(d.get("class_name") == "obstacle" for d in detections) else "影像中存在障碍物，航线需避让",
+        "fire_trend": f"当前增长率 {observation.get('growth_rate', '—')}/h，需结合下一轮影像复核火势方向",
+        "conflicts": conflicts, "anomalies": anomalies,
+        "source": "rule-explainer-fallback", "mode": "fallback",
+    }
+
+
+def _validate_external_payload(value: Any, required: Tuple[str, ...], kind: str) -> Dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{kind} 响应必须是 JSON object")
+    missing = [key for key in required if key not in value]
+    if missing:
+        raise ValueError(f"{kind} 响应缺少字段: {', '.join(missing)}")
+    if kind == "detect_fire" and not isinstance(value.get("detections"), list):
+        raise ValueError("detect_fire.detections 必须是数组")
+    return value
+
+
+def detect_fire(image_name: str = "default", image_path: Optional[str] = None, strict_real: bool = False, **_: Any) -> Dict[str, Any]:
+    """调用真实检测适配器；strict_real 下不以 fixture 掩盖外部失败。"""
+    endpoint = os.environ.get("FIRE_YOLO_ENDPOINT")
+    if endpoint and image_path:
+        try:
+            payload = Path(image_path).read_bytes()
+            request = urllib.request.Request(endpoint, data=payload, headers={"Content-Type": "application/octet-stream"})
+            with urllib.request.urlopen(request, timeout=5) as response:
+                result = _validate_external_payload(json.loads(response.read().decode()), ("detections",), "detect_fire")
+            result.update({"mode": "real", "source": "pwm-yolo-adapter", "image_name": image_name, "image_path": image_path})
+            return result
+        except Exception as error:
+            if strict_real:
+                return {"status": "error", "mode": "real", "source": "pwm-yolo-adapter", "error": {"code": "detector_unavailable", "message": str(error)}, "detections": []}
+            observation = demo_observation(image_name, image_path)
+            observation["adapter_fallback"] = {"code": "yolo_endpoint_unavailable", "message": str(error)}
+            return observation
+    return demo_observation(image_name, image_path)
+
+
+def analyze_with_vlm(observation: Dict[str, Any] = None, environment: Dict[str, Any] = None, people_status: str = "unknown", strict_real: bool = False, **_: Any) -> Dict[str, Any]:
+    """调用 VLM 并校验 object 响应；strict_real 下外部失败返回结构化错误。"""
+    endpoint = os.environ.get("FIRE_VLM_ENDPOINT")
+    if endpoint:
+        try:
+            body = json.dumps({"observation": observation or {}, "environment": environment or {}, "people_status": people_status}).encode()
+            request = urllib.request.Request(endpoint, data=body, headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(request, timeout=5) as response:
+                result = _validate_external_payload(json.loads(response.read().decode()), (), "analyze_with_vlm")
+            result.setdefault("source", "vlm-adapter"); result["mode"] = "real"
+            return result
+        except Exception as error:
+            if strict_real:
+                return {"status": "error", "mode": "real", "source": "vlm-adapter", "error": {"code": "vlm_unavailable", "message": str(error)}}
+            explanation = vlm_explain_fire(observation, environment, people_status)
+            explanation["adapter_fallback"] = {"code": "vlm_endpoint_unavailable", "message": str(error)}
+            return explanation
+    return vlm_explain_fire(observation, environment, people_status)
+
+
+def build_core_tools() -> List[BaseTool]:
+    """构建确定性核心工具注册表，兼容旧的函数式 registry。"""
+    handlers = {
+        "detect_fire": detect_fire, "calculate_fire_metrics": calculate_fire_metrics,
+        "analyze_with_vlm": analyze_with_vlm, "get_water_sources": get_water_sources,
+        "calculate_wind_vector": calculate_wind_vector, "predict_spread": predict_spread,
+        "assess_fire_level": assess_fire_level, "estimate_growth": estimate_growth,
+        "match_extinguisher": match_extinguisher, "calculate_resource_need": calculate_resource_need,
+        "validate_plan": validate_plan, "calculate_drone_count": calculate_drone_count,
+        "assign_tasks": assign_tasks, "calculate_distance": calculate_distance, "plan_route": plan_route,
+        "check_battery": check_battery, "check_payload": check_payload, "execute_firefighting": execute_firefighting,
+        "resupply": resupply, "return_to_charge": return_to_charge, "update_fire_state": update_fire_state,
+        "evaluate_result": evaluate_result, "make_next_decision": make_next_decision,
+        "normalize_uav_record": normalize_uav_record, "get_fleet_status_v1": get_fleet_status_v1,
+        "get_inventory_v1": get_inventory_v1, "calculate_energy_consumption": calculate_energy_consumption,
+        "calculate_soc_need": calculate_soc_need, "check_uav_feasibility": check_uav_feasibility,
+        "select_water_source": select_water_source, "calculate_flp_load": calculate_flp_load,
+        "calculate_agent_effective_flp": calculate_agent_effective_flp, "simulate_fire_round": simulate_fire_round,
+        "simulate_supply_cycle": simulate_supply_cycle, "transition_uav_state": transition_uav_state,
+        "calculate_resource_gap": calculate_resource_gap, "score_dispatch_plan": score_dispatch_plan,
+        "resolve_wind_band": resolve_wind_band, "resolve_slope_factor": resolve_slope_factor,
+        "build_fire_grid": build_fire_grid, "simulate_dispatch_candidate": simulate_dispatch_candidate,
+        "score_candidate_plan": score_candidate_plan, "charge_battery": charge_battery,
+        "swap_battery": swap_battery, "plan_evacuation_route": plan_evacuation_route,
+        "vlm_explain_fire": vlm_explain_fire, "extract_frames": extract_frames,
+        "analyze_visual_trend": analyze_visual_trend, "retrieve_scene_knowledge": retrieve_scene_knowledge,
+    }
+    return [FunctionTool(name, handler, "V1 确定性规则 Tool。", "rules") for name, handler in handlers.items()]
