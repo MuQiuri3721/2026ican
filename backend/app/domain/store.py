@@ -22,13 +22,19 @@ class AnalysisStore:
         with self._lock:
             return self._items.get(analysis_id)
 
+    def list(self) -> List[AnalysisEnvelope]:
+        with self._lock:
+            return list(reversed(list(self._items.values())))
+
     def update(self, analysis_id: str, **changes) -> AnalysisEnvelope:
         with self._lock:
-            item = self._items[analysis_id]
+            item = self._items.get(analysis_id)
+            if item is None:
+                raise KeyError("分析任务不存在: " + analysis_id)
             changes["updated_at"] = datetime.now().isoformat(timespec="seconds")
             for key, value in changes.items():
                 setattr(item, key, value)
-            return item
+            return item.model_copy(deep=True) if hasattr(item, "model_copy") else item
 
     def add_event(self, analysis_id: str, stage: str, message: str, source: str = "system") -> AnalysisEnvelope:
         item = self.get(analysis_id)

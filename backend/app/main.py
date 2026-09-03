@@ -14,10 +14,12 @@ from .domain.store import analysis_store
 from .pipeline import run_demo_analysis, simulate_monitor
 from .skills.fire_analysis import build_skill_registry
 from .skills.orchestrator import SkillOrchestrator
+from .services.analysis_service import AnalysisService
 
 
 skill_registry = build_skill_registry()
 skill_orchestrator = SkillOrchestrator(skill_registry)
+analysis_service = AnalysisService(skill_orchestrator)
 
 
 UPLOAD_DIR = Path(__file__).resolve().parents[2] / "uploads"
@@ -77,11 +79,17 @@ def list_skills():
 @app.post("/api/skills/{skill_name}/run")
 def run_skill(skill_name: str, request: AnalyzeRequest):
     try:
-        return {"skill": skill_name, **skill_orchestrator.run(skill_name, {"scene_id": request.scene_id, "image_name": request.image_name})}
+        return {"skill": skill_name, **skill_orchestrator.run(skill_name, {"scene_id": request.scene_id, "image_name": request.image_name, "image_path": request.image_path})}
     except KeyError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.get("/api/analyzes")
+def list_analyses():
+    items = analysis_store.list()
+    return {"items": [item.model_dump() if hasattr(item, "model_dump") else item.dict() for item in items]}
 
 
 @app.get("/api/analyze/{analysis_id}")
@@ -89,7 +97,7 @@ def get_analysis(analysis_id: str):
     item = analysis_store.get(analysis_id)
     if item is None:
         raise HTTPException(status_code=404, detail="分析任务不存在")
-    return item.dict()
+    return item.model_dump() if hasattr(item, "model_dump") else item.dict()
 
 
 @app.get("/api/analyze/{analysis_id}/events")
@@ -97,7 +105,7 @@ def get_analysis_events(analysis_id: str):
     item = analysis_store.get(analysis_id)
     if item is None:
         raise HTTPException(status_code=404, detail="分析任务不存在")
-    return {"analysis_id": analysis_id, "events": [event.dict() for event in item.events]}
+    return {"analysis_id": analysis_id, "events": [event.model_dump() if hasattr(event, "model_dump") else event.dict() for event in item.events]}
 
 
 @app.post("/api/analyze/upload")
@@ -121,20 +129,7 @@ async def analyze_upload(scene_id: str = "forest-demo-01", use_vlm: bool = False
             output.write(chunk)
     _validate_upload_signature(target, file.content_type)
     request = AnalysisInput(scene_id=scene_id, image_name=safe_name, image_path=str(target), use_vlm=use_vlm)
-    item = analysis_store.create(request.dict())
-    analysis_store.update(item.analysis_id, status="running")
-    analysis_store.add_event(item.analysis_id, "ingest", "影像已接入", "upload")
-    try:
-        result = run_demo_analysis(scene_id, safe_name)
-        chain = skill_orchestrator.run_analysis({"scene_id": scene_id, "image_name": safe_name, "image_path": str(target)})
-        result["fire_assessment"].update({key: chain["skill_chain"]["fire_assessment"]["assessment"]["data"].get(key, result["fire_assessment"].get(key)) for key in ["fire_area_m2", "smoke_area_m2", "growth_rate", "confidence", "risk_score", "level", "label"]})
-        result["agent"] = chain
-        analysis_store.update(item.analysis_id, status="succeeded", result=result, stages=result.get("pipeline_stages", []))
-        analysis_store.add_event(item.analysis_id, "dispatch", "规则调度方案已生成", "rules")
-        return analysis_store.get(item.analysis_id).dict()
-    except ValueError as error:
-        analysis_store.update(item.analysis_id, status="failed", error={"error_code": "analysis_failed", "message": str(error), "stage": "pipeline"})
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    return analysis_service.create_and_run(request)
 
 
 def _update_monitor_state(analysis_id: str, item, monitor_result: dict) -> None:
@@ -166,14 +161,6 @@ def monitor(analysis_id: str, request: MonitorRequest):
 
 @app.post("/api/analyze")
 def analyze(request: AnalyzeRequest):
-    try:
-        result = run_demo_analysis(request.scene_id, request.image_name or request.image_path)
-        result["agent"] = skill_orchestrator.run_analysis({"scene_id": request.scene_id, "image_name": request.image_name, "image_path": request.image_path})
-        assessment = result["agent"]["skill_chain"]["fire_assessment"]["assessment"].get("data", {})
-        result["fire_assessment"].update({key: assessment[key] for key in ["fire_area_m2", "smoke_area_m2", "growth_rate", "confidence", "risk_score", "level", "label"] if key in assessment})
-    except ValueError as error:
-        raise HTTPException(status_code=404, detail=str(error)) from error
-    item = analysis_store.create(request.dict())
-    analysis_store.update(item.analysis_id, status="succeeded", result=result, stages=result.get("pipeline_stages", []))
-    analysis_store.add_event(item.analysis_id, "dispatch", "规则调度方案已生成", "rules")
-    return analysis_store.get(item.analysis_id).dict()
+    return analysis_service.create_and_run(request)
+
+
