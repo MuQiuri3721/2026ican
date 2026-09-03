@@ -20,13 +20,24 @@ class EnvironmentAssessmentSkill(BaseSkill):
     name = "environment_assessment"
     def run(self, context):
         scene_id = context.get("scene_id", "forest-demo-01")
-        environment = self.registry.execute("get_environment", {"scene_id": scene_id})
+        environment = self.registry.execute("get_environment", {
+            "scene_id": scene_id,
+            "latitude": context.get("latitude"),
+            "longitude": context.get("longitude"),
+            "water_radius_m": context.get("water_search_radius_m", 3000),
+            "road_radius_m": context.get("road_search_radius_m", 3000),
+        })
         if not environment.get("ok"): return environment
         scene = environment["data"]
-        source = scene.get("water_sources", [{}])[0]
-        wind_vector = self.registry.execute("calculate_wind_vector", {"wind_speed": scene["wind_speed"], "wind_direction_deg": scene.get("wind_direction_deg", 315)})
+        nearest = scene.get("nearest_water")
+        if nearest is None:
+            sources = scene.get("water_sources")
+            nearest = sources[0] if isinstance(sources, list) and sources else {}
+        wind_speed = scene.get("wind_speed") or 0
+        wind_direction = scene.get("wind_direction")
+        wind_vector = self.registry.execute("calculate_wind_vector", {"wind_speed": wind_speed, "wind_direction_deg": scene.get("wind_direction_deg", 315)})
         spread = self.registry.execute("predict_spread", {"origin": scene.get("fire_origin", {"x": 0, "y": 0}), "wind_vector": wind_vector.get("data", {"x": 0, "y": 0})})
-        return {"environment": scene, "water_sources": self.registry.execute("get_water_sources", {"scene_id": scene_id}), "wind_vector": wind_vector, "spread": spread, "nearest_water_distance_m": source.get("distance_m", 0)}
+        return {"environment": scene, "environment_source": {"mode": scene.get("mode"), "source": scene.get("source"), "status": scene.get("status")}, "water_sources": {"ok": True, "data": {"sources": scene.get("water_sources", [])}}, "wind_vector": wind_vector, "spread": spread, "nearest_water_distance_m": (nearest or {}).get("distance_m")}
 class FireAssessmentSkill(BaseSkill):
     name = "fire_assessment"
     def run(self, context):

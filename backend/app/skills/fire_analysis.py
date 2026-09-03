@@ -12,6 +12,7 @@ class FireAnalysisSkill:
         self.registry = registry or build_registry()
         self.planner = planner or AnalysisPlanner()
     def run(self, scene_id: str = "forest-demo-01", image_name: Optional[str] = None) -> Dict[str, Any]:
+        context = {}
         if isinstance(scene_id, dict):
             context = scene_id
             scene_id = context.get("scene_id", "forest-demo-01")
@@ -20,11 +21,23 @@ class FireAnalysisSkill:
         handlers = {
             "ingest": lambda context: {"image_name": image_name, "accepted": True},
             "vision": lambda context: {"mode": "demo", "provider": "yolo-pending"},
-            "environment": lambda context: self.registry.execute("get_environment", {"scene_id": scene_id}),
+            "environment": lambda context: self.registry.execute("get_environment", {
+                "scene_id": scene_id,
+                "latitude": context.get("latitude"),
+                "longitude": context.get("longitude"),
+                "water_radius_m": context.get("water_search_radius_m", 3000),
+                "road_radius_m": context.get("road_search_radius_m", 3000),
+            }),
             "assessment": lambda context: {"mode": "rules", "status": "delegated-to-pipeline"},
             "dispatch": lambda context: {"status": "delegated-to-pipeline"},
         }
-        plan = PlanExecutor().run(plan, handlers, {"scene_id": scene_id, "image_name": image_name})
+        plan = PlanExecutor().run(plan, handlers, {
+            "scene_id": scene_id, "image_name": image_name,
+            "latitude": context.get("latitude") if isinstance(context, dict) else None,
+            "longitude": context.get("longitude") if isinstance(context, dict) else None,
+            "water_search_radius_m": context.get("water_search_radius_m", 3000) if isinstance(context, dict) else 3000,
+            "road_search_radius_m": context.get("road_search_radius_m", 3000) if isinstance(context, dict) else 3000,
+        })
         return {"plan": plan.as_dict(), "analysis": run_demo_analysis(scene_id, image_name)}
 
 

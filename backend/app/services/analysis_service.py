@@ -26,6 +26,11 @@ class AnalysisService:
                 "scene_id": request.scene_id,
                 "image_name": request.image_name or "default",
                 "image_path": request.image_path,
+                "latitude": request.latitude,
+                "longitude": request.longitude,
+                "environment_mode": request.environment_mode,
+                "water_search_radius_m": request.water_search_radius_m,
+                "road_search_radius_m": request.road_search_radius_m,
             }
             agent = self.orchestrator.run_analysis(context)
             result = run_demo_analysis(request.scene_id, request.image_name or request.image_path)
@@ -99,3 +104,21 @@ class AnalysisService:
         if assignment:
             result["dispatch_plan"]["tasks"] = assignment.get("tasks", result["dispatch_plan"].get("tasks", []))
         result["data_mode"] = agent.get("data_mode", result.get("data_mode"))
+        env = chain.get("environment_assessment", {})
+        if env.get("environment_source"):
+            source = env["environment_source"]
+            result["environment_source"] = source
+            environment = env.get("environment") or {}
+            # Keep the persisted analysis environment contract aligned with the
+            # tool output, while retaining demo values when a field is absent.
+            result["environment"].update({
+                key: environment[key]
+                for key in (
+                    "mode", "status", "source", "wind_speed", "wind_direction",
+                    "wind_direction_deg", "altitude", "terrain", "water_sources",
+                    "nearest_water", "preferred_water", "road_context", "landcover", "raw",
+                )
+                if key in environment
+            })
+            if env.get("nearest_water_distance_m") is not None:
+                result["environment"]["nearest_water_distance_m"] = env["nearest_water_distance_m"]

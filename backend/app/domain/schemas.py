@@ -10,6 +10,11 @@ class AnalysisInput(BaseModel):
     file_id: Optional[str] = None
     use_vlm: bool = False
     fleet_snapshot: str = "default"
+    latitude: Optional[float] = Field(default=None, ge=-90, le=90)
+    longitude: Optional[float] = Field(default=None, ge=-180, le=180)
+    environment_mode: Optional[str] = None
+    water_search_radius_m: int = Field(default=3000, gt=0, le=50000)
+    road_search_radius_m: int = Field(default=3000, gt=0, le=50000)
 
 
 class MonitorInput(BaseModel):

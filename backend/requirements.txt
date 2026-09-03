@@ -1,3 +1,11 @@
 fastapi
 uvicorn[standard]
 pydantic
+# Optional geospatial environment stack; EnvironmentTool falls back to demo when absent.
+numpy
+requests
+rasterio
+pyproj
+shapely
+pystac-client
+planetary-computer
