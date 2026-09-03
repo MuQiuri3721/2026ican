@@ -24,23 +24,29 @@ import {
 const activeTab = ref('command')
 const viewTab = ref('overview')
 const analyzing = ref(false)
+const monitoring = ref(false)
 const uploaded = ref(false)
 const selectedFile = ref(null)
 const previewUrl = ref('')
 const fileInput = ref(null)
 const progress = ref(0)
 const errorMessage = ref('')
+const analysisEnvelope = ref(null)
 const analysisResult = ref(null)
 const analysisId = ref('')
+const stages = ref([])
+const eventsRequestToken = ref(0)
+const historyTasks = ref([])
+const historyLoading = ref(false)
 const taskStatus = ref('待命')
 const currentStage = ref('等待影像接入')
 const monitorResult = ref(null)
 const serviceOnline = ref(false)
 const projectStatus = ref({ framework: 'checking', demo_pipeline: 'checking', yolo: 'pending', vlm: 'pending', geo_data: 'demo-data' })
 const logs = ref([
-  '系统已连接 · 等待新的侦察数据',
-  '场景「青龙山演示林区」已载入',
-  '三架无人机状态同步完成',
+  { timestamp: '', stage: 'system', source: 'local', message: '系统已连接 · 等待新的侦察数据' },
+  { timestamp: '', stage: 'scene', source: 'local', message: '场景「青龙山演示林区」已载入' },
+  { timestamp: '', stage: 'fleet', source: 'local', message: '三架无人机状态同步完成' },
 ])
 
 const scene = {
@@ -80,6 +86,9 @@ const fallbackResult = {
 }
 
 const result = computed(() => analysisResult.value || fallbackResult)
+const statusLabels = { succeeded: '已完成', completed: '已完成', running: '执行中', action_required: '需要处置', failed: '失败', queued: '排队中' }
+const displayStatus = computed(() => statusLabels[analysisEnvelope.value?.status] || analysisEnvelope.value?.status || taskStatus.value)
+const monitorArea = computed(() => monitorResult.value?.next_fire_area_m2 ?? result.value.fire_assessment.fire_area_m2)
 const dataMode = computed(() => result.value.data_mode || '本地演示数据 · 规则引擎')
 const metrics = computed(() => [
   { label: '火焰面积', value: formatNumber(result.value.fire_assessment.fire_area_m2), unit: 'm²', change: '+12.4%', tone: 'orange', icon: Flame },
@@ -106,11 +115,81 @@ function selectNav(id) {
 
 function selectView(id) {
   viewTab.value = id
-  activeTab.value = id === 'monitor' ? 'map' : id === 'history' ? 'logs' : 'command'
+  if (id === 'monitor') activeTab.value = 'map'
+  else if (id === 'history') activeTab.value = 'logs'
+  else if (id === 'overview') activeTab.value = 'command'
+  if (id === 'history') loadHistory()
 }
 
-function addLog(message) {
-  logs.value.unshift(message)
+function addLog(message, details = {}) {
+  logs.value.unshift({ timestamp: new Date().toISOString(), stage: 'ui', source: 'frontend', message, ...details })
+}
+
+function logText(log) {
+  return typeof log === 'string' ? log : log.message
+}
+
+function logTime(log, index) {
+  if (typeof log === 'object' && log.timestamp) return log.timestamp.slice(11, 19)
+  return `09:${String(20 - index).padStart(2, '0')}`
+}
+
+function selectHistoryTask(task) {
+  if (!task?.analysis_id) return
+  applyEnvelope(task)
+  monitorResult.value = task.result?.monitor || null
+  currentStage.value = task.stages?.at(-1)?.stage || task.stages?.at(-1)?.name || '历史任务已恢复'
+  if (Array.isArray(task.stages)) stages.value = task.stages
+  if (Array.isArray(task.result?.fleet)) updateDrones(task.result)
+  loadEvents(task.analysis_id)
+  viewTab.value = 'overview'
+  activeTab.value = 'command'
+}
+
+function updateDrones(payload) {
+  if (!Array.isArray(payload?.fleet)) return
+  drones.value = payload.fleet.map((drone) => ({ ...drone, label: drone.role === 'reconnaissance' ? '侦察蜂' : drone.role === 'firefighting' ? '灭火蜂' : '支援蜂', color: drone.role === 'reconnaissance' ? 'blue' : drone.role === 'firefighting' ? 'orange' : 'green', task: payload.dispatch_plan?.tasks?.find((task) => task.drone_id === drone.id)?.task || '待命' }))
+}
+
+function applyEnvelope(payload) {
+  const envelope = payload?.payload || payload
+  analysisEnvelope.value = envelope
+  analysisId.value = envelope?.analysis_id || ''
+  analysisResult.value = envelope?.result || null
+  stages.value = Array.isArray(envelope?.stages) ? envelope.stages : []
+  taskStatus.value = statusLabels[envelope?.status] || envelope?.status || '待命'
+  currentStage.value = stages.value.at(-1)?.stage || stages.value.at(-1)?.name || currentStage.value
+  updateDrones(analysisResult.value)
+}
+
+async function loadEvents(id = analysisId.value) {
+  if (!id) return
+  const requestToken = ++eventsRequestToken.value
+  try {
+    const response = await fetch(`/api/analyze/${id}/events`)
+    if (!response.ok) throw new Error('事件接口不可用')
+    const payload = await response.json()
+    if (requestToken !== eventsRequestToken.value || id !== analysisId.value) return
+    logs.value = Array.isArray(payload.events) ? payload.events : []
+  } catch (error) {
+    if (requestToken === eventsRequestToken.value) logs.value = []
+    console.warn(error)
+  }
+}
+
+async function loadHistory() {
+  historyLoading.value = true
+  try {
+    const response = await fetch('/api/analyzes')
+    if (!response.ok) throw new Error('历史任务接口不可用')
+    historyTasks.value = (await response.json()).items || []
+  } catch (error) {
+    historyTasks.value = []
+    addLog('历史任务暂不可用 · 保持当前本地状态')
+    console.warn(error)
+  } finally {
+    historyLoading.value = false
+  }
 }
 
 async function loadServiceStatus() {
@@ -196,17 +275,18 @@ async function startAnalysis() {
     const response = await fetch('/api/analyze/upload', { method: 'POST', body: formData })
     if (!response.ok) throw new Error(`分析服务返回 ${response.status}`)
     const payload = await response.json()
-    analysisId.value = payload.analysis_id || ''
-    analysisResult.value = payload.result || payload
-    taskStatus.value = '执行中'
+    applyEnvelope(payload)
+    await loadEvents(analysisId.value)
+    if (!analysisResult.value) throw new Error('分析响应缺少 result')
     currentStage.value = '调度方案已生成'
-    if (analysisResult.value.fleet) {
-      drones.value = analysisResult.value.fleet.map((drone) => ({ ...drone, label: drone.role === 'reconnaissance' ? '侦察蜂' : drone.role === 'firefighting' ? '灭火蜂' : '支援蜂', color: drone.role === 'reconnaissance' ? 'blue' : drone.role === 'firefighting' ? 'orange' : 'green', task: analysisResult.value.dispatch_plan.tasks.find((task) => task.drone_id === drone.id)?.task || '待命' }))
-    }
     progress.value = 100
     addLog('研判完成 · 建议立即处置')
   } catch (error) {
+    analysisEnvelope.value = null
     analysisResult.value = fallbackResult
+    analysisId.value = ''
+    stages.value = []
+    monitorResult.value = null
     taskStatus.value = '本地演示'
     currentStage.value = '已切换本地演示结果'
     progress.value = 100
@@ -219,22 +299,43 @@ async function startAnalysis() {
 }
 
 async function runMonitor() {
-  if (!analysisId.value) return
+  if (!analysisId.value || monitoring.value) return
+  const monitoredId = analysisId.value
+  monitoring.value = true
   try {
-    const response = await fetch(`/api/monitor/${analysisId.value}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ elapsed_minutes: 5, extinguishing_liters: 40 }) })
+    const response = await fetch(`/api/monitor/${monitoredId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ elapsed_minutes: 5, extinguishing_liters: 40 }) })
     if (!response.ok) throw new Error('监测接口不可用')
-    monitorResult.value = await response.json()
-    taskStatus.value = monitorResult.value.status === 'completed' ? '已完成' : monitorResult.value.status === 'action_required' ? '需要处置' : '执行中'
-    addLog(`第 2 轮监测完成 · 下一步：${monitorResult.value.action}`)
+    const payload = await response.json()
+    if (monitoredId !== analysisId.value) return
+    const envelope = payload?.payload || payload
+    const updatedResult = envelope?.result || null
+    monitorResult.value = updatedResult?.monitor || payload?.monitor || payload
+    analysisEnvelope.value = envelope
+    analysisId.value = envelope?.analysis_id || monitoredId
+    analysisResult.value = updatedResult
+    stages.value = Array.isArray(envelope?.stages) ? envelope.stages : stages.value
+    taskStatus.value = statusLabels[envelope?.status] || envelope?.status || '执行中'
+    currentStage.value = stages.value.at(-1)?.stage || stages.value.at(-1)?.name || '闭环监测完成'
+    updateDrones(updatedResult)
+    const action = payload?.action || monitorResult.value?.action || '保持观察'
+    addLog(`第 2 轮监测完成 · 下一步：${action}`, { stage: 'monitor', source: 'rules' })
+    await loadEvents(monitoredId)
   } catch (error) {
-    errorMessage.value = '监测服务暂不可用。'
-    addLog('闭环监测失败 · 保持当前任务状态')
+    if (monitoredId === analysisId.value) {
+      errorMessage.value = '监测服务暂不可用。'
+      addLog('闭环监测失败 · 保持当前任务状态')
+    }
+  } finally {
+    monitoring.value = false
   }
 }
 
 function resetAnalysis() {
+  analysisEnvelope.value = null
   analysisResult.value = null
   analysisId.value = ''
+  stages.value = []
+  currentStage.value = '等待影像接入'
   monitorResult.value = null
   selectedFile.value = null
   uploaded.value = false
@@ -263,7 +364,7 @@ onMounted(loadServiceStatus)
 
     <main>
       <header><div><div class="breadcrumb">COMMAND CENTER <span>/</span> {{ activeTab.toUpperCase() }}</div><h1>森林火灾救援工作台</h1><p>多源感知 · 智能研判 · 集群调度 · 闭环处置</p></div><div class="header-actions"><button class="icon-btn" title="查看通知"><Bell :size="18" /><i></i></button><div class="utc">UTC+08:00<br><strong>2026.09.02</strong></div></div></header>
-      <section class="toolbar"><div class="tab-pills" role="tablist" aria-label="任务视图"><button :class="{ selected: viewTab === 'overview' }" @click="selectView('overview')">任务概览</button><button :class="{ selected: viewTab === 'monitor' }" @click="selectView('monitor')">实时监测</button><button :class="{ selected: viewTab === 'history' }" @click="selectView('history')">历史任务</button></div><div class="toolbar-right"><span class="task-badge">任务状态 · {{ taskStatus }}</span><span class="sync"><span class="live-dot"></span> {{ currentStage }}</span><button class="primary" :disabled="analyzing" @click="startAnalysis"><Bot :size="17" /> {{ analyzing ? '分析中…' : '启动智能研判' }}</button></div></section>
+      <section class="toolbar"><div class="tab-pills" role="tablist" aria-label="任务视图"><button :class="{ selected: viewTab === 'overview' }" @click="selectView('overview')">任务概览</button><button :class="{ selected: viewTab === 'monitor' }" @click="selectView('monitor')">实时监测</button><button :class="{ selected: viewTab === 'history' }" @click="selectView('history')">历史任务</button></div><div class="toolbar-right"><span class="task-badge">任务状态 · {{ displayStatus }}</span><span class="sync"><span class="live-dot"></span> {{ currentStage }}</span><button class="primary" :disabled="analyzing" @click="startAnalysis"><Bot :size="17" /> {{ analyzing ? '分析中…' : '启动智能研判' }}</button></div></section>
       <div v-if="errorMessage" class="notice" role="status"><Activity :size="16" /><span>{{ errorMessage }}</span><button class="notice-close" title="关闭提示" @click="errorMessage = ''">×</button></div>
 
       <div v-if="activeTab === 'command'" class="dashboard">
@@ -273,15 +374,17 @@ onMounted(loadServiceStatus)
 
         <section class="metrics-grid"><article v-for="metric in metrics" :key="metric.label" class="metric-card"><div class="metric-top"><span>{{ metric.label }}</span><component :is="metric.icon" :size="17" :class="'tone-' + metric.tone" /></div><div class="metric-value">{{ metric.value }} <small>{{ metric.unit }}</small></div><div :class="['metric-change', 'tone-' + metric.tone]">{{ metric.change }}</div></article></section>
         <section class="fleet-panel panel"><div class="panel-heading"><div><span class="section-kicker">FLEET STATUS</span><h2>无人机集群状态</h2></div><button class="text-btn" @click="selectNav('fleet')">查看详情 <ChevronRight :size="14" /></button></div><div class="fleet-list"><div v-for="drone in drones" :key="drone.id" class="drone-row"><div :class="['drone-icon', drone.color]"><Zap :size="17" /></div><div class="drone-name"><strong>{{ drone.id }} <span>{{ drone.label }}</span></strong><small>{{ drone.role }}</small></div><div class="battery"><div class="battery-bar"><i :style="{ width: drone.battery + '%' }"></i></div><span>{{ drone.battery }}%</span></div><span :class="['drone-status', drone.status === '执行中' ? 'active-status' : '']"><i></i>{{ drone.status }}</span></div></div></section>
-        <section class="decision-panel panel"><div class="panel-heading"><div><span class="section-kicker">AGENT DECISION</span><h2>调度建议</h2></div><span class="ai-badge"><Bot :size="14" /> {{ dataMode }}</span></div><div class="decision-callout"><div class="decision-icon"><Gauge :size="20" /></div><div><strong>{{ result.dispatch_plan.can_control ? '建议立即启动一级处置响应' : '建议立即请求增援' }}</strong><p>{{ result.explanation }}</p></div></div><div class="task-chips"><span v-for="task in result.dispatch_plan.tasks" :key="task.drone_id"><b>{{ task.drone_id }}</b> {{ task.task }}</span></div><button v-if="analysisResult" class="monitor-btn" @click="runMonitor"><RefreshCw :size="14" /> 执行下一轮监测</button><div v-if="monitorResult" class="monitor-result">监测结果：火焰面积 {{ monitorResult.next_fire_area_m2 }}m² · {{ monitorResult.reason }}</div></section>
-        <section class="log-panel panel"><div class="panel-heading"><div><span class="section-kicker">SYSTEM ACTIVITY</span><h2>任务日志</h2></div><span class="log-count">{{ logs.length }} EVENTS</span></div><div class="logs"><div v-for="(log, index) in logs.slice(0, 6)" :key="log + index"><span class="log-time">09:{{ String(20 - index).padStart(2, '0') }}</span><i :class="{ bright: index === 0 }"></i><span>{{ log }}</span></div></div></section>
+        <section class="decision-panel panel"><div class="panel-heading"><div><span class="section-kicker">AGENT DECISION</span><h2>调度建议</h2></div><span class="ai-badge"><Bot :size="14" /> {{ dataMode }}</span></div><div class="decision-callout"><div class="decision-icon"><Gauge :size="20" /></div><div><strong>{{ result.dispatch_plan.can_control ? '建议立即启动一级处置响应' : '建议立即请求增援' }}</strong><p>{{ result.explanation }}</p></div></div><div class="task-chips"><span v-for="task in result.dispatch_plan.tasks" :key="task.drone_id"><b>{{ task.drone_id }}</b> {{ task.task }}</span></div><button v-if="analysisResult" class="monitor-btn" :disabled="monitoring" @click="runMonitor"><RefreshCw :size="14" /> {{ monitoring ? '监测中…' : '执行下一轮监测' }}</button><div v-if="monitorResult" class="monitor-result">监测结果：火焰面积 {{ monitorArea }}m² · 状态 {{ statusLabels[monitorResult.status] || monitorResult.status }} · 动作 {{ monitorResult.action }} · {{ monitorResult.reason }}</div></section>
+        <section class="log-panel panel"><div class="panel-heading"><div><span class="section-kicker">SYSTEM ACTIVITY</span><h2>任务日志</h2></div><span class="log-count">{{ logs.length }} EVENTS</span></div><div class="logs"><div v-for="(log, index) in logs.slice(0, 6)" :key="log.message + log.timestamp + index"><span class="log-time">{{ logTime(log, index) }}</span><i :class="{ bright: index === 0 }"></i><span>{{ logText(log) }} <small v-if="typeof log === 'object'">· {{ log.stage }} / {{ log.source }}</small></span></div></div></section>
       </div>
 
       <section v-else-if="activeTab === 'fleet'" class="detail-view"><div class="detail-heading"><div><span class="section-kicker">FLEET OPERATIONS</span><h2>无人机集群</h2><p>当前集群共有 3 架无人机，状态数据来自演示数据源。</p></div><span class="status-tag"><span class="live-dot"></span> 全部在线</span></div><div class="fleet-detail-grid"><article v-for="drone in drones" :key="drone.id" class="fleet-detail-card"><div :class="['drone-icon large', drone.color]"><Zap :size="20" /></div><div class="fleet-detail-title"><strong>{{ drone.id }}</strong><span>{{ drone.label }}</span></div><div class="fleet-detail-role">{{ drone.role }}</div><div class="detail-battery"><div class="battery-bar"><i :style="{ width: drone.battery + '%' }"></i></div><strong>{{ drone.battery }}%</strong></div><div class="fleet-detail-task"><span>当前任务</span><b>{{ drone.task }}</b></div><button class="outline-btn" @click="addLog(`${drone.id} 状态详情已查看`)"><ListFilter :size="14" /> 查看状态</button></article></div></section>
 
       <section v-else-if="activeTab === 'map'" class="detail-view map-view"><div class="detail-heading"><div><span class="section-kicker">GEO SITUATION</span><h2>林区态势</h2><p>固定演示场景 · {{ scene.name }} · {{ scene.terrain }}地形 · 海拔 {{ scene.altitude }}m</p></div><span class="status-tag orange"><MapPinned :size="14" /> {{ scene.coordinates }}</span></div><div class="large-map"><div class="map-grid"></div><div class="ridge ridge-a"></div><div class="ridge ridge-b"></div><div class="route-line"></div><div class="map-node fire"><Flame :size="18" fill="currentColor" /><span>火点中心</span></div><div class="map-node water"><MapPinned :size="17" /><span>蓄水池 · {{ scene.waterDistance }}m</span></div><div class="map-node drone one"><Radio :size="15" /><span>DR-01</span></div><div class="map-node drone two"><Radio :size="15" /><span>DR-02</span></div><div class="map-node drone three"><Radio :size="15" /><span>DR-03</span></div><div class="map-compass">N</div><div class="wind-legend"><Wind :size="18" /><span>{{ scene.windDirection }}风 · {{ scene.windSpeed }} m/s</span></div></div></section>
 
-      <section v-else class="detail-view"><div class="detail-heading"><div><span class="section-kicker">SYSTEM ACTIVITY</span><h2>任务日志</h2><p>记录当前演示任务的输入、分析阶段和调度决策。</p></div><span class="status-tag"><Activity :size="14" /> {{ logs.length }} 条记录</span></div><div class="full-logs"><div v-for="(log, index) in logs" :key="log + index"><span class="log-time">09:{{ String(20 - index).padStart(2, '0') }}</span><i :class="{ bright: index === 0 }"></i><span>{{ log }}</span><small>{{ index === 0 ? 'LATEST' : 'EVENT' }}</small></div></div></section>
+      <section v-else-if="viewTab === 'history'" class="detail-view"><div class="detail-heading"><div><span class="section-kicker">TASK ARCHIVE</span><h2>历史任务</h2><p>任务记录来自后端 /api/analyzes，点击任务可恢复主显示结果。</p></div><button class="outline-btn" @click="loadHistory"><RefreshCw :size="14" /> 刷新</button></div><div class="full-logs"><div v-if="historyLoading">正在加载历史任务…</div><div v-else-if="!historyTasks.length">暂无历史任务</div><div v-for="task in historyTasks" :key="task.analysis_id" class="history-row" @click="selectHistoryTask(task)"><span class="log-time">{{ task.created_at?.slice(0, 19).replace('T', ' ') }}</span><i></i><span><strong>{{ task.analysis_id }}</strong> · {{ task.input?.image_name || '未命名影像' }}</span><small>{{ task.status }}</small></div></div></section>
+
+      <section v-else class="detail-view"><div class="detail-heading"><div><span class="section-kicker">SYSTEM ACTIVITY</span><h2>任务日志</h2><p>记录当前演示任务的输入、分析阶段和调度决策。</p></div><span class="status-tag"><Activity :size="14" /> {{ logs.length }} 条记录</span></div><div class="full-logs"><div v-for="(log, index) in logs" :key="log.message + log.timestamp + index"><span class="log-time">{{ logTime(log, index) }}</span><i :class="{ bright: index === 0 }"></i><span>{{ logText(log) }} <small v-if="typeof log === 'object'">· {{ log.stage }} / {{ log.source }}</small></span><small>{{ index === 0 ? 'LATEST' : 'EVENT' }}</small></div></div></section>
     </main>
   </div>
 </template>

@@ -62,20 +62,33 @@ def run_demo_analysis(scene_id: str, image_name: Optional[str], fire_override: O
     return {"fire_assessment": fire, "environment": {"wind_speed": scene["wind_speed"], "wind_direction": scene["wind_direction"], "altitude": scene["altitude"], "terrain": scene["terrain"], "nearest_water_distance_m": scene["water_sources"][0]["distance_m"]}, "dispatch_plan": dispatch, "source_image": image_name, "data_mode": "固定演示数据 · 规则引擎", "pipeline_stages": [{"id": "ingest", "label": "影像接入", "status": "completed", "source": "上传文件"}, {"id": "vision", "label": "视觉识别", "status": "demo", "source": "YOLO 待接入"}, {"id": "environment", "label": "环境融合", "status": "completed", "source": "固定场景数据"}, {"id": "dispatch", "label": "调度生成", "status": "completed", "source": "规则引擎"}], "fleet": state["fleet"], "inventory": state["inventory"], "explanation": f"当前为{fire['label']}，{scene['wind_direction']}风可能推动火势向{scene['wind_direction']}扩散。{dispatch['reason']}"}
 
 
-def simulate_monitor(analysis: Dict[str, Any], elapsed_minutes: float, extinguishing_liters: float) -> Dict[str, Any]:
+def simulate_monitor(
+    analysis: Dict[str, Any],
+    elapsed_minutes: float,
+    extinguishing_liters: float,
+    fleet_snapshot: Optional[list] = None,
+    inventory: Optional[Dict[str, Any]] = None,
+    image_name: Optional[str] = None,
+) -> Dict[str, Any]:
     fire = analysis["fire_assessment"]
     environment = analysis["environment"]
+    fleet = [dict(drone) for drone in (fleet_snapshot if fleet_snapshot is not None else analysis.get("fleet", []))]
+    stock = dict(inventory if inventory is not None else analysis.get("inventory", {}))
+    available_drones = sum(1 for drone in fleet if drone.get("role") == "firefighting" and drone.get("battery", 0) >= 20)
+    water_liters = max(0, float(stock.get("water_liters", 0)))
+    requested_liters = max(0, float(extinguishing_liters))
+    effective_liters = min(requested_liters, water_liters)
     elapsed = max(0.1, elapsed_minutes)
     growth = fire["fire_area_m2"] * fire.get("growth_rate", 0.42) * (1 + 0.04 * environment["wind_speed"]) * elapsed / 60
-    reduction = extinguishing_liters * 0.9
+    reduction = effective_liters * 0.9 * (1 if available_drones else 0.5)
     next_area = max(0, round(fire["fire_area_m2"] + growth - reduction))
     ratio = round((next_area - fire["fire_area_m2"]) / max(fire["fire_area_m2"], 1), 3)
     if next_area <= 300:
         action, reason = "finish", "火焰面积已降至目标阈值，进入效果确认。"
+    elif effective_liters <= 0 or requested_liters > water_liters:
+        action, reason = "resupply", "当前库存不足以支持本轮灭火，建议先完成补给。"
     elif ratio > 0.08:
         action, reason = "reinforce", "火势仍在扩大，建议请求增援并扩大侦察范围。"
-    elif extinguishing_liters <= 0:
-        action, reason = "resupply", "本轮没有有效灭火资源消耗，建议先完成补给。"
     else:
         action, reason = "continue", "火势受到抑制，继续当前任务并在 5 分钟后复评。"
-    return {"next_fire_area_m2": next_area, "growth_area_m2": round(growth), "extinguished_area_m2": round(reduction), "change_ratio": ratio, "action": action, "reason": reason, "next_check_minutes": 5}
+    return {"next_fire_area_m2": next_area, "growth_area_m2": round(growth), "extinguished_area_m2": round(reduction), "change_ratio": ratio, "action": action, "reason": reason, "next_check_minutes": 5, "input": {"image_name": image_name if image_name is not None else analysis.get("source_image"), "fleet_snapshot": fleet, "inventory": stock}, "availability": {"firefighting_drones": available_drones, "water_liters": water_liters}, "resource_consumed": {"water_liters": effective_liters}, "next_inventory": {**stock, "water_liters": max(0, water_liters - effective_liters)}, "next_fleet": fleet}

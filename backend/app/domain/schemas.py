@@ -37,3 +37,4 @@ class AnalysisEnvelope(BaseModel):
     stages: List[Dict[str, Any]] = Field(default_factory=list)
     events: List[TaskEvent] = Field(default_factory=list)
     error: Optional[Dict[str, Any]] = None
+    monitor_round: int = 0
