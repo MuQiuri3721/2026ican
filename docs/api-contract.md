@@ -444,7 +444,7 @@ Query：`once`（可选，`1` = 仅推送当前事件快照后结束，供一次
 - 闭环监测输出 `emergency_units`（SOC<`emergency_soc_percent`(15%) 的任务机，规则 V1 §4.2 应急回收标记）。
 - 有人分支（people=confirmed）核心链追加疏散：`result.agent.skill_chain.evacuation`（BFS 路线避开火点风险网格，含 steps/estimated_minutes/risk_cells）。
 - 至少 1 架 R 在线监测；S 按人员分支分配（confirmed→通信/疏散指引，absent→物流，unknown→复核与后备）。
-- 药剂 κ 表（`configs/simulation.json`）：植被火 W20=1.0、C6=0.25；电气水剂=0（排除）、C6=1.5。`fire_type ∈ {electrical, oil, chemical}` 默认 C6。
+- 药剂 κ 表（`configs/simulation.json`）：植被火 W20=1.0、C6=0.25；电气水剂=0（排除）、C6=1.5。`fire_type ∈ {electrical, oil, chemical}` 默认 C6；调度仿真/闭环监测的 κ 一律按真实 `fire_type` 查表，油类与化学品火归一化到电气行（C6=1.5、W20=0）。
 - 重规划触发：FLP 上升 >20%、风速档位变化、预计返航 SOC<25%、药剂不足、人员状态变化、资源/续航动作（resupply/return/reinforce）。
 - 资源锁跨任务互斥：`approved/executing/replanning` 状态任务的锁集合与其他任务候选交集非空时 409。
 

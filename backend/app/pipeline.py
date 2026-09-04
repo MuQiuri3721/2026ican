@@ -157,7 +157,7 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
     if module == "co2_6kg":
         quantity = 6.0
     max_drones = max(1, min(max_drones, 4))
-    kappa, _compatible = _agent_kappa(module, fire_type="vegetation" if module == "water_20l" else "electrical")
+    kappa, _compatible = _agent_kappa(module, fire_type)
     fire_load = max(1.0, float(fire.get("fire_load_flp") or fire["fire_area_m2"] / 180.0))
     growth_flp_per_hour = float(fire.get("growth_flp_per_hour", fire_load * float(fire.get("growth_rate", 0.42))))
     wind_speed = float(fire.get("wind_speed", scene.get("wind_speed", 0)))
@@ -176,7 +176,7 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
         for selected in itertools.combinations(e_candidates, size):
             simulation = simulate_dispatch_candidate(
                 selected=list(selected), fire_load_flp=fire_load, growth_flp_per_hour=growth_flp_per_hour,
-                module=module, origin=origin, inventory=inventory, wind_speed=wind_speed,
+                module=module, fire_type=fire_type, origin=origin, inventory=inventory, wind_speed=wind_speed,
             )
             energy_total = sum(entry["sortie_soc_cost"] * max(entry["sorties"], 1) for entry in simulation["per_uav"])
             changes = simulation["swaps"] + simulation["refills"]
@@ -207,7 +207,7 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
         pool = controlled or scored
     chosen = min(pool, key=lambda entry: (entry["score"]["score"], entry["simulation"]["residual_flp"]), default=None)
     if chosen is None:
-        chosen = {"selected": (), "simulation": simulate_dispatch_candidate([], fire_load_flp=fire_load, growth_flp_per_hour=growth_flp_per_hour, module=module, origin=origin, inventory=inventory, wind_speed=wind_speed), "score": score_candidate_plan(None, fire_load, fire_load, 0, 0, 0, 0), "energy_total": 0.0, "changes": 0}
+        chosen = {"selected": (), "simulation": simulate_dispatch_candidate([], fire_load_flp=fire_load, growth_flp_per_hour=growth_flp_per_hour, module=module, fire_type=fire_type, origin=origin, inventory=inventory, wind_speed=wind_speed), "score": score_candidate_plan(None, fire_load, fire_load, 0, 0, 0, 0), "energy_total": 0.0, "changes": 0}
     ok, selected, battery_plan, total_flp, gaps, errors = (False, (), [], 0.0, [], [])
     selected = chosen["selected"]
     simulation = chosen["simulation"]
@@ -326,7 +326,7 @@ def simulate_monitor(
     module = dispatch.get("material_module", "water_20l")
     capacity = 20.0 if module == "water_20l" else 6.0
     spray_rate = 4.0 if module == "water_20l" else 1.5
-    kappa, _compatible = _agent_kappa(module, "vegetation" if module == "water_20l" else "electrical")
+    kappa, _compatible = _agent_kappa(module, str(fire.get("fire_type", "vegetation")).lower())
     band = resolve_wind_band(environment.get("wind_speed", 0))
     eta = 0.9 * (1.0 if band["band"] == 0 else 0.85 if band["band"] == 1 else 0.65)
     origin = analysis.get("scene", {}).get("fire_origin", {"x": 0, "y": 0})
@@ -341,14 +341,22 @@ def simulate_monitor(
     available_drones = sum(1 for drone in fleet if drone.get("subgroup") == "suppression" and drone.get("soc", 0) >= 25 and drone.get("health", 0) >= 60)
 
     # 初始化执行态：被选中的 E 机按状态机进入 flying；R/S 维持监测/支援悬停。
+    # 上一轮已在途（flying/returning）的机组必须携带进度条，否则没有状态推进、永远停在原地掉电；
+    # 重规划换名单后不在新 selected_ids 的在途机视为携带旧任务，召回返航。
     state_progress = {}
     for drone in fleet:
         uid = drone.get("uav_id")
-        if uid in selected_ids and drone.get("status") in {"available", "assigned"}:
+        status = drone.get("status")
+        plan = plan_by_uav.get(uid) or {}
+        if uid in selected_ids and status in {"available", "assigned"}:
             drone["status"] = "flying"
-            plan = plan_by_uav.get(uid) or {}
-            distance = math.hypot((drone.get("position") or origin).get("x", 0) - origin.get("x", 0), (drone.get("position") or origin).get("y", 0) - origin.get("y", 0))
             state_progress[uid] = {"phase_elapsed": 0.0, "phase_minutes": max(0.5, float(plan.get("outbound_minutes", 1.0)))}
+        elif status == "flying" and uid not in selected_ids:
+            drone["status"] = "returning"
+            state_progress[uid] = {"phase_elapsed": 0.0, "phase_minutes": max(0.5, float(plan.get("outbound_minutes", 4.0)))}
+        elif status in {"flying", "returning"}:
+            default_minutes = 1.0 if status == "flying" else 4.0
+            state_progress[uid] = {"phase_elapsed": 0.0, "phase_minutes": max(0.5, float(plan.get("outbound_minutes", default_minutes)))}
 
     stalled_agent = False
     soc_return_risk = False

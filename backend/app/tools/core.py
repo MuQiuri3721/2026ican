@@ -359,9 +359,8 @@ def calculate_flp_load(cells: list = None, intensity: float = 1, fuel_factor: fl
 
 
 def calculate_agent_effective_flp(agent_quantity: float, module: str = "water_20l", scene: str = "vegetation", drop_efficiency: float = 0.9, weather_efficiency: float = 1.0, **_: Any) -> Dict[str, Any]:
-    kappa = 1.0 if module == "water_20l" and scene != "electrical" else (1.5 if module == "co2_6kg" and scene == "electrical" else (0.25 if module == "co2_6kg" else 0))
-    if scene == "electrical" and module != "co2_6kg": kappa = 0
-    return {"effective_flp": round(agent_quantity * kappa * drop_efficiency * weather_efficiency, 4), "module": module, "compatible": kappa > 0}
+    kappa, compatible = _agent_kappa(module, scene)
+    return {"effective_flp": round(agent_quantity * kappa * drop_efficiency * weather_efficiency, 4), "module": module, "compatible": compatible}
 
 
 def simulate_fire_round(fire_load_flp: float, growth_flp_per_hour: float = 0, suppression_flp: float = 0, duration_minutes: float = 5, **_: Any) -> Dict[str, Any]:
@@ -407,7 +406,7 @@ def build_fire_grid(fire_area_m2: float, wind_speed: float = 0, slope_deg: float
     }
 
 
-def simulate_dispatch_candidate(selected: List[Dict[str, Any]] = None, fire_load_flp: float = 0, growth_flp_per_hour: float = 0, module: str = "water_20l", origin: Dict[str, float] = None, inventory: Dict[str, Any] = None, wind_speed: float = 0, round_minutes: float = 5, max_rounds: int = 24, **_: Any) -> Dict[str, Any]:
+def simulate_dispatch_candidate(selected: List[Dict[str, Any]] = None, fire_load_flp: float = 0, growth_flp_per_hour: float = 0, module: str = "water_20l", fire_type: str = "vegetation", origin: Dict[str, float] = None, inventory: Dict[str, Any] = None, wind_speed: float = 0, round_minutes: float = 5, max_rounds: int = 24, **_: Any) -> Dict[str, Any]:
     """对单个候选组合做 5 分钟离散仿真：喷洒、补给、换电、返航 SOC 硬约束。
 
     返回控制时间、剩余 FLP、物资与换电消耗，供多目标评分 J 使用。
@@ -419,7 +418,7 @@ def simulate_dispatch_candidate(selected: List[Dict[str, Any]] = None, fire_load
     swap_minutes = float((config.get("charging") or {}).get("battery_swap_minutes", 5))
     swap_soc = float((config.get("charging") or {}).get("battery_swap_soc", 95))
     return_soc = float(config.get("return_soc_percent", 25))
-    kappa, compatible = _agent_kappa(module, fire_type="vegetation")
+    kappa, compatible = _agent_kappa(module, fire_type)
     band = resolve_wind_band(wind_speed)
     weather = (config.get("weather_efficiency") or {}).get(f"band{band['band']}", 1.0)
     eta = (config.get("drop_efficiency") or {}).get("clear", 0.9) * weather
@@ -535,6 +534,8 @@ def plan_evacuation_route(start: List[int] = None, exit_cell: List[int] = None, 
 
 
 def _agent_kappa(module: str, fire_type: str = "vegetation") -> Tuple[float, bool]:
+    # κ 表只分植被/电气两类；油类、化学品火与电气火同用 CO₂ 兼容行（pipeline 的模块选择同此口径）。
+    fire_type = {"oil": "electrical", "chemical": "electrical"}.get(fire_type, fire_type)
     kappa_table = v1_config().get("kappa") or {"vegetation": {"water_20l": 1.0, "co2_6kg": 0.25}, "electrical": {"water_20l": 0.0, "co2_6kg": 1.5}}
     kappa = float((kappa_table.get(fire_type) or {}).get(module, 0.0))
     return kappa, kappa > 0

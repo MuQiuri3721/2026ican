@@ -244,6 +244,37 @@ def test_time_limit_constraint_filters_overtime_plans():
     assert all(g["resource"] != "time_limit" for g in base_plan["resource_gap"])
 
 
+def test_round_triggered_replan_keeps_user_constraints():
+    """自动重规划必须继承创建时约束（BUG-3 回归）：轮次触发的 replan 不带 constraints，
+    只能回读 result["constraints"]；创建链路必须先把约束写进 result。"""
+    client = TestClient(app)
+    created = client.post("/api/analyze", json={
+        "scene_id": "forest-demo-01", "image_name": "small-fire.jpg", "environment_mode": "offline",
+        "constraints": {"max_drones": 1},
+    })
+    assert created.status_code == 200, created.text
+    task_id = created.json()["analysis_id"]
+    stored = client.get(f"/api/analyze/{task_id}").json()
+    assert stored["result"]["constraints"] == {"max_drones": 1}
+
+    plan = client.get(f"/api/tasks/{task_id}/plan").json()["plan"]
+    approved = client.post(f"/api/tasks/{task_id}/approval", json={"action": "approve", "plan_id": plan["plan_id"]})
+    assert approved.status_code == 200
+
+    round_one = client.post(f"/api/tasks/{task_id}/rounds", json={
+        "round": 1, "fire_load_flp": plan["fire_load_flp"] * 2.5,
+    })
+    assert round_one.status_code == 200
+    assert round_one.json()["next_action"] == "awaiting_confirmation", "FLP 翻倍必须触发自动重规划"
+
+    replacement = client.get(f"/api/tasks/{task_id}/plan").json()["plan"]
+    suppression = [u for u in replacement["selected_uavs"] if str(u).startswith("E")]
+    assert len(suppression) <= 1, "重规划后的方案必须仍受 max_drones=1 约束"
+    stored = client.get(f"/api/analyze/{task_id}").json()
+    assert stored["result"]["constraints"] == {"max_drones": 1}
+    client.post(f"/api/tasks/{task_id}/approval", json={"action": "terminate"})
+
+
 def test_scene_fixture_coordinates_share_one_relative_frame():
     """坐标口径（api-contract §1.3）：x/y 全部为同一相对坐标系（米），GPS 参考单独存放。"""
     scene = json.loads((ROOT / "data" / "scene.json").read_text(encoding="utf-8"))

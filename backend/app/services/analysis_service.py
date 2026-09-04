@@ -79,6 +79,8 @@ class AnalysisService:
                 dispatch_override=chain.get("candidate_generation", {}).get("v1_dispatch"),
             )
             self._merge_agent_result(result, agent)
+            # 轮次触发的自动重规划不带 constraints，回读 result["constraints"] 继承用户约束。
+            result["constraints"] = request.constraints
             if visual_sequence and visual_sequence.get("frame_count", 0) >= 2:
                 result["visual_sequence"] = visual_sequence
             analysis_store.update_resources(item.analysis_id, result.get("fleet"), result.get("inventory"))

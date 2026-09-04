@@ -27,6 +27,7 @@ from backend.app.tools.core import (  # noqa: E402
     resolve_wind_band,
     score_candidate_plan,
     select_water_source,
+    simulate_dispatch_candidate,
     transition_uav_state,
 )
 from backend.app.pipeline import simulate_monitor  # noqa: E402
@@ -61,9 +62,41 @@ def test_kappa_table_and_effective_flp():
     assert _agent_kappa("co2_6kg", "vegetation") == (0.25, True)
     assert _agent_kappa("water_20l", "electrical") == (0.0, False)
     assert _agent_kappa("co2_6kg", "electrical") == (1.5, True)
+    # 油类/化学品火与电气火同用 CO₂ 兼容行（模块选择同此口径），不得落空为 κ=0
+    assert _agent_kappa("co2_6kg", "oil") == (1.5, True)
+    assert _agent_kappa("water_20l", "oil") == (0.0, False)
+    assert _agent_kappa("co2_6kg", "chemical") == (1.5, True)
     result = calculate_agent_effective_flp(20, "water_20l", "vegetation", drop_efficiency=0.9, weather_efficiency=1.0)
     assert result["effective_flp"] == pytest.approx(18.0)
     assert result["compatible"] is True
+
+
+def test_dispatch_simulation_uses_real_fire_type_for_kappa():
+    """κ 必须按真实火型查表：电气火 CO₂ κ=1.5，不得写死 vegetation 行的 0.25。"""
+    uav = [{"uav_id": "E1", "subgroup": "suppression", "status": "available", "position": {"x": 200, "y": 80},
+            "soc": 90, "payload_capacity_kg": 25, "payload_module": "co2_6kg", "agent_remaining": 6,
+            "agent_unit": "kg", "speed_mps": 8, "energy_rate_percent_per_hour": 270, "health": 100}]
+    inventory = {"water_liters": 0, "water_modules_w20": 0, "co2_modules_c6": 12, "battery_packs": 16}
+    electrical = simulate_dispatch_candidate(uav, fire_load_flp=20, growth_flp_per_hour=2, module="co2_6kg",
+                                             fire_type="electrical", inventory=inventory, wind_speed=4)
+    vegetation = simulate_dispatch_candidate(uav, fire_load_flp=20, growth_flp_per_hour=2, module="co2_6kg",
+                                             fire_type="vegetation", inventory=inventory, wind_speed=4)
+    assert electrical["kappa"] == 1.5 and vegetation["kappa"] == 0.25
+    assert electrical["kappa"] / vegetation["kappa"] == 6
+    assert electrical["controlled"] is True
+    assert vegetation["controlled"] is False
+
+
+def test_electrical_fire_controllable_with_default_inventory():
+    """电气火用真实 κ=1.5 仿真：默认演示库存（CO₂ 模块 + 备用电池）下可控；
+    修复前 κ 按 vegetation 行 0.25 计，单机抑制力差 6 倍必判不可控。"""
+    from backend.app.pipeline import deterministic_v1_dispatch, load_demo_state
+    state = load_demo_state("forest-demo-01")
+    fire = {"fire_load_flp": 20, "growth_flp_per_hour": 2, "fire_type": "electrical", "wind_speed": 4}
+    plan = deterministic_v1_dispatch(state, fire)
+    assert plan["material_module"] == "co2_6kg"
+    assert plan["can_control"] is True
+    assert any(u == "E3" for u in plan["selected_uavs"]), "CO₂ 挂载的 E3 应入选电气火方案"
 
 
 def test_soc_need_and_uav_feasibility():
@@ -207,3 +240,22 @@ def test_monitor_flags_emergency_units_below_15_percent():
     assert "emergency_units" in result and "emergency_soc_percent" in result
     # 高耗电率下 5 分钟内 SOC 跌破 15%
     assert "E1" in result["emergency_units"]
+
+
+def test_returning_uav_progresses_across_monitor_rounds():
+    """跨轮续跑：第 1 轮结束时仍在返航的机，第 2 轮必须继续 servicing→charging，
+    而不是因为没有进度条永远停在 returning 掉电到 0。"""
+    from backend.app.pipeline import simulate_monitor
+    analysis = _low_soc_monitor_analysis()
+    analysis["fleet"][0]["agent_remaining"] = 4  # 一分钟喷完即返航
+    first = simulate_monitor(analysis, elapsed_minutes=3, extinguishing_liters=0)
+    e1 = next(d for d in first["next_fleet"] if d["uav_id"] == "E1")
+    assert e1["status"] == "returning"
+
+    second = simulate_monitor(
+        analysis, elapsed_minutes=10, extinguishing_liters=0,
+        fleet_snapshot=first["next_fleet"], inventory=first["next_inventory"],
+    )
+    e1_second = next(d for d in second["next_fleet"] if d["uav_id"] == "E1")
+    assert e1_second["status"] in {"servicing", "charging", "available"}, "返航机必须跨轮推进状态机"
+    assert e1_second["soc"] > 0, "返航机应回到充电流程，而不是原地掉电到 0"
