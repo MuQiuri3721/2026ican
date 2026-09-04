@@ -87,12 +87,22 @@ def test_full_skill_chain_uses_real_fire_origin():
         "environment_mode": "offline", "people_status": "confirmed",
     })
     chain = result["skill_chain"]
-    assert set(orchestrator.CORE_ORDER) <= set(chain), "核心 12 步 Skill 链必须完整执行"
+    assert set(orchestrator.CORE_ORDER) <= set(chain), "核心链 Skill 必须完整执行"
+    assert "route_planning" not in chain and "task_execution" not in chain and "closed_loop_monitoring" not in chain, "旧演示 Skill 不得再进核心链"
 
     candidate = chain["candidate_generation"]
     assert candidate["fire_origin"] == origin
 
-    route = chain["route_planning"]["route"]["data"]
+
+def test_legacy_demo_skills_runnable_via_compat_channel():
+    """route_planning/task_execution/closed_loop_monitoring 已移出核心链（audit §一.9），
+    但仍保留在注册表，供 /api/skills/{name}/run 兼容通道单独调用（SK-2 航线不变式）。"""
+    orchestrator = SkillOrchestrator(build_skill_registry())
+    state = load_demo_state("forest-demo-01")
+    origin = state["scene"]["fire_origin"]
+    for name in ("route_planning", "task_execution", "closed_loop_monitoring"):
+        assert name in orchestrator.registry.list(), f"{name} 应保留在兼容注册表"
+    route = orchestrator.run("route_planning", {"candidate_generation": {"fire_origin": origin}})["route"]["data"]
     assert route["waypoints"][1] == origin, "航线目标必须是真实火点"
     assert route["distance_m"] > 0
 

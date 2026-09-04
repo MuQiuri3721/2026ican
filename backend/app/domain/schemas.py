@@ -169,24 +169,6 @@ class FeedbackRoundInput(BaseModel):
     wind_speed: Optional[float] = Field(default=None, ge=0)
     people_status: Optional[PeopleStatus] = None
     fleet_snapshot: Optional[List[Dict[str, Any]]] = None
-    inventory: Optional[Dict[str, Any]] = None
+    inventory: Optional[List[Dict[str, Any]]] = None
     elapsed_minutes: float = Field(default=5, gt=0, le=120)
     extinguishing_liters: float = Field(default=0, ge=0)
-
-
-class DispatchPlan(BaseModel):
-    schema_version: str = "uav-dispatch-v1"
-    plan_id: str
-    task_id: str
-    generated_at: str
-    plan_version: int = 1
-    risk_level: str = "medium"
-    selected_uavs: List[str] = Field(default_factory=list)
-    agent_allocation: List[Dict[str, Any]] = Field(default_factory=list)
-    battery_plan: List[Dict[str, Any]] = Field(default_factory=list)
-    people_branch: PeopleStatus = PeopleStatus.UNKNOWN
-    estimated_control_time: Dict[str, Any] = Field(default_factory=dict)
-    feasibility: bool = True
-    resource_gap: List[Dict[str, Any]] = Field(default_factory=list)
-    alternative_plan: List[Dict[str, Any]] = Field(default_factory=list)
-    replan_trigger: List[str] = Field(default_factory=list)

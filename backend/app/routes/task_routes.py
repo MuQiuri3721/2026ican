@@ -58,7 +58,9 @@ def project_status():
 
 @router.get("/api/tools")
 def list_tools():
-    return {"tools": skill_registry.get("fire_analysis").registry.list()}
+    # 与 project_status 同口径：新注册表（skills/registry.py）无 fire_analysis 聚合 Skill，
+    # Tool 列表取感知 Skill 持有的完整 ToolRegistry。
+    return {"tools": skill_registry.get("fire_perception").registry.list()}
 
 
 @router.get("/api/skills")
@@ -220,11 +222,22 @@ async def analyze_upload(
     longitude: float | None = Form(None),
     environment_mode: str | None = Form(None),
     people_status: str = Form("unknown"),
+    fire_type: str = Form("vegetation"),
+    constraints: str | None = Form(None),
     water_search_radius_m: int = Form(5000, gt=0, le=50000),
     road_search_radius_m: int = Form(5000, gt=0, le=50000),
     file: UploadFile = File(...),
     frames: Optional[List[UploadFile]] = File(default=None),
 ):
+    # 表单通道的 constraints 是 JSON 字符串（multipart 无原生 object 类型），与 §5.1 JSON 体同语义。
+    parsed_constraints = None
+    if constraints:
+        try:
+            parsed_constraints = json.loads(constraints)
+        except json.JSONDecodeError as error:
+            raise HTTPException(status_code=422, detail="constraints 必须是合法 JSON 字符串") from error
+        if not isinstance(parsed_constraints, dict):
+            raise HTTPException(status_code=422, detail="constraints 必须是 JSON object")
     if file.content_type not in ALLOWED_TYPES:
         raise HTTPException(status_code=415, detail="仅支持 JPG、PNG 或 MP4 文件")
     safe_name = Path(file.filename or "upload.bin").name
@@ -257,7 +270,7 @@ async def analyze_upload(
             _validate_upload_signature(frame_target, frame.content_type)
             frame_targets.append(frame_target)
             frame_paths.append(str(frame_target))
-        result = analysis_service.create_and_run(AnalysisInput(scene_id=scene_id, image_name=safe_name, image_path=str(target), use_vlm=use_vlm, latitude=latitude, longitude=longitude, environment_mode=environment_mode, people_status=people_status, water_search_radius_m=water_search_radius_m, road_search_radius_m=road_search_radius_m), frame_paths=frame_paths or None)
+        result = analysis_service.create_and_run(AnalysisInput(scene_id=scene_id, image_name=safe_name, image_path=str(target), use_vlm=use_vlm, latitude=latitude, longitude=longitude, environment_mode=environment_mode, people_status=people_status, fire_type=fire_type, constraints=parsed_constraints, water_search_radius_m=water_search_radius_m, road_search_radius_m=road_search_radius_m), frame_paths=frame_paths or None)
         keep_target = True
         return result
     except (SkillExecutionError, RuntimeError) as error:

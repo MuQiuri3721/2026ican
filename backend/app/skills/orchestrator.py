@@ -11,11 +11,12 @@ class SkillExecutionError(Exception):
 class SkillOrchestrator:
     """业务门面：按照方案顺序编排 Skill，并保留每一步的结构化结果。"""
 
+    # 核心链只保留真实参与研判/调度的步骤；route_planning/task_execution/closed_loop_monitoring
+    # 是旧演示链（硬编码起点/写死 40L/演示版决策），已移出核心执行序，仅保留在注册表供兼容通道单独调用。
     CORE_ORDER = [
         "fire_perception", "environment_assessment", "fire_assessment",
         "people_assessment", "candidate_generation", "constraint_filtering",
-        "dispatch_scoring", "route_planning", "approval_preparation",
-        "task_execution", "closed_loop_monitoring", "report_archiving",
+        "dispatch_scoring", "approval_preparation", "report_archiving",
     ]
 
     def __init__(self, registry: SkillRegistry = None):
@@ -35,8 +36,7 @@ class SkillOrchestrator:
             order = [name for name in self.LEGACY_ORDER if name in self.registry.list()]
         for name in order:
             results[name] = self.run(name, {**context, **results})
-            # New planning skills retain the legacy context keys consumed by
-            # route/execution/monitoring skills.
+            # candidate_generation 的 legacy 兼容键仍被 API 合并层（_merge_agent_result）消费。
             if name == "candidate_generation":
                 results.setdefault("resource_matching", results[name].get("resource_matching", {}))
                 results.setdefault("drone_dispatch", results[name].get("drone_dispatch", {}))

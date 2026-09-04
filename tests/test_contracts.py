@@ -244,6 +244,41 @@ def test_time_limit_constraint_filters_overtime_plans():
     assert all(g["resource"] != "time_limit" for g in base_plan["resource_gap"])
 
 
+def test_tools_endpoint_lists_full_registry():
+    """/api/tools 曾引用新注册表不存在的 fire_analysis Skill 而 500（审计 §一.1 回归）。"""
+    client = TestClient(app)
+    response = client.get("/api/tools")
+    assert response.status_code == 200
+    tools = response.json()["tools"]
+    assert len(tools) >= 50
+    assert "simulate_dispatch_candidate" in tools and "detect_fire" in tools
+
+
+def test_upload_carries_fire_type_and_constraints():
+    """上传通道必须能带 fire_type/constraints（审计 §一.6）：否则演示从界面永远走不到电气火分支。"""
+    client = TestClient(app)
+    response = client.post(
+        "/api/analyze/upload",
+        data={
+            "environment_mode": "offline",
+            "fire_type": "electrical",
+            "constraints": json.dumps({"max_drones": 2}),
+        },
+        files={"file": ("fire.jpg", b"\xff\xd8\xff\xe0" + b"0" * 32, "image/jpeg")},
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["result"]["dispatch_plan"]["material_module"] == "co2_6kg", "电气火上传必须选中 CO₂ 模块"
+    assert payload["result"]["constraints"] == {"max_drones": 2}
+    bad = client.post(
+        "/api/analyze/upload",
+        data={"environment_mode": "offline", "constraints": "{not-json"},
+        files={"file": ("fire.jpg", b"\xff\xd8\xff\xe0" + b"0" * 32, "image/jpeg")},
+    )
+    assert bad.status_code == 422
+    client.post(f"/api/tasks/{payload['analysis_id']}/approval", json={"action": "terminate"})
+
+
 def test_round_triggered_replan_keeps_user_constraints():
     """自动重规划必须继承创建时约束（BUG-3 回归）：轮次触发的 replan 不带 constraints，
     只能回读 result["constraints"]；创建链路必须先把约束写进 result。"""

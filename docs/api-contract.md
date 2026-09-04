@@ -252,7 +252,7 @@ Query：`latitude`（默认 32.0725，紫金山主峰）、`longitude`（默认 
     "fleet": ["...同 §4.1 归一化 8 架"],
     "inventory": {"...同 §4.2"},
     "explanation": "当前为III 级 · 高风险，火情负荷 245.7 FLP（18 个 100m² 网格）...",
-    "agent": {"skill_chain": {"...12 步 Skill 链结构化结果"}, "chain_order": ["..."], "data_mode": "demo-stub + rules"},
+    "agent": {"skill_chain": {"...9 步核心 Skill 链结构化结果（确认有人时追加 evacuation；route_planning/task_execution/closed_loop_monitoring 已移出核心链，仅存于兼容注册表）"}, "chain_order": ["..."], "data_mode": "demo-stub + rules"},
     "vlm_explanation": {"summary": "...", "conflicts": [], "anomalies": [], "source": "rule-explainer-fallback", "mode": "fallback"},
     "environment_source": {"mode": "...", "source": "...", "status": "...", "stale": false, "location": {...}}
   },
@@ -268,7 +268,7 @@ Query：`latitude`（默认 32.0725，紫金山主峰）、`longitude`（默认 
 
 ### 5.2 `POST /api/analyze/upload`（multipart/form-data）
 
-Form 字段（全部为 multipart 表单字段，显式 `Form(...)` 绑定）：`file`（必填，≤200MB，JPG/PNG/MP4，服务端做魔数校验）、`frames`（可选，1+ 张早前帧图片；主文件自动作为序列最新一帧，共 ≥2 帧时逐帧检测并输出面积趋势）、`scene_id`、`use_vlm`、`latitude`、`longitude`、`environment_mode`、`people_status`（confirmed/absent/unknown，confirmed 时核心链追加疏散分支）、`water_search_radius_m`、`road_search_radius_m`。文件落盘 `uploads/<12hex>-<原名>`，随后行为与 `POST /api/analyze` 一致。类型不符 415、超限 413、魔数不符 415（上传文件随之删除）。
+Form 字段（全部为 multipart 表单字段，显式 `Form(...)` 绑定）：`file`（必填，≤200MB，JPG/PNG/MP4，服务端做魔数校验）、`frames`（可选，1+ 张早前帧图片；主文件自动作为序列最新一帧，共 ≥2 帧时逐帧检测并输出面积趋势）、`scene_id`、`use_vlm`、`latitude`、`longitude`、`environment_mode`、`people_status`（confirmed/absent/unknown，confirmed 时核心链追加疏散分支）、`fire_type`（默认 `vegetation`；`electrical/oil/chemical` 触发 C6，语义同 §5.1）、`constraints`（可选，JSON object 字符串，如 `{"max_drones": 2}`，语义同 §5.1；非法 JSON 422）、`water_search_radius_m`、`road_search_radius_m`。文件落盘 `uploads/<12hex>-<原名>`，随后行为与 `POST /api/analyze` 一致。类型不符 415、超限 413、魔数不符 415（上传文件随之删除）。
 
 多帧序列响应附加字段：`result.visual_sequence = {"frame_count": N, "frames": [{image_name, fire_area_m2, smoke_area_m2, growth_rate, confidence}], "trend": {status, trend, growth_rate, areas_m2}}`；趋势状态 `ok` 时序列增长率与最新帧面积显式驱动火情重算。
 
