@@ -1,3 +1,4 @@
+import json
 import sys
 from pathlib import Path
 
@@ -219,3 +220,59 @@ def test_domain_contract_rejects_invalid_payload_and_negative_inventory():
                   energy_rate_percent_per_hour=100)
     with pytest.raises(ValueError):
         InventorySnapshot(water_liters=-1)
+
+
+def test_time_limit_constraint_filters_overtime_plans():
+    """硬时限（target_minutes）剔除全部超时方案时必须输出时限缺口且判不可控（规则文档 §8.2）。"""
+    client = TestClient(app)
+    limited = client.post("/api/analyze", json={
+        "scene_id": "forest-demo-01", "image_name": "small-fire.jpg", "environment_mode": "offline",
+        "constraints": {"max_drones": 4, "target_minutes": 30},
+    })
+    assert limited.status_code == 200, limited.text
+    plan = client.get(f"/api/tasks/{limited.json()['analysis_id']}/plan").json()["plan"]
+    gap = next(g for g in plan["resource_gap"] if g["resource"] == "time_limit")
+    assert gap["required"] == 30.0 and gap["available"] > 30
+    assert plan["can_control"] is False
+
+    baseline = client.post("/api/analyze", json={"scene_id": "forest-demo-01", "image_name": "small-fire.jpg", "environment_mode": "offline"})
+    base_plan = client.get(f"/api/tasks/{baseline.json()['analysis_id']}/plan").json()["plan"]
+    assert base_plan["can_control"] is True
+    assert all(g["resource"] != "time_limit" for g in base_plan["resource_gap"])
+
+
+def test_scene_fixture_coordinates_share_one_relative_frame():
+    """坐标口径（api-contract §1.3）：x/y 全部为同一相对坐标系（米），GPS 参考单独存放。"""
+    scene = json.loads((ROOT / "data" / "scene.json").read_text(encoding="utf-8"))
+    origin = scene["fire_origin"]
+    assert 0 <= origin["x"] <= 500 and 0 <= origin["y"] <= 500
+    assert 0 <= scene["water_sources"][0]["position"]["x"] <= 500
+    assert set(scene["fire_origin_gps"]) == {"latitude", "longitude"}
+
+    fleet = json.loads((ROOT / "data" / "fleet.json").read_text(encoding="utf-8"))
+    for uav in fleet:
+        position = uav["position"]
+        assert 0 <= position["x"] <= 500 and 0 <= position["y"] <= 500
+
+    vision = json.loads((ROOT / "data" / "vision_observations.json").read_text(encoding="utf-8"))
+    for observation in vision.values():
+        assert set(observation["fire_center"]) == {"latitude", "longitude"}
+
+
+def test_dispatch_and_monitor_share_scene_origin_frame():
+    """调度与闭环监测必须使用同一火点原点（相对坐标），出航时间与距离一致。"""
+    from backend.app.pipeline import load_demo_state, deterministic_v1_dispatch, run_demo_analysis
+    import math
+
+    state = load_demo_state("forest-demo-01")
+    origin = state["scene"]["fire_origin"]
+    fire = {"fire_load_flp": 60, "growth_flp_per_hour": 6, "fire_type": "vegetation", "wind_speed": 5}
+    plan = deterministic_v1_dispatch(state, fire)
+    for entry in plan["battery_plan"]:
+        uav = next(u for u in state["fleet"] if u["uav_id"] == entry["uav_id"])
+        distance = math.hypot(uav["position"]["x"] - origin["x"], uav["position"]["y"] - origin["y"])
+        expected = round(distance / max(uav["speed_mps"], 0.1) / 60, 2)
+        assert entry["outbound_minutes"] == pytest.approx(expected)
+
+    result = run_demo_analysis("forest-demo-01", "demo.jpg")
+    assert result["scene"]["fire_origin"] == origin

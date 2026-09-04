@@ -157,14 +157,31 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
             scored.append({"selected": selected, "simulation": simulation, "score": score, "energy_total": energy_total, "changes": changes})
 
     controlled = [entry for entry in scored if entry["simulation"]["controlled"]]
-    pool = controlled or scored
+    # 用户硬时限（规则文档 §8.2）：先剔除超时方案；全部超时时仍选最快方案供参考，但判为不可控并输出时限缺口。
+    time_limit = constraints.get("target_minutes")
+    if time_limit is not None:
+        try:
+            time_limit = float(time_limit)
+        except (TypeError, ValueError):
+            time_limit = None
+    time_gap = None
+    if time_limit is not None and controlled:
+        within = [entry for entry in controlled if entry["simulation"]["control_minutes"] is not None and entry["simulation"]["control_minutes"] <= time_limit]
+        if within:
+            pool = within
+        else:
+            pool = controlled
+            fastest = min(entry["simulation"]["control_minutes"] for entry in controlled if entry["simulation"]["control_minutes"] is not None)
+            time_gap = {"resource": "time_limit", "required": round(time_limit, 1), "available": round(fastest, 1), "gap": round(fastest - time_limit, 1), "resource_gap": True}
+    else:
+        pool = controlled or scored
     chosen = min(pool, key=lambda entry: (entry["score"]["score"], entry["simulation"]["residual_flp"]), default=None)
     if chosen is None:
         chosen = {"selected": (), "simulation": simulate_dispatch_candidate([], fire_load_flp=fire_load, growth_flp_per_hour=growth_flp_per_hour, module=module, origin=origin, inventory=inventory, wind_speed=wind_speed), "score": score_candidate_plan(None, fire_load, fire_load, 0, 0, 0, 0), "energy_total": 0.0, "changes": 0}
     ok, selected, battery_plan, total_flp, gaps, errors = (False, (), [], 0.0, [], [])
     selected = chosen["selected"]
     simulation = chosen["simulation"]
-    ok = bool(selected) and simulation["controlled"]
+    ok = bool(selected) and simulation["controlled"] and time_gap is None
     battery_plan = [
         {
             "uav_id": entry["uav_id"], "soc_before": next((u.get("soc", 0) for u in selected if u.get("uav_id") == entry["uav_id"]), 0),
@@ -219,7 +236,7 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
         "fire_load_flp": round(fire_load, 2),
         "growth_flp_per_hour": round(growth_flp_per_hour, 2),
         "effective_flp": round(total_flp, 2),
-        "resource_gap": gaps + ([{"resource": "hard_constraint", "gap": ";".join(errors), "resource_gap": True}] if errors else []),
+        "resource_gap": ([time_gap] if time_gap else []) + gaps + ([{"resource": "hard_constraint", "gap": ";".join(errors), "resource_gap": True}] if errors else []),
         "battery_plan": battery_plan,
         "people_branch": people_status,
         "fire_grid": fire.get("fire_grid"),
@@ -231,7 +248,7 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
         "estimated_minutes": window[1] if window else None,
         "alternative_plan": alternatives,
         "tasks": tasks,
-        "reason": "V1 离散仿真可控，按 J 评分选出最优组合" if ok else ("V1 硬约束不足：输出资源缺口，需补给或重规划" if selected_ids else "无可用灭火无人机候选"),
+        "reason": ("V1 离散仿真可控，按 J 评分选出最优组合" if ok else (f"最快可控方案需 {time_gap['available']} 分钟，超过用户时限 {time_gap['required']} 分钟：输出时限缺口" if time_gap else ("V1 硬约束不足：输出资源缺口，需补给或重规划" if selected_ids else "无可用灭火无人机候选"))),
     }
 
 
@@ -248,7 +265,7 @@ def run_demo_analysis(scene_id: str, image_name: Optional[str], fire_override: O
         fire["fire_grid"] = {key: grid[key] for key in ("cell_area_m2", "cell_count", "intensity", "k_fuel", "k_wind", "k_slope", "fuel_type")}
     scene = state["scene"]
     dispatch = dispatch_override or deterministic_v1_dispatch(state, fire, people_status, constraints=constraints)
-    return {"fire_assessment": fire, "environment": {"wind_speed": scene["wind_speed"], "wind_direction": scene["wind_direction"], "altitude": scene["altitude"], "terrain": scene["terrain"], "nearest_water_distance_m": scene["water_sources"][0]["distance_m"]}, "dispatch_plan": dispatch, "source_image": image_name, "data_mode": "固定演示数据 · 规则引擎", "pipeline_stages": [{"id": "ingest", "label": "影像接入", "status": "completed", "source": "上传文件"}, {"id": "vision", "label": "视觉识别", "status": "demo", "source": "PWM-YOLO 适配器待接入"}, {"id": "environment", "label": "环境融合", "status": "completed", "source": "固定场景数据"}, {"id": "assessment", "label": "网格 FLP 评估", "status": "completed", "source": "规则引擎"}, {"id": "dispatch", "label": "离散仿真调度", "status": "completed", "source": "规则引擎"}], "fleet": state["fleet"], "inventory": state["inventory"], "explanation": f"当前为{fire['label']}，火情负荷 {fire['fire_load_flp']} FLP（{fire['fire_grid']['cell_count']} 个 100m² 网格），{scene['wind_direction']}风可能推动火势向{scene['wind_direction']}扩散。{dispatch['reason']}"}
+    return {"fire_assessment": fire, "scene": {"fire_origin": scene["fire_origin"]}, "environment": {"wind_speed": scene["wind_speed"], "wind_direction": scene["wind_direction"], "altitude": scene["altitude"], "terrain": scene["terrain"], "nearest_water_distance_m": scene["water_sources"][0]["distance_m"]}, "dispatch_plan": dispatch, "source_image": image_name, "data_mode": "固定演示数据 · 规则引擎", "pipeline_stages": [{"id": "ingest", "label": "影像接入", "status": "completed", "source": "上传文件"}, {"id": "vision", "label": "视觉识别", "status": "demo", "source": "PWM-YOLO 适配器待接入"}, {"id": "environment", "label": "环境融合", "status": "completed", "source": "固定场景数据"}, {"id": "assessment", "label": "网格 FLP 评估", "status": "completed", "source": "规则引擎"}, {"id": "dispatch", "label": "离散仿真调度", "status": "completed", "source": "规则引擎"}], "fleet": state["fleet"], "inventory": state["inventory"], "explanation": f"当前为{fire['label']}，火情负荷 {fire['fire_load_flp']} FLP（{fire['fire_grid']['cell_count']} 个 100m² 网格），{scene['wind_direction']}风可能推动火势向{scene['wind_direction']}扩散。{dispatch['reason']}"}
 
 
 def simulate_monitor(

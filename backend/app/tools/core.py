@@ -74,6 +74,24 @@ def analyze_visual_trend(observations: list = None, **_: Any) -> Dict[str, Any]:
     return {"status": "ok", "sample_count": len(areas), "trend": trend, "area_delta_m2": round(delta, 2), "growth_rate": round(delta / max(areas[0], 1), 4), "areas_m2": areas}
 
 
+def analyze_frame_sequence(frame_paths: List[str] = None, **_: Any) -> Dict[str, Any]:
+    """多帧序列：按时间顺序逐帧检测并输出面积趋势（api-contract §5.2 visual_sequence）。"""
+    observations = []
+    for path in frame_paths or []:
+        name = Path(path).name
+        detection = detect_fire(image_name=name, image_path=path)
+        if detection.get("status") == "error":
+            continue
+        observations.append({
+            "image_name": name,
+            "fire_area_m2": detection.get("fire_area_m2"),
+            "smoke_area_m2": detection.get("smoke_area_m2"),
+            "growth_rate": detection.get("growth_rate"),
+            "confidence": detection.get("confidence"),
+        })
+    return {"frame_count": len(observations), "frames": observations, "trend": analyze_visual_trend(observations)}
+
+
 def retrieve_scene_knowledge(scene_id: str = "forest-demo-01", keywords: list = None, **_: Any) -> Dict[str, Any]:
     scene = scene_data(scene_id)
     terms = [str(item).lower() for item in (keywords or [])]
@@ -327,8 +345,16 @@ def select_water_source(sources: list = None, distance_m: float = 0, cycle_minut
 
 
 def calculate_flp_load(cells: list = None, intensity: float = 1, fuel_factor: float = 1.0, wind_factor: float = 1.0, slope_factor: float = 1.0, **_: Any) -> Dict[str, Any]:
+    # cells 兼容 k_fuel/k_wind/k_slope（build_fire_grid 记法）与 fuel_factor/wind_factor/slope_factor 两种键名，
+    # 冻结公式 B_i = 10 × I × K_fuel × K_wind × K_slope 的每个因子都必须生效。
     if cells is None: cells = [{"intensity": intensity, "fuel_factor": fuel_factor, "wind_factor": wind_factor, "slope_factor": slope_factor}]
-    loads = [10 * c.get("intensity", 1) * c.get("fuel_factor", 1) * c.get("wind_factor", 1) * c.get("slope_factor", 1) for c in cells]
+    loads = [
+        10 * c.get("intensity", 1)
+        * c.get("fuel_factor", c.get("k_fuel", 1))
+        * c.get("wind_factor", c.get("k_wind", 1))
+        * c.get("slope_factor", c.get("k_slope", 1))
+        for c in cells
+    ]
     return {"fire_load_flp": round(sum(loads), 4), "cell_loads_flp": [round(x, 4) for x in loads], "cell_count": len(loads)}
 
 
@@ -625,6 +651,7 @@ def build_core_tools() -> List[BaseTool]:
         "score_candidate_plan": score_candidate_plan, "charge_battery": charge_battery,
         "swap_battery": swap_battery, "plan_evacuation_route": plan_evacuation_route,
         "vlm_explain_fire": vlm_explain_fire, "extract_frames": extract_frames,
-        "analyze_visual_trend": analyze_visual_trend, "retrieve_scene_knowledge": retrieve_scene_knowledge,
+        "analyze_visual_trend": analyze_visual_trend, "analyze_frame_sequence": analyze_frame_sequence,
+        "retrieve_scene_knowledge": retrieve_scene_knowledge,
     }
     return [FunctionTool(name, handler, "V1 确定性规则 Tool。", "rules") for name, handler in handlers.items()]

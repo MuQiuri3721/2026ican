@@ -39,6 +39,14 @@ const environment = ref(null)
 const fleet = ref([])
 const inventory = ref(null)
 const peopleStatus = ref('unknown')
+const useVlm = ref(false)
+const maxDrones = ref(4)
+const targetMinutes = ref(null)
+const disabledUavs = ref([])
+const reasonInput = ref('')
+const reportViewer = ref({ open: false, loading: false, data: null })
+const selectedFrames = ref([])
+const streamedTaskId = ref('')
 const approvalBusy = ref(false)
 const environmentLoading = ref(false)
 const environmentMode = ref('real')
@@ -82,32 +90,50 @@ const scene = {
 }
 
 const drones = ref([
-  { id: 'R-01', label: '侦察单元', role: 'reconnaissance', subgroup: 'reconnaissance', battery: 82, soc: 82, status: '执行中', module: 'EO/IR', payload: '—', signal: 96, health: 98, color: 'blue', task: '持续侦察' },
-  { id: 'R-02', label: '侦察单元', role: 'reconnaissance', subgroup: 'reconnaissance', battery: 78, soc: 78, status: '飞行中', module: 'EO/IR', payload: '—', signal: 92, health: 97, color: 'blue', task: '火线复核' },
-  { id: 'R-03', label: '侦察单元', role: 'reconnaissance', subgroup: 'reconnaissance', battery: 71, soc: 71, status: '待命', module: '多光谱', payload: '—', signal: 89, health: 95, color: 'blue', task: '待命' },
-  { id: 'E-01', label: '灭火单元', role: 'firefighting', subgroup: 'suppression', battery: 75, soc: 75, status: '作业中', module: 'water_20l', payload: '16 L', signal: 94, health: 96, color: 'orange', task: '主力灭火' },
-  { id: 'E-02', label: '灭火单元', role: 'firefighting', subgroup: 'suppression', battery: 68, soc: 68, status: '已分配', module: 'water_20l', payload: '20 L', signal: 87, health: 93, color: 'orange', task: '火线压制' },
-  { id: 'E-03', label: '灭火单元', role: 'firefighting', subgroup: 'suppression', battery: 61, soc: 61, status: '充电中', module: 'water_20l', payload: '—', signal: 76, health: 91, color: 'orange', task: '补能' },
-  { id: 'S-01', label: '支援单元', role: 'support', subgroup: 'support', battery: 88, soc: 88, status: '待命', module: 'relay', payload: '—', signal: 99, health: 99, color: 'green', task: '通信中继' },
-  { id: 'S-02', label: '支援单元', role: 'support', subgroup: 'support', battery: 84, soc: 84, status: '待命', module: 'logistics', payload: '—', signal: 91, health: 98, color: 'green', task: '水源补给' },
+  { id: 'R1', label: '侦察单元', role: 'reconnaissance', subgroup: 'reconnaissance', battery: 92, soc: 92, status: '待命', module: 'EO/IR', payload: '—', signal: 96, health: 100, color: 'blue', task: '待命' },
+  { id: 'R2', label: '侦察单元', role: 'reconnaissance', subgroup: 'reconnaissance', battery: 88, soc: 88, status: '待命', module: 'EO/IR', payload: '—', signal: 94, health: 98, color: 'blue', task: '待命' },
+  { id: 'E1', label: '灭火单元', role: 'firefighting', subgroup: 'suppression', battery: 92, soc: 92, status: '待命', module: 'water_20l', payload: '20 L', signal: 90, health: 100, color: 'orange', task: '待命' },
+  { id: 'E2', label: '灭火单元', role: 'firefighting', subgroup: 'suppression', battery: 86, soc: 86, status: '待命', module: 'water_20l', payload: '20 L', signal: 88, health: 100, color: 'orange', task: '待命' },
+  { id: 'E3', label: '灭火单元', role: 'firefighting', subgroup: 'suppression', battery: 79, soc: 79, status: '待命', module: 'co2_6kg', payload: '6 kg', signal: 86, health: 97, color: 'orange', task: '待命' },
+  { id: 'E4', label: '灭火单元', role: 'firefighting', subgroup: 'suppression', battery: 74, soc: 74, status: '待命', module: 'water_20l', payload: '20 L', signal: 84, health: 96, color: 'orange', task: '待命' },
+  { id: 'S1', label: '支援单元', role: 'support', subgroup: 'support', battery: 95, soc: 95, status: '待命', module: 'sup_10', payload: '10 kg', signal: 98, health: 100, color: 'green', task: '待命' },
+  { id: 'S2', label: '支援单元', role: 'support', subgroup: 'support', battery: 90, soc: 90, status: '待命', module: 'sup_10', payload: '10 kg', signal: 95, health: 99, color: 'green', task: '待命' },
 ])
 
+// 本地演示兜底结果仅在后端不可用时展示；字段与 docs/api-contract.md §7 对齐，
+// 使用 2+4+2 口径和仿真时间区间，不出现旧三机/单点分钟结论。
 const fallbackResult = {
   analysis_id: 'analysis-demo-001',
-  fire_assessment: { level: 2, label: 'Ⅱ级 · 中等火情', fire_area_m2: 1800, smoke_area_m2: 4200, confidence: 0.91, spread_direction: '西北' },
+  fire_assessment: { level: 2, label: 'II 级 · 中等火情', fire_area_m2: 1800, smoke_area_m2: 4200, confidence: 0.91, spread_direction: '西北', fire_load_flp: 245.7, growth_rate: 0.42 },
   environment: { wind_speed: 6.5, wind_direction: '西北', altitude: 320, terrain: '丘陵', nearest_water_distance_m: 800 },
   dispatch_plan: {
+    schema_version: 'uav-dispatch-v1',
+    plan_id: 'plan-demo00001',
+    plan_version: 1,
     can_control: true,
+    feasibility: true,
+    required_drones: 2,
+    selected_uavs: ['R1', 'E1', 'E2', 'S1'],
     recommended_material: 'water',
+    material_module: 'water_20l',
     material_amount: 80,
-    estimated_minutes: 18,
+    fire_load_flp: 245.7,
+    effective_flp: 92.4,
+    people_branch: 'unknown',
+    resource_gap: [],
+    alternative_plan: [],
+    replan_trigger: ['fire_load_increase_over_20_percent', 'wind_band_changed', 'soc_below_return_threshold'],
+    estimated_control_time: { earliest_minutes: 12, latest_minutes: 17, window_minutes: [12, 17], unit: 'min', simulated: false },
+    estimated_minutes: 17,
     tasks: [
-      { drone_id: 'DR-01', task: '持续侦察' },
-      { drone_id: 'DR-02', task: '主力灭火' },
-      { drone_id: 'DR-03', task: '水源补给' },
+      { drone_id: 'R1', task: '持续侦察', branch: 'reconnaissance' },
+      { drone_id: 'E1', task: '主力灭火', module: 'water_20l', target_flp: 122.85 },
+      { drone_id: 'E2', task: '主力灭火', module: 'water_20l', target_flp: 122.85 },
+      { drone_id: 'S1', task: '复核人员与后备侦察', branch: 'support' },
     ],
   },
-  explanation: '当前为中等火情，西北风可能推动火势向西北扩散。建议 DR-02 立即压制火线，DR-03 前往 800m 外水源点补给。',
+  explanation: '当前为 II 级 · 中等火情，火情负荷约 245.7 FLP（18 个 100m² 网格），西北风可能推动火势向西北扩散。R1 持续监测，E1/E2 主力灭火，S1 复核人员；时间为仿真区间，后端服务恢复后以实时研判为准。',
+  data_mode: '本地演示数据 · 规则引擎',
 }
 
 const result = computed(() => {
@@ -120,6 +146,14 @@ const displayStatus = computed(() => statusLabels[analysisEnvelope.value?.status
 const plan = computed(() => result.value.dispatch_plan || {})
 const planStatus = computed(() => analysisEnvelope.value?.status || (plan.value.feasibility === false ? 'awaiting_confirmation' : 'ready'))
 const resourceGap = computed(() => plan.value.resource_gap || result.value.resource_gap || [])
+// 契约字段为 earliest_minutes/latest_minutes/window_minutes（api-contract.md §7），旧 min/max 仅兜底。
+const controlWindow = computed(() => {
+  const time = plan.value.estimated_control_time || {}
+  const start = time.earliest_minutes ?? time.min ?? time.window_minutes?.[0]
+  const end = time.latest_minutes ?? time.max ?? time.window_minutes?.[1]
+  if (start == null && end == null) return '—'
+  return `${start ?? '—'}–${end ?? '—'} 分钟`
+})
 const peopleRisk = computed(() => peopleStatus.value === 'unknown' ? '人员情况不确定：禁止低空近距离作业，需先确认现场是否有人。' : peopleStatus.value === 'confirmed' ? '有人风险：已启用人员避让与人工复核，禁止自动投放。' : '已确认无人：仍需保持通信与撤离通道。')
 const activeRounds = computed(() => rounds.value.length ? rounds.value : (analysisEnvelope.value?.rounds || []))
 const latestRound = computed(() => activeRounds.value.at(-1))
@@ -443,24 +477,74 @@ async function downloadReport() {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `task-${analysisId.value}-report.html`
+  link.download = `task-${analysisId.value}-dispatch_plan.json`
   link.click()
   URL.revokeObjectURL(url)
 }
 
-async function submitApproval(action) {
-  if (!analysisId.value || approvalBusy.value) return
-  approvalBusy.value = true
+async function toggleReport() {
+  if (!analysisId.value) { errorMessage.value = '暂无任务报告，请先完成一次研判。'; return }
+  reportViewer.value.open = !reportViewer.value.open
+  if (!reportViewer.value.open) return
+  reportViewer.value.loading = true
   try {
-    const response = await fetch(`/api/tasks/${analysisId.value}/approval`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, plan_id: plan.value.plan_id, constraints: { people_status: peopleStatus.value } }) })
-    if (!response.ok) throw new Error('方案操作失败')
-    applyEnvelope(await response.json())
-    addLog(`方案操作完成 · ${action}`)
-  } catch (error) { errorMessage.value = '方案操作失败，请重试。'; console.warn(error) } finally { approvalBusy.value = false }
+    const response = await fetch(`/api/tasks/${analysisId.value}/report`)
+    if (!response.ok) throw new Error('报告接口不可用')
+    reportViewer.value.data = await response.json()
+  } catch (error) {
+    errorMessage.value = '报告暂不可用。'
+    reportViewer.value.open = false
+    console.warn(error)
+  } finally {
+    reportViewer.value.loading = false
+  }
 }
 
-function fleetForPayload() { return drones.value.map((drone) => ({ ...drone, soc: drone.soc ?? drone.battery })) }
+const reportJson = computed(() => reportViewer.value.data ? JSON.stringify(reportViewer.value.data, null, 2) : '正在加载报告…')
 
+// SSE 实时事件流（api-contract §5.10）：任务变更时订阅，事件实时上屏；终态 done 后自动关闭。
+let eventStream = null
+function openEventStream(id) {
+  closeEventStream()
+  if (!id || !window.EventSource) return
+  streamedTaskId.value = id
+  eventStream = new EventSource(`/api/tasks/${id}/events/stream`)
+  eventStream.onmessage = (message) => {
+    try {
+      const event = JSON.parse(message.data)
+      if (event?.message) logs.value = [event, ...logs.value].slice(0, 200)
+    } catch (error) { console.warn(error) }
+  }
+  eventStream.addEventListener('done', () => closeEventStream())
+}
+function closeEventStream() {
+  if (eventStream) { eventStream.close(); eventStream = null }
+  streamedTaskId.value = ''
+}
+
+function adjustConstraints() {
+  const constraints = { people_status: peopleStatus.value, max_drones: maxDrones.value }
+  if (targetMinutes.value != null && Number(targetMinutes.value) > 0) constraints.target_minutes = Number(targetMinutes.value)
+  if (disabledUavs.value.length) constraints.disabled_uavs = [...disabledUavs.value]
+  return constraints
+}
+
+async function submitApproval(action) {
+  if (!analysisId.value || approvalBusy.value) return
+  const reason = reasonInput.value.trim()
+  if ((action === 'reject' || action === 'terminate') && !reason) {
+    errorMessage.value = '驳回或终止必须在原因框中说明原因。'
+    return
+  }
+  approvalBusy.value = true
+  try {
+    const response = await fetch(`/api/tasks/${analysisId.value}/approval`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, plan_id: plan.value.plan_id, constraints: adjustConstraints(), reason: reason || null }) })
+    if (!response.ok) throw new Error('方案操作失败')
+    applyEnvelope(await response.json())
+    reasonInput.value = ''
+    addLog(`方案操作完成 · ${action}${reason ? ' · 原因：' + reason : ''}`)
+  } catch (error) { errorMessage.value = '方案操作失败，请重试。'; console.warn(error) } finally { approvalBusy.value = false }
+}
 
 function applyEnvelope(payload) {
   const envelope = payload?.payload || payload
@@ -472,6 +556,7 @@ function applyEnvelope(payload) {
   currentStage.value = stages.value.at(-1)?.stage || stages.value.at(-1)?.name || currentStage.value
   updateDrones(analysisResult.value)
   if (analysisResult.value?.environment) environment.value = analysisResult.value.environment
+  if (envelope?.analysis_id && envelope.analysis_id !== streamedTaskId.value) openEventStream(envelope.analysis_id)
 }
 
 async function loadEvents(id = analysisId.value) {
@@ -523,24 +608,28 @@ function openFilePicker() {
   fileInput.value?.click()
 }
 
-function acceptFile(file) {
+function acceptFile(fileList) {
   errorMessage.value = ''
-  if (!file) return
+  const list = Array.from(fileList || [])
+  if (!list.length) return
+  const primary = list[list.length - 1]
   const allowed = ['image/jpeg', 'image/png', 'video/mp4']
-  if (!allowed.includes(file.type)) {
+  if (!allowed.includes(primary.type)) {
     errorMessage.value = '仅支持 JPG、PNG 或 MP4 文件。'
     return
   }
-  if (file.size > 200 * 1024 * 1024) {
-    errorMessage.value = '文件大小不能超过 200MB。'
+  if (list.some((file) => file.size > 200 * 1024 * 1024)) {
+    errorMessage.value = '单个文件大小不能超过 200MB。'
     return
   }
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
-  selectedFile.value = file
-  previewUrl.value = URL.createObjectURL(file)
+  selectedFile.value = primary
+  // 多选图片时：最新一帧作为主文件，其余图片组成序列帧（api-contract §5.2）。
+  selectedFrames.value = primary.type.startsWith('image/') ? list.filter((file) => file.type.startsWith('image/') && file !== primary) : []
+  previewUrl.value = URL.createObjectURL(primary)
   uploaded.value = true
   progress.value = 0
-  addLog(`已接收新航拍影像 · ${file.name}`)
+  addLog(`已接收航拍影像 · ${primary.name}${selectedFrames.value.length ? ` · 序列共 ${selectedFrames.value.length + 1} 帧` : ''}`)
 }
 
 function handleFileChange(event) {
@@ -582,8 +671,9 @@ async function startAnalysis() {
 
     const formData = new FormData()
     formData.append('file', selectedFile.value)
+    for (const frame of selectedFrames.value) formData.append('frames', frame, frame.name)
     formData.append('scene_id', scene.id)
-    formData.append('use_vlm', 'false')
+    formData.append('use_vlm', String(useVlm.value))
     const { latitude, longitude } = environmentForPayload()
     formData.append('latitude', String(latitude))
     formData.append('longitude', String(longitude))
@@ -620,29 +710,30 @@ async function runMonitor() {
   if (!analysisId.value || monitoring.value) return
   const monitoredId = analysisId.value
   monitoring.value = true
+  let failureDetail = ''
   try {
-    const response = await fetch(`/api/monitor/${monitoredId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ elapsed_minutes: 5, extinguishing_liters: 40, fleet_snapshot: fleetForPayload(), inventory: inventory.value }) })
-    if (!response.ok) throw new Error('监测接口不可用')
-    const payload = await response.json()
+    // 新集成统一使用 /api/tasks/{id}/rounds（api-contract.md §5.7）；
+    // 任务快照始终以后端 Store 为准，不再上送 fleet/inventory。
+    const roundNumber = (analysisEnvelope.value?.monitor_round || 0) + 1
+    const response = await fetch(`/api/tasks/${monitoredId}/rounds`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ round: roundNumber, elapsed_minutes: 5, extinguishing_liters: 40 }) })
+    const payload = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      failureDetail = payload?.detail || `反馈轮次接口返回 ${response.status}`
+      throw new Error(failureDetail)
+    }
     if (monitoredId !== analysisId.value) return
-    const envelope = payload?.payload || payload
-    const updatedResult = envelope?.result || null
-    monitorResult.value = updatedResult?.monitor || payload?.monitor || payload
-    rounds.value = Array.isArray(envelope?.rounds) ? envelope.rounds : rounds.value
-    analysisEnvelope.value = envelope
-    analysisId.value = envelope?.analysis_id || monitoredId
-    analysisResult.value = updatedResult
-    stages.value = Array.isArray(envelope?.stages) ? envelope.stages : stages.value
-    taskStatus.value = statusLabels[envelope?.status] || envelope?.status || '执行中'
-    currentStage.value = stages.value.at(-1)?.stage || stages.value.at(-1)?.name || '闭环监测完成'
-    updateDrones(updatedResult)
-    const action = payload?.action || monitorResult.value?.action || '保持观察'
-    addLog(`第 ${envelope?.monitor_round || activeRounds.value.length + 1} 轮监测完成 · 下一步：${action} · ${monitorResult.value?.reason || '无重规划原因'}`, { stage: 'monitor', source: 'rules' })
+    const refreshed = await fetch(`/api/analyze/${monitoredId}`)
+    if (refreshed.ok) applyEnvelope(await refreshed.json())
+    rounds.value = Array.isArray(analysisEnvelope.value?.rounds) ? analysisEnvelope.value.rounds : rounds.value
+    monitorResult.value = payload.after || payload
+    const action = payload.changes?.action || payload.after?.action || payload.next_action || '保持观察'
+    addLog(`第 ${payload.round || roundNumber} 轮反馈完成 · 下一步：${payload.next_action || action} · ${payload.after?.reason || '无重规划原因'}`, { stage: 'monitor', source: 'rules' })
     await loadEvents(monitoredId)
   } catch (error) {
     if (monitoredId === analysisId.value) {
-      errorMessage.value = '监测服务暂不可用。'
-      addLog('闭环监测失败 · 保持当前任务状态')
+      errorMessage.value = failureDetail || '反馈轮次暂不可用。'
+      addLog('反馈轮次失败 · 保持当前任务状态')
+      console.warn(error)
     }
   } finally {
     monitoring.value = false
@@ -657,6 +748,8 @@ function resetAnalysis() {
   currentStage.value = '等待影像接入'
   rounds.value = []
   selectedFile.value = null
+  selectedFrames.value = []
+  closeEventStream()
   uploaded.value = false
   progress.value = 0
   errorMessage.value = ''
@@ -666,6 +759,7 @@ function resetAnalysis() {
 }
 
 onBeforeUnmount(() => {
+  closeEventStream()
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
 })
 
@@ -694,12 +788,12 @@ onMounted(() => {
       <div v-if="activeTab === 'command'" class="dashboard">
         <section class="hero-panel"><div class="panel-heading"><div><span class="section-kicker">ACTIVE INCIDENT · FF-20260902-001</span><h2>{{ scene.incident }}</h2></div><span class="severity"><span></span>{{ result.fire_assessment.label }}</span></div><div class="map-preview"><div class="map-grid"></div><div class="ridge ridge-a"></div><div class="ridge ridge-b"></div><div class="fire-zone"><span class="pulse"></span><Flame :size="23" fill="currentColor" /><label>火点中心<br><b>{{ scene.coordinates }}</b></label></div><div class="wind-arrow"><Wind :size="20" /><span>{{ result.environment.wind_direction || '—' }} {{ result.environment.wind_speed ?? '—' }} m/s</span></div><div class="map-label top">北坡林区 / ZONE A</div><div class="map-label bottom">{{ result.environment.nearest_water?.distance_m ?? result.environment.nearest_water_distance_m ?? '—' }}m · {{ result.environment.nearest_water?.name || '最近水源' }}</div></div><div class="hero-footer"><div><small>当前处置结论</small><strong>{{ result.dispatch_plan.can_control ? '可控制 · 建议立即出动' : '暂不可控 · 请求增援' }}</strong></div><div class="hero-stat"><small>预计处置时间</small><strong>{{ result.dispatch_plan.estimated_minutes }} <em>MIN</em></strong></div><div class="hero-stat"><small>下次评估</small><strong>05 <em>MIN</em></strong></div></div></section>
 
-        <section class="upload-panel"><div class="panel-heading"><div><span class="section-kicker">INPUT CHANNEL</span><h2>现场影像接入</h2></div><FileImage :size="19" class="muted-icon" /></div><input ref="fileInput" class="visually-hidden" type="file" accept="image/jpeg,image/png,video/mp4" @change="handleFileChange"><div class="dropzone" :class="{ uploaded }" @click="openFilePicker" @dragover.prevent @drop.prevent="handleDrop"><div v-if="previewUrl && selectedFile?.type.startsWith('image/')" class="preview-thumb"><img :src="previewUrl" alt="已选择的火灾影像预览"></div><div v-else class="upload-orb"><Upload :size="22" /></div><strong>{{ uploaded ? '影像已接入' : '拖入航拍图像或视频' }}</strong><span>{{ uploaded ? `${selectedFile.name} · ${(selectedFile.size / 1024 / 1024).toFixed(1)} MB` : '支持 JPG / PNG / MP4 · 最大 200MB' }}</span><button type="button" @click.stop="openFilePicker">{{ uploaded ? '更换文件' : '选择文件' }}</button></div><div class="process"><div class="process-row"><span>分析管线</span><b>{{ progress }}%</b></div><div class="progress"><i :style="{ width: progress + '%' }"></i></div><div class="pipeline"><span :class="{ done: progress >= 24 }">视觉识别</span><ChevronRight :size="13" /><span :class="{ done: progress >= 48 }">环境融合</span><ChevronRight :size="13" /><span :class="{ done: progress >= 72 }">风险评估</span><ChevronRight :size="13" /><span :class="{ done: progress >= 90 }">调度生成</span></div><div class="model-status"><span>YOLO <b>{{ projectStatus.yolo === 'pending' ? '待接入' : '在线' }}</b></span><span>VLM <b>{{ projectStatus.vlm === 'pending' ? '待接入' : '在线' }}</b></span><span>场景数据 <b>{{ projectStatus.geo_data }}</b></span></div></div><button v-if="uploaded" class="reset-link" @click="resetAnalysis"><RefreshCw :size="13" /> 清空并重新接入</button></section>
+        <section class="upload-panel"><div class="panel-heading"><div><span class="section-kicker">INPUT CHANNEL</span><h2>现场影像接入</h2></div><FileImage :size="19" class="muted-icon" /></div><input ref="fileInput" class="visually-hidden" type="file" accept="image/jpeg,image/png,video/mp4" multiple @change="handleFileChange"><div class="dropzone" :class="{ uploaded }" @click="openFilePicker" @dragover.prevent @drop.prevent="handleDrop"><div v-if="previewUrl && selectedFile?.type.startsWith('image/')" class="preview-thumb"><img :src="previewUrl" alt="已选择的火灾影像预览"></div><div v-else class="upload-orb"><Upload :size="22" /></div><strong>{{ uploaded ? (selectedFrames.length ? `影像已接入 · 序列 ${selectedFrames.length + 1} 帧` : '影像已接入') : '拖入航拍图像或视频' }}</strong><span>{{ uploaded ? `${selectedFile.name}${selectedFrames.length ? ` + ${selectedFrames.length} 帧序列` : ''} · ${(selectedFile.size / 1024 / 1024).toFixed(1)} MB` : '支持 JPG / PNG / MP4 · 多选图片组成序列 · 最大 200MB' }}</span><button type="button" @click.stop="openFilePicker">{{ uploaded ? '更换文件' : '选择文件' }}</button></div><div class="process"><div class="process-row"><span>分析管线</span><b>{{ progress }}%</b></div><div class="progress"><i :style="{ width: progress + '%' }"></i></div><div class="pipeline"><span :class="{ done: progress >= 24 }">视觉识别</span><ChevronRight :size="13" /><span :class="{ done: progress >= 48 }">环境融合</span><ChevronRight :size="13" /><span :class="{ done: progress >= 72 }">风险评估</span><ChevronRight :size="13" /><span :class="{ done: progress >= 90 }">调度生成</span></div><div class="model-status"><span>YOLO <b>{{ projectStatus.yolo === 'pending' ? '待接入' : '在线' }}</b></span><span>VLM <b>{{ projectStatus.vlm === 'pending' ? '待接入' : '在线' }}</b></span><span>场景数据 <b>{{ projectStatus.geo_data }}</b></span><label class="vlm-toggle"><input type="checkbox" v-model="useVlm"> 上传时调用 VLM 解释</label></div></div><button v-if="uploaded" class="reset-link" @click="resetAnalysis"><RefreshCw :size="13" /> 清空并重新接入</button></section>
 
         <section class="environment-panel panel"><div class="panel-heading"><div><span class="section-kicker">ENVIRONMENT FEED</span><h2>现场环境</h2></div><button class="outline-btn environment-refresh" :disabled="environmentLoading" @click="loadEnvironment"><RefreshCw :size="14" /> {{ environmentLoading ? '刷新中…' : '刷新环境' }}</button></div><div class="environment-controls"><label>模式 <select v-model="environmentMode" @change="loadEnvironment"><option value="real">真实数据</option><option value="auto">自动</option><option value="offline">离线演示（不联网）</option><option value="demo">演示数据</option></select></label><div class="coordinate-editor"><label>纬度 <input v-model="coordinateDraft.latitude" inputmode="decimal" aria-label="纬度"></label><label>经度 <input v-model="coordinateDraft.longitude" inputmode="decimal" aria-label="经度"></label><button class="outline-btn" type="button" @click="applyCoordinates">应用</button></div><span>{{ environmentCoordinates.latitude.toFixed(7) }}, {{ environmentCoordinates.longitude.toFixed(7) }}</span></div><div v-if="coordinateError" class="coordinate-error" role="alert">{{ coordinateError }}</div><div class="environment-meta"><span>采集 · {{ environment?.collected_at?.slice(0, 19).replace('T', ' ') || '等待刷新' }}</span><span>状态 · {{ environmentStatus }}</span><span>来源 · {{ environmentSource }}</span><span v-if="environmentStale">stale / 缓存</span><span v-if="environmentFallback">fallback · {{ environmentFallback }}</span></div><div class="environment-grid"><div v-for="item in environmentFeatures" :key="item.label" class="environment-item"><span>{{ item.label }}</span><strong :class="'tone-' + item.tone">{{ item.value }}</strong></div></div></section>
         <section class="metrics-grid"><article v-for="metric in metrics" :key="metric.label" class="metric-card"><div class="metric-top"><span>{{ metric.label }}</span><component :is="metric.icon" :size="17" :class="'tone-' + metric.tone" /></div><div class="metric-value">{{ metric.value }} <small>{{ metric.unit }}</small></div><div :class="['metric-change', 'tone-' + metric.tone]">{{ metric.change }}</div></article></section>
         <section class="fleet-panel panel"><div class="panel-heading"><div><span class="section-kicker">FLEET STATUS</span><h2>无人机集群状态</h2></div><button class="text-btn" @click="selectNav('fleet')">查看详情 <ChevronRight :size="14" /></button></div><div class="fleet-list"><div v-for="drone in drones" :key="drone.id" class="drone-row"><div :class="['drone-icon', drone.color]"><Zap :size="17" /></div><div class="drone-name"><strong>{{ drone.id }} <span>{{ drone.label }}</span></strong><small>{{ drone.subgroup }} · {{ drone.status }}</small></div><div class="battery"><div class="battery-bar"><i :style="{ width: drone.soc + '%' }"></i></div><span>SOC {{ drone.soc }}%</span></div><div class="drone-telemetry"><span>{{ drone.module }}</span><span>{{ drone.payload }}</span><span>信号 {{ drone.signal }}%</span><span>健康 {{ drone.health }}%</span></div><span :class="['drone-status', drone.status === '执行中' ? 'active-status' : '']"><i></i>{{ drone.status }}</span></div></div></section>
-        <section class="decision-panel panel"><div class="panel-heading"><div><span class="section-kicker">AGENT DECISION</span><h2>调度建议</h2></div><span class="ai-badge"><Bot :size="14" /> {{ dataMode }}</span></div><div class="decision-callout"><div class="decision-icon"><Gauge :size="20" /></div><div><strong>{{ result.dispatch_plan.can_control ? '建议立即启动一级处置响应' : '建议立即请求增援' }}</strong><p>{{ result.explanation }}</p></div></div><div class="plan-summary" v-if="analysisEnvelope?.status === 'awaiting_confirmation' || plan.plan_id"><b>方案 {{ plan.plan_version ? `v${plan.plan_version}` : '' }}</b><span>FLP：{{ plan.fire_load_flp ?? result.dispatch_plan.fire_load_flp ?? '—' }}</span><span>主方案：{{ plan.plan_id || '当前方案' }}</span><span>时间区间：{{ plan.estimated_control_time?.min ?? plan.estimated_minutes ?? '—' }}–{{ plan.estimated_control_time?.max ?? plan.estimated_minutes ?? '—' }} 分钟</span><span>硬约束：{{ plan.hard_constraints?.length ? plan.hard_constraints.join('、') : (plan.resource_gap?.some((gap) => gap.resource === 'hard_constraint') ? '存在冲突' : '满足') }}</span><span>备选：{{ plan.alternative_plan?.length ? `${plan.alternative_plan.length} 个` : '暂无' }}</span><span>缺口：{{ resourceGap.length ? resourceGap.map((gap) => gap.name || gap.resource || gap.type).join('、') : '无' }}</span><span>重规划：{{ plan.replan_trigger?.length ? plan.replan_trigger.join('、') : '未触发' }}</span></div><div class="people-risk"><label>人员状态 <select v-model="peopleStatus"><option value="confirmed">有人</option><option value="absent">无人</option><option value="unknown">不确定</option></select></label><span>{{ peopleRisk }}</span></div><div class="approval-actions" v-if="analysisId"><button class="outline-btn" :disabled="approvalBusy" @click="submitApproval('approve')">批准主方案</button><button class="outline-btn" :disabled="approvalBusy" @click="submitApproval('adjust')">调整方案</button><button class="outline-btn danger-btn" :disabled="approvalBusy" @click="submitApproval('reject')">驳回</button><button class="outline-btn danger-btn" :disabled="approvalBusy" @click="submitApproval('terminate')">终止任务</button><button class="outline-btn" @click="downloadReport">查看/下载报告</button></div><div class="task-chips"><span v-for="task in result.dispatch_plan.tasks" :key="task.drone_id"><b>{{ task.drone_id }}</b> {{ task.task }}</span></div><button v-if="analysisResult" class="monitor-btn" :disabled="monitoring" @click="runMonitor"><RefreshCw :size="14" /> {{ monitoring ? '监测中…' : '执行下一轮监测' }}</button><div v-if="monitorResult" class="monitor-result">第 {{ analysisEnvelope?.monitor_round || activeRounds.length }} 轮 · 监测结果：火焰面积 {{ monitorArea }}m² · FLP {{ monitorResult.fire_load_flp ?? monitorResult.next_fire_load_flp ?? '—' }} · SOC {{ monitorResult.next_fleet?.map((drone) => `${drone.id}:${drone.soc ?? drone.battery}%`).join('、') || '—' }} · 库存 {{ monitorResult.next_inventory ? JSON.stringify(monitorResult.next_inventory) : '—' }} · {{ monitorResult.reason || '无重规划原因' }}</div><div v-if="activeRounds.length" class="round-list"><div v-for="round in activeRounds" :key="round.round || round.monitor_round"><b>Round {{ round.round || round.monitor_round }}</b><span>before FLP {{ round.before?.fire_load_flp ?? round.before?.fire_load ?? '—' }}</span><span>after FLP {{ round.after?.fire_load_flp ?? round.after?.fire_load ?? '—' }}</span><span>触发原因：{{ (round.replan_triggers || round.replan_trigger || []).join('、') || '无' }}</span></div></div></section>
+        <section class="decision-panel panel"><div class="panel-heading"><div><span class="section-kicker">AGENT DECISION</span><h2>调度建议</h2></div><span class="ai-badge"><Bot :size="14" /> {{ dataMode }}</span></div><div class="decision-callout"><div class="decision-icon"><Gauge :size="20" /></div><div><strong>{{ result.dispatch_plan.can_control ? '建议立即启动一级处置响应' : '建议立即请求增援' }}</strong><p>{{ result.explanation }}</p></div></div><div class="plan-summary" v-if="analysisEnvelope?.status === 'awaiting_confirmation' || plan.plan_id"><b>方案 {{ plan.plan_version ? `v${plan.plan_version}` : '' }}</b><span>FLP：{{ plan.fire_load_flp ?? result.dispatch_plan.fire_load_flp ?? '—' }}</span><span>主方案：{{ plan.plan_id || '当前方案' }}</span><span>时间区间：{{ controlWindow }}</span><span>硬约束：{{ plan.hard_constraints?.length ? plan.hard_constraints.join('、') : (plan.resource_gap?.some((gap) => gap.resource === 'hard_constraint') ? '存在冲突' : '满足') }}</span><span>备选：{{ plan.alternative_plan?.length ? `${plan.alternative_plan.length} 个` : '暂无' }}</span><span>缺口：{{ resourceGap.length ? resourceGap.map((gap) => gap.name || gap.resource || gap.type).join('、') : '无' }}</span><span>重规划：{{ plan.replan_trigger?.length ? plan.replan_trigger.join('、') : '未触发' }}</span></div><div class="people-risk"><label>人员状态 <select v-model="peopleStatus"><option value="confirmed">有人</option><option value="absent">无人</option><option value="unknown">不确定</option></select></label><label>出动上限 <select v-model.number="maxDrones" title="调整方案时生效的灭火机数量上限"><option v-for="n in 4" :key="n" :value="n">{{ n }}</option></select></label><label>时限 <input class="minute-input" type="number" min="1" v-model.number="targetMinutes" placeholder="min" title="调整方案时生效的目标处置时限（分钟）"></label><label class="uav-disable">禁用 <input type="checkbox" value="E1" v-model="disabledUavs"><span>E1</span> <input type="checkbox" value="E2" v-model="disabledUavs"><span>E2</span> <input type="checkbox" value="E3" v-model="disabledUavs"><span>E3</span> <input type="checkbox" value="E4" v-model="disabledUavs"><span>E4</span></label><span>{{ peopleRisk }}</span></div><div class="approval-actions" v-if="analysisId"><input class="reason-input" v-model="reasonInput" placeholder="驳回/终止原因（必填）" aria-label="操作原因"><button class="outline-btn" :disabled="approvalBusy" @click="submitApproval('approve')">批准主方案</button><button class="outline-btn" :disabled="approvalBusy" @click="submitApproval('adjust')">按约束调整</button><button class="outline-btn danger-btn" :disabled="approvalBusy" @click="submitApproval('reject')">驳回</button><button class="outline-btn danger-btn" :disabled="approvalBusy" @click="submitApproval('terminate')">终止任务</button><button class="outline-btn" @click="toggleReport">{{ reportViewer.open ? '收起报告' : '在线查看报告' }}</button><button class="outline-btn" @click="downloadReport">下载报告 JSON</button></div><div v-if="reportViewer.open" class="report-viewer"><div class="report-viewer-head"><b>任务报告 · {{ analysisId }}</b><small>data/reports/{{ analysisId }}/dispatch_plan.json</small></div><pre>{{ reportJson }}</pre></div><div class="task-chips"><span v-for="task in result.dispatch_plan.tasks" :key="task.drone_id"><b>{{ task.drone_id }}</b> {{ task.task }}</span></div><button v-if="analysisResult" class="monitor-btn" :disabled="monitoring" @click="runMonitor"><RefreshCw :size="14" /> {{ monitoring ? '监测中…' : '执行下一轮监测' }}</button><div v-if="monitorResult" class="monitor-result">第 {{ analysisEnvelope?.monitor_round || activeRounds.length }} 轮 · 监测结果：火焰面积 {{ monitorArea }}m² · FLP {{ monitorResult.fire_load_flp ?? monitorResult.next_fire_load_flp ?? '—' }} · SOC {{ monitorResult.next_fleet?.map((drone) => `${drone.id}:${drone.soc ?? drone.battery}%`).join('、') || '—' }} · 库存 {{ monitorResult.next_inventory ? JSON.stringify(monitorResult.next_inventory) : '—' }} · {{ monitorResult.reason || '无重规划原因' }}</div><div v-if="activeRounds.length" class="round-list"><div v-for="round in activeRounds" :key="round.round || round.monitor_round"><b>Round {{ round.round || round.monitor_round }}</b><span>before FLP {{ round.before?.fire_load_flp ?? round.before?.fire_load ?? '—' }}</span><span>after FLP {{ round.after?.fire_load_flp ?? round.after?.fire_load ?? '—' }}</span><span>触发原因：{{ (round.replan_triggers || round.replan_trigger || []).join('、') || '无' }}</span></div></div></section>
         <section class="log-panel panel"><div class="panel-heading"><div><span class="section-kicker">SYSTEM ACTIVITY</span><h2>任务日志</h2></div><span class="log-count">{{ logs.length }} EVENTS</span></div><div class="logs"><div v-for="(log, index) in logs.slice(0, 6)" :key="log.message + log.timestamp + index"><span class="log-time">{{ logTime(log, index) }}</span><i :class="{ bright: index === 0 }"></i><span>{{ logText(log) }} <small v-if="typeof log === 'object'">· {{ log.stage }} / {{ log.source }}</small></span></div></div></section>
       </div>
 

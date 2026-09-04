@@ -1,6 +1,6 @@
 # 项目进度
 
-更新时间：2026-09-03
+更新时间：2026-09-04
 
 ## 已完成
 
@@ -16,6 +16,15 @@
 - [x] 方案审批闭环：确认、拒绝、调整、终止、资源锁和事件记录
 - [x] 5 分钟反馈轮次（内部 1 分钟推进）、重规划触发和报告归档
 - [x] 视觉 fixture、上传 MIME/大小/文件魔数校验、契约测试和前端生产构建
+- [x] 开发规范与 API 契约：`CONTRIBUTING.md`、`docs/api-contract.md`（2026-09-04）
+- [x] 规则 Tool 键名对齐：`calculate_flp_load` 兼容 `k_fuel/k_wind/k_slope` 记法，冻结公式 `B_i = 10×I×K_fuel×K_wind×K_slope` 全因子生效（2026-09-04 修复，此前风/燃料/坡度因子未参与计算）
+- [x] 首个方案补齐 `plan_version: 1`，与 `uav-dispatch-v1` 契约一致（2026-09-04）
+- [x] 前端演示兜底升级为 2+4+2 正口径：移除 DR-01/02/03、"18 分钟"单点与 3+3+2 旧数据；时间区间改读 `earliest_minutes/latest_minutes`（2026-09-04）
+- [x] 前端反馈改用 `POST /api/tasks/{id}/rounds`，不再上送 fleet/inventory 快照（2026-09-04）
+- [x] 前端新增：任务报告在线查看、VLM 解释开关、调整约束的出动上限表单；报告下载文件名修正为 `.json`；workbench.css 未闭合花括号修复（2026-09-04）
+- [x] 测试补齐：规则算例（tests/test_rules.py）、YOLO/VLM 适配协议（tests/test_adapters.py）、六场景 API 级验收（tests/test_scenarios.py）（2026-09-04）
+- [x] 路由层按域拆分：`routes/task_routes.py`（开发者 A）与 `routes/environment_routes.py`（开发者 B），`main.py` 仅做装配；双人平台分工与文件所有权表见 CONTRIBUTING.md 第 3、4 节（2026-09-04）
+- [x] 修改追踪清单建立：[docs/修改追踪清单.md](修改追踪清单.md)，已回填 7 项完成、登记待办 A-1~A-7 / B-1~B-8 / J-1~J-2 / E-1~E-3（2026-09-04）
 
 ## 当前为演示实现
 
@@ -34,7 +43,8 @@
 - [x] 每 5 分钟轮次对比 FLP、SOC、药剂、库存、环境和 UAV 状态。
 - [x] 关键事件触发重规划，并保存方案版本与资源缺口。
 - [x] 完成后可查询报告，保留输入、审批、轮次、事件、消耗和结论。
-- [ ] 交付前运行完整 `pytest -q`、后端编译、前端构建和浏览器六场景验收。
+- [x] 2026-09-04 自动化门禁全绿：`pytest -q` 33 passed、`python -m py_compile`、`cd frontend && npm run build`；六场景已由 tests/test_scenarios.py 在 API 层覆盖。
+- [ ] 浏览器端六场景人工验收（演示录制前执行一次）。
 
 ## 后续接入
 

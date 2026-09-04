@@ -52,7 +52,7 @@ frontend/src/     # Vue 工作台
 configs/          # 仿真参数
 data/             # 场景、2+4+2 机群、库存和视觉 fixture
 docs/             # 需求、架构、算法、数据、演示和进度
-reports/          # 任务报告输出（运行时生成）
+data/reports/     # 任务报告输出（运行时生成，git 忽略）
 tests/            # 契约和接口测试
 ```
 
@@ -99,6 +99,7 @@ POST /api/tasks/{task_id}/approval       approve/reject/adjust/terminate
 POST /api/tasks/{task_id}/replan
 POST /api/tasks/{task_id}/rounds
 GET  /api/tasks/{task_id}/report
+GET  /api/tasks/{task_id}/events/stream  SSE 事件实时推送
 ```
 
 旧的 `POST /api/monitor/{analysis_id}` 继续保留；其 `extinguishing_liters` 仅在入口转换为 W20 输入，避免旧面积规则污染新领域模型。上传支持 JPEG、PNG、MP4，当前文件不会送入真实 YOLO。
@@ -113,10 +114,13 @@ cd frontend && npm run build
 
 ## 已知限制与后续
 
-`AnalysisStore` 当前为内存存储，重启后任务和锁丢失；规则参数和 FLP 为团队仿真设定，不代表专业消防标准；路线为演示模型，不是生产级障碍避让；执行不连接飞控。后续按优先级接入 SQLite、真实 YOLO/PWM-YOLO、视频抽帧、VLM、GIS/在线气象、SSE/WebSocket、真实能耗与飞控。
+任务、事件和资源锁已通过 SQLite 写穿持久化（`data/analysis_store.db`，删除该文件即重置演示状态）；规则参数和 FLP 为团队仿真设定，不代表专业消防标准；路线为演示模型，不是生产级障碍避让；执行不连接飞控；视觉默认 fixture。后续按优先级接入真实 YOLO/PWM-YOLO、视频抽帧、VLM、在线 GIS/气象、WebSocket 双向控制、真实能耗与飞控。
 
 ## 相关文档
 
+- [开发规范](CONTRIBUTING.md)
+- [API 契约](docs/api-contract.md)
+- [修改追踪清单](docs/修改追踪清单.md)
 - [需求摘要](docs/requirements.md)
 - [系统架构](docs/architecture.md)
 - [Agent 分层](docs/agent-architecture.md)

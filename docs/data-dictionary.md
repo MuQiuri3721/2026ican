@@ -1,6 +1,8 @@
 # 数据字典
 
-所有接口响应带 `schema_version`、单位、来源和更新时间；旧字段仅在兼容入口/响应保留，业务规则读取新字段。
+领域对象响应带 `schema_version`（`uav-v1`、`fleet-v1`、`inventory-v1`、`analysis-v1`、`uav-dispatch-v1`）、单位、来源和更新时间；工具型/辅助接口（health、environment、terrain、tools、skills、events、rounds）不强制携带。旧字段仅在兼容入口/响应保留，业务规则读取新字段。字段级契约以 [api-contract.md](api-contract.md) 为唯一权威。
+
+坐标口径：任务内所有 `x/y`（`fleet.position`、`scene.fire_origin`、水源 `position`）共用同一套演示相对坐标（米），调度与闭环仿真只在此坐标系内算距离；GPS 参考值单独存放（`scene.fire_origin_gps` 与视觉 `fire_center` 的 `latitude/longitude`），只用于展示与环境查询，不参与距离计算（详见 api-contract.md §1.3）。
 
 | 数据对象 | 关键字段 | 单位/枚举 | 来源与说明 |
 |---|---|---|---|
@@ -10,11 +12,11 @@
 | UAV | `uav_id`、`subgroup`、`status`、`position`、`soc`、`payload_capacity_kg`、`payload_module`、`agent_remaining`、`agent_unit`、`speed_mps`、`energy_rate_percent_per_hour`、`signal`、`health`、`assigned_task` | SOC/信号/健康度 %；`reconnaissance/suppression/support` | `data/fleet.json`；2+4+2 八架独立记录，R1–R2、E1–E4、S1–S2 |
 | 药剂模块 | `water_20l`、`co2_6kg`、`sup_10` | W20=L、C6/SUP10=kg | 植被火默认 W20；C6 只用于局部设备/电气热点 |
 | 库存 | `water_liters`、`water_modules_w20`、`co2_modules_c6`、`support_boxes_sup10`、`battery_packs`、`water_sources` | L、kg、件 | `data/inventory.json`；库存不得为负 |
-| 调度方案 | `plan_id`、`task_id`、`plan_version`、`selected_uavs`、`agent_allocation`、`battery_plan`、`people_branch`、`estimated_control_time`、`feasibility`、`resource_gap`、`alternative_plan`、`replan_trigger` | 时间为 min 区间 | 确定性调度链；保留来源和硬约束检查 |
+| 调度方案 | `plan_id`、`task_id`、`plan_version`、`selected_uavs`、`tasks`、`material_module`、`fire_load_flp`、`battery_plan`、`people_branch`、`estimated_control_time`、`feasibility`、`resource_gap`、`alternative_plan`、`replan_trigger`、`scoring` | 时间为 min 区间；W20=L、C6=kg | 确定性调度链（`deterministic_v1_dispatch`）；任务分配在 `tasks`，无 `agent_allocation`/`risk_level` 字段；完整字段见 api-contract.md §7 |
 | 任务状态 | `status`、`approval`、`resource_locks` | `queued/running/awaiting_confirmation/approved/executing/replanning/completed/terminated/failed` | AnalysisStore；审批确认前不得执行 |
 | 反馈轮次 | `round`、`before`、`after`、`changes`、`replan_required`、`replan_triggers`、`next_action` | 1 分钟内部、5 分钟对外 | 监测与重规划接口 |
 | 事件 | `timestamp`、`stage`、`message`、`source` | ISO 时间 | 状态、审批、执行、反馈和归档审计 |
-| 报告归档 | 输入、方案版本、审批、轮次、事件、资源消耗、结论 | JSON | `reports/` 或报告服务输出；可追溯任务全生命周期 |
+| 报告归档 | 输入、方案版本、审批、轮次、事件、资源消耗、结论 | JSON | `data/reports/{task_id}/dispatch_plan.json`（运行时生成，git 忽略）；可追溯任务全生命周期 |
 
 ## 兼容字段
 

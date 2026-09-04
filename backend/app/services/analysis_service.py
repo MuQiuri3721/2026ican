@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import json
 from uuid import uuid4
@@ -22,7 +22,7 @@ class AnalysisService:
     def __init__(self, orchestrator: Optional[SkillOrchestrator] = None):
         self.orchestrator = orchestrator or SkillOrchestrator()
 
-    def create_and_run(self, request: AnalysisInput) -> Dict[str, Any]:
+    def create_and_run(self, request: AnalysisInput, frame_paths: Optional[List[str]] = None) -> Dict[str, Any]:
         item = analysis_store.create(request.model_dump())
         analysis_store.update(item.analysis_id, status="running")
         analysis_store.add_event(
@@ -54,6 +54,21 @@ class AnalysisService:
             chain = agent.get("skill_chain", {})
             observation = chain.get("fire_perception", {}).get("observation", {})
             fire_override = {key: observation[key] for key in ("fire_area_m2", "smoke_area_m2", "growth_rate") if observation.get(key) is not None}
+            # 多帧序列（api-contract §5.2）：frames 为早前帧，主文件自动作为最新一帧，趋势显式驱动火情重算。
+            visual_sequence = None
+            if frame_paths:
+                from ..tools.core import analyze_frame_sequence
+                sequence_paths = [*frame_paths, request.image_path] if request.image_path else list(frame_paths)
+                visual_sequence = analyze_frame_sequence(sequence_paths)
+                frames = visual_sequence.get("frames") or []
+                if frames:
+                    last_frame = frames[-1]
+                    for key in ("fire_area_m2", "smoke_area_m2"):
+                        if last_frame.get(key) is not None:
+                            fire_override[key] = last_frame[key]
+                trend = visual_sequence.get("trend") or {}
+                if trend.get("status") == "ok" and trend.get("growth_rate") is not None:
+                    fire_override["growth_rate"] = trend["growth_rate"]
             result = run_demo_analysis(
                 request.scene_id,
                 request.image_name or request.image_path,
@@ -64,13 +79,15 @@ class AnalysisService:
                 dispatch_override=chain.get("candidate_generation", {}).get("v1_dispatch"),
             )
             self._merge_agent_result(result, agent)
+            if visual_sequence and visual_sequence.get("frame_count", 0) >= 2:
+                result["visual_sequence"] = visual_sequence
             analysis_store.update_resources(item.analysis_id, result.get("fleet"), result.get("inventory"))
             analysis_store.update(
                 item.analysis_id,
                 status="awaiting_confirmation",
                 result=result,
                 stages=result.get("pipeline_stages", []),
-                plan_versions=[{"schema_version": "uav-dispatch-v1", "plan_id": "plan-" + uuid4().hex[:10], "task_id": item.analysis_id, "generated_at": datetime.now().isoformat(timespec="seconds"), **result.get("dispatch_plan", {})}],
+                plan_versions=[{"schema_version": "uav-dispatch-v1", "plan_id": "plan-" + uuid4().hex[:10], "task_id": item.analysis_id, "plan_version": 1, "generated_at": datetime.now().isoformat(timespec="seconds"), **result.get("dispatch_plan", {})}],
             )
             analysis_store.add_event(item.analysis_id, "dispatch", "分析链完成并生成调度方案", "rules")
             self._persist_dispatch_report(item.analysis_id)

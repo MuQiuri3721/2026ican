@@ -1,20 +1,62 @@
 from datetime import datetime
+from pathlib import Path
+from sqlite3 import connect
 from threading import RLock
 from typing import Any, Callable, Dict, List, Optional
 from uuid import uuid4
-from pathlib import Path
 import json
 
 from .schemas import AnalysisEnvelope, TaskEvent
 
 
 class AnalysisStore:
-    def __init__(self):
+    """内存工作态 + SQLite 写穿持久化：重启后任务、方案、事件和锁可恢复。"""
+
+    def __init__(self, db_path: Optional[Path] = None):
         self._items: Dict[str, AnalysisEnvelope] = {}
         # Resource state is owned by the task, never re-read from the global fixture.
         self._fleet_snapshots: Dict[str, List[dict]] = {}
         self._inventory_snapshots: Dict[str, dict] = {}
         self._lock = RLock()
+        self._db_path = Path(db_path) if db_path else Path(__file__).resolve().parents[3] / "data" / "analysis_store.db"
+        self._db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._db = connect(self._db_path, check_same_thread=False)
+        self._db.execute(
+            "CREATE TABLE IF NOT EXISTS tasks ("
+            "analysis_id TEXT PRIMARY KEY, envelope TEXT NOT NULL, fleet TEXT, inventory TEXT, updated_at TEXT)"
+        )
+        self._db.commit()
+        self._load_all()
+
+    def _load_all(self) -> None:
+        for analysis_id, envelope, fleet, inventory in self._db.execute(
+            "SELECT analysis_id, envelope, fleet, inventory FROM tasks"
+        ):
+            try:
+                self._items[analysis_id] = AnalysisEnvelope.model_validate(json.loads(envelope))
+                self._fleet_snapshots[analysis_id] = json.loads(fleet) if fleet else []
+                self._inventory_snapshots[analysis_id] = json.loads(inventory) if inventory else {}
+            except (ValueError, TypeError, json.JSONDecodeError):
+                # 历史损坏行跳过，不阻塞启动；合法行仍在。
+                continue
+
+    def _persist(self, analysis_id: str) -> None:
+        item = self._items.get(analysis_id)
+        if item is None:
+            return
+        self._db.execute(
+            "INSERT INTO tasks (analysis_id, envelope, fleet, inventory, updated_at) VALUES (?, ?, ?, ?, ?) "
+            "ON CONFLICT(analysis_id) DO UPDATE SET envelope=excluded.envelope, fleet=excluded.fleet, "
+            "inventory=excluded.inventory, updated_at=excluded.updated_at",
+            (
+                analysis_id,
+                item.model_dump_json(),
+                json.dumps(self._fleet_snapshots.get(analysis_id, []), ensure_ascii=False),
+                json.dumps(self._inventory_snapshots.get(analysis_id, {}), ensure_ascii=False),
+                item.updated_at,
+            ),
+        )
+        self._db.commit()
 
     def create(self, request_data: dict) -> AnalysisEnvelope:
         now = datetime.now().isoformat(timespec="seconds")
@@ -32,6 +74,7 @@ class AnalysisStore:
             state = load_demo_state(request_data.get("scene_id", "forest-demo-01"))
             self._fleet_snapshots[item.analysis_id] = self._normalize_fleet(state["fleet"])
             self._inventory_snapshots[item.analysis_id] = self._normalize_inventory(state["inventory"])
+            self._persist(item.analysis_id)
         return item.model_copy(deep=True)
 
     def get(self, analysis_id: str) -> Optional[AnalysisEnvelope]:
@@ -54,6 +97,7 @@ class AnalysisStore:
             changes["updated_at"] = datetime.now().isoformat(timespec="seconds")
             for key, value in changes.items():
                 setattr(item, key, value)
+            self._persist(analysis_id)
             return item.model_copy(deep=True)
 
     def dump(self, analysis_id: str) -> dict:
@@ -82,6 +126,7 @@ class AnalysisStore:
                     raise ValueError("不允许更新字段: " + key)
                 setattr(item, key, value)
             item.updated_at = changes["updated_at"]
+            self._persist(analysis_id)
             return item.model_copy(deep=True)
 
     def add_event(self, analysis_id: str, stage: str, message: str, source: str = "system") -> AnalysisEnvelope:
@@ -115,6 +160,7 @@ class AnalysisStore:
                 self._fleet_snapshots[analysis_id] = self._normalize_fleet(fleet)
             if inventory is not None:
                 self._inventory_snapshots[analysis_id] = self._normalize_inventory(inventory)
+            self._persist(analysis_id)
 
     @staticmethod
     def _normalize_fleet(fleet: Any) -> List[dict]:
@@ -133,12 +179,13 @@ class AnalysisStore:
             active = {uav for other in self._items.values() if other.analysis_id != analysis_id and other.status in {"approved", "executing", "replanning"} for uav in other.resource_locks}
             if active.intersection(uav_ids): raise ValueError("资源已被其他任务锁定")
             item.resource_locks = list(dict.fromkeys(uav_ids))
+            self._persist(analysis_id)
             return list(item.resource_locks)
 
     def release_resources(self, analysis_id: str) -> None:
         with self._lock:
             item = self._items.get(analysis_id)
-            if item: item.resource_locks = []
+            if item: item.resource_locks = []; self._persist(analysis_id)
 
     def approval(self, analysis_id: str, action: str, plan_id: Optional[str] = None, constraints: Optional[dict] = None, reason: Optional[str] = None, idempotency_key: Optional[str] = None) -> AnalysisEnvelope:
         with self._lock:
@@ -183,6 +230,7 @@ class AnalysisStore:
             event = TaskEvent(stage="approval", message=f"方案审批：{action}", source="user")
             item.events = [event, *item.events]; item.approval = {"action": action, "plan_id": current, "constraints": constraints, "reason": reason, "idempotency_key": idempotency_key}
             item.status = status; item.updated_at = datetime.now().isoformat(timespec="seconds")
+            self._persist(analysis_id)
             return item.model_copy(deep=True)
 
     def list_events(self, analysis_id: str) -> List[TaskEvent]:

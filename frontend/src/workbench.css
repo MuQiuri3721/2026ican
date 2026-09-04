@@ -5,7 +5,9 @@
 .drone-telemetry,.fleet-detail-meta{display:flex;gap:8px;flex-wrap:wrap;color:#8a969e;font:9px 'DM Mono'}.drone-telemetry span,.fleet-detail-meta span{padding:3px 5px;background:#f7f9fa;border-radius:3px}.drone-telemetry b,.fleet-detail-meta b{color:#52636b;font-weight:500}.round-list{display:grid;gap:7px;margin-top:10px}.round-list>div{display:flex;gap:10px;flex-wrap:wrap;padding:8px;background:#f7f9fa;border-left:2px solid #765392;color:#7b8790;font:9px 'DM Mono'}.round-list b{color:#765392}.fleet-detail-meta{margin:9px 0}.fleet-detail-meta span{display:inline-flex;gap:4px}.drone-telemetry{grid-column:4;align-items:center}@media(max-width:900px){.drone-telemetry{grid-column:auto}}
 
 .model-status {
+  display: flex;
   gap: 12px;
+}
 
 .model-status span {
   display: inline-flex;
@@ -15,6 +17,83 @@
 .model-status b {
   color: #5f7fc8;
   font-weight: 500;
+}
+
+.model-status label.vlm-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #5f7fc8;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.report-viewer {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fbfcfd;
+  padding: 12px;
+}
+
+.report-viewer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font: 600 12px Manrope;
+  color: #42525c;
+  margin-bottom: 8px;
+}
+
+.report-viewer-head small {
+  font: 9px 'DM Mono';
+  color: #9aa5ab;
+  overflow-wrap: anywhere;
+}
+
+.report-viewer pre {
+  margin: 0;
+  max-height: 340px;
+  overflow: auto;
+  font: 10px/1.6 'DM Mono';
+  color: #4d5e68;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.reason-input {
+  flex: 1 1 170px;
+  min-width: 150px;
+  margin-top: 0;
+  border: 1px solid #dce3e6;
+  border-radius: 5px;
+  padding: 8px 10px;
+  font: 10px 'DM Mono';
+  color: #52636b;
+  background: #fff;
+}
+
+.minute-input {
+  width: 52px;
+  border: 1px solid #dce3e6;
+  border-radius: 4px;
+  padding: 4px;
+  font: 10px 'DM Mono';
+  color: #52636b;
+  background: #fff;
+}
+
+.uav-disable {
+  gap: 3px;
+}
+
+.uav-disable input {
+  accent-color: #2867f4;
+}
+
+.uav-disable span {
+  color: #52636b;
 }
 
 .live-dot.offline {

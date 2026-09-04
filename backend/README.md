@@ -16,7 +16,9 @@ Swagger：`http://localhost:8000/docs`
 ## 分层与链路
 
 ```text
-HTTP API → AnalysisService → SkillOrchestrator → SkillRegistry → ToolRegistry → Tools
+HTTP API → routes/task_routes.py（任务/平台路由，开发者 A）
+         → routes/environment_routes.py（环境/等高线路由，开发者 B）
+         → AnalysisService → SkillOrchestrator → SkillRegistry → ToolRegistry → Tools
                          └→ AnalysisStore（任务、方案、审批、轮次、事件、资源锁）
 ```
 
@@ -52,4 +54,4 @@ GET  /api/tasks/{task_id}/report
 POST /api/monitor/{analysis_id}          旧接口兼容，旧升水量转换为 W20 输入
 ```
 
-AnalysisStore 当前为内存实现，适合演示和联调；重启后任务、锁和事件不会持久保留。真实 YOLO/VLM、生产级 GIS、飞控和数据库属于后续适配能力。
+AnalysisStore 使用 SQLite 写穿持久化（`data/analysis_store.db`，git 忽略），重启后任务、方案版本、事件和资源锁可恢复；规则快照和视觉仍为演示 fixture。真实 YOLO/VLM、生产级 GIS、飞控属于后续适配能力。
