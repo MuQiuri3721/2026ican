@@ -222,6 +222,53 @@ def test_domain_contract_rejects_invalid_payload_and_negative_inventory():
         InventorySnapshot(water_liters=-1)
 
 
+def test_uav_record_rejects_agent_over_capacity():
+    """载荷校验此前对水剂乘了 1000 形同虚设（审计 §一.4）：20L 对 25kg 必须通过，26 必须拒绝。"""
+    UAVRecord(uav_id="E-ok", subgroup="suppression", soc=50, payload_capacity_kg=25,
+              payload_module="water_20l", agent_remaining=20, agent_unit="L", speed_mps=8,
+              energy_rate_percent_per_hour=270)
+    with pytest.raises(ValueError):
+        UAVRecord(uav_id="E-over", subgroup="suppression", soc=50, payload_capacity_kg=25,
+                  payload_module="water_20l", agent_remaining=26, agent_unit="L", speed_mps=8,
+                  energy_rate_percent_per_hour=270)
+    with pytest.raises(ValueError):
+        UAVRecord(uav_id="E-over2", subgroup="suppression", soc=50, payload_capacity_kg=6,
+                  payload_module="co2_6kg", agent_remaining=7, agent_unit="kg", speed_mps=8,
+                  energy_rate_percent_per_hour=270)
+
+
+def test_run_skill_maps_skill_failure_to_502():
+    """兼容通道契约（api-contract §6.2）：Skill 内部失败（ok:false）映射 502，未知 Skill 404。"""
+    client = TestClient(app)
+    failed = client.post("/api/skills/environment_assessment/run", json={"scene_id": "unknown"})
+    assert failed.status_code == 502
+    unknown = client.post("/api/skills/no_such_skill/run", json={})
+    assert unknown.status_code == 404
+
+
+def test_monitor_finish_releases_resource_locks():
+    """自查修复回归：monitor 判定 finish 置 completed 后必须释放资源锁——
+    此前只有 terminate/reject/adjust 释放，completed 任务曾永久带着 ['R1','E1','S1'] 脏锁。"""
+    client = TestClient(app)
+    task_id, plan = _create_offline_task(client)
+    approved = client.post(f"/api/tasks/{task_id}/approval", json={"action": "approve", "plan_id": plan["plan_id"]})
+    assert approved.status_code == 200
+    assert approved.json()["resource_locks"], "批准后必须持有资源锁"
+
+    # 轮次上报把火情观测缩到 2 FLP（增长率 = 2×0.1，由 rounds 通道显式驱动；
+    # replan 的 observation 白名单不含 growth_flp_per_hour，压不住默认增长率），
+    # 一轮 5000L 喷洒必然清零 finish。
+    finished = client.post(f"/api/tasks/{task_id}/rounds", json={
+        "round": 1, "fire_load_flp": 2, "growth_rate": 0.1,
+        "elapsed_minutes": 5, "extinguishing_liters": 5000,
+    })
+    assert finished.status_code == 200, finished.text
+    assert finished.json()["changes"]["action"] == "finish", "2 FLP + 5000L 必须一轮 finish"
+    envelope = client.get(f"/api/analyze/{task_id}").json()
+    assert envelope["status"] == "completed"
+    assert envelope["resource_locks"] == [], "completed 任务不得遗留资源锁"
+
+
 def test_time_limit_constraint_filters_overtime_plans():
     """硬时限（target_minutes）剔除全部超时方案时必须输出时限缺口且判不可控（规则文档 §8.2）。
 

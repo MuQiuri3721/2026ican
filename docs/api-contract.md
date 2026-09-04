@@ -144,7 +144,7 @@ Query：`scene_id`（默认 `forest-demo-01`）、`latitude`、`longitude`、`en
 ```json
 {
   "scene_id": "forest-demo-01", "name": "紫金山演示林区",
-  "mode": "demo", "status": "ok", "source": "demo-data",
+  "mode": "demo", "status": "ok", "source": "demo-data", "collected_at": "2026-09-05T18:00:00",
   "wind_speed": 6.5, "wind_direction": "西北",
   "altitude": 320, "terrain": "丘陵",
   "water_sources": [{"name": "北侧蓄水池", "distance_m": 150, "available": true, "position": {"x": 20, "y": -20}, "latitude": 32.0701, "longitude": 118.8432}],
@@ -154,6 +154,7 @@ Query：`scene_id`（默认 `forest-demo-01`）、`latitude`、`longitude`、`en
 ```
 
 - `mode` 取值：`demo`（固定场景）/ `real`（环境服务）/ `demo-fallback`（失败回退，附 `fallback: {code, message}`）/ 真实缓存过期时 `status="stale"` 且 `stale=true`。
+- `collected_at` 为数据装配/抓取时刻（ISO 秒级）；缓存命中时随缓存返回，即数据实际采集时间。
 - `real` 模式必须同时提供 `latitude` 与 `longitude`，否则 422 或 fallback（取决于模式）。
 - `offline` 请求模式返回 `mode=demo` 且 `metadata: {"offline": true, "network": "disabled"}`。
 

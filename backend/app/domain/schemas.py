@@ -69,10 +69,9 @@ class UAVRecord(BaseModel):
         expected = {PayloadModule.WATER_20L: "L", PayloadModule.CO2_6KG: "kg", PayloadModule.SUP_10: "kg"}
         if self.payload_module in expected and self.agent_unit != expected[self.payload_module]:
             raise ValueError("agent_unit 与 payload_module 不匹配")
-        if self.payload_module == PayloadModule.WATER_20L and self.agent_remaining > self.payload_capacity_kg * 1000:
-            raise ValueError("水剂载荷超过容量")
-        if self.payload_module != PayloadModule.WATER_20L and self.agent_remaining > self.payload_capacity_kg:
-            raise ValueError("药剂载荷超过容量")
+        # 载荷上限统一按 payload_capacity_kg 口径（水剂 1L≈1kg），超过即拒绝。
+        if self.agent_remaining > self.payload_capacity_kg:
+            raise ValueError("载荷超过容量")
         return self
 
 

@@ -74,6 +74,9 @@ def run_skill(skill_name: str, request: AnalysisInput):
         return {"skill": skill_name, **skill_orchestrator.run(skill_name, request.model_dump())}
     except KeyError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+    except SkillExecutionError as error:
+        # 契约 §6.2：Skill 内部失败（ok:false）映射 502，不得裸 500。
+        raise HTTPException(status_code=502, detail=str(error)) from error
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 

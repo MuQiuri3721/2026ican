@@ -149,6 +149,9 @@ class AnalysisService:
             }
 
         updated = analysis_store.monitor_update(analysis_id, calculate)
+        if updated.status == "completed":
+            # 归档即释放：终态任务不得遗留资源锁（与 terminate/reject 同口径，自查发现 completed 曾带锁）。
+            analysis_store.release_resources(analysis_id)
         self._persist_dispatch_report(analysis_id)
         return {**updated.model_dump(), "action": updated.result["monitor"]["action"]}
 
