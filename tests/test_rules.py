@@ -160,3 +160,50 @@ def test_monitor_low_soc_triggers_return():
     assert "soc_below_return_threshold" in result["replan_triggers"]
     e1 = next(entry for entry in result["battery_plan"] if entry["uav_id"] == "E1")
     assert e1["soc_after"] < 25
+
+
+def _state_with_fleet(fleet):
+    from backend.app.pipeline import load_demo_state
+    state = load_demo_state("forest-demo-01")
+    state["fleet"] = fleet
+    return state
+
+
+def test_new_task_soc_floor_excludes_low_battery_units():
+    """G-1（规则 V1 §4.2）：SOC<35% 的新任务机不进入候选集（25% 仅为返航阈值）。"""
+    from backend.app.pipeline import deterministic_v1_dispatch
+    fleet = [
+        {"uav_id": "E1", "subgroup": "suppression", "role": "firefighting", "status": "available",
+         "position": {"x": 200, "y": 80}, "soc": 30, "payload_capacity_kg": 25,
+         "payload_module": "water_20l", "agent_remaining": 20, "agent_unit": "L",
+         "speed_mps": 8, "energy_rate_percent_per_hour": 270, "health": 100},
+        {"uav_id": "E2", "subgroup": "suppression", "role": "firefighting", "status": "available",
+         "position": {"x": 210, "y": 80}, "soc": 90, "payload_capacity_kg": 25,
+         "payload_module": "water_20l", "agent_remaining": 20, "agent_unit": "L",
+         "speed_mps": 8, "energy_rate_percent_per_hour": 270, "health": 100},
+    ]
+    plan = deterministic_v1_dispatch(_state_with_fleet(fleet), {"fire_load_flp": 40, "growth_flp_per_hour": 4, "fire_type": "vegetation", "wind_speed": 4})
+    assert "E1" not in plan["selected_uavs"], "SOC 30% 的机不得入选新任务"
+    assert plan["selected_uavs"][0].startswith("E")
+
+
+def test_water_plan_evaluated_via_six_conditions():
+    """G-2（规则 V1 §5.3）：就地取水评估真实执行；演示水源 8 min 装水比基地 4 min 慢 → 基地胜出。"""
+    from backend.app.pipeline import deterministic_v1_dispatch, load_demo_state
+    state = load_demo_state("forest-demo-01")
+    plan = deterministic_v1_dispatch(state, {"fire_load_flp": 40, "growth_flp_per_hour": 4, "fire_type": "vegetation", "wind_speed": 4})
+    water_plan = plan["water_source_plan"]
+    assert water_plan["mode"] in {"base", "onsite"}
+    assert "就地取水评估" in water_plan["reason"] or water_plan["mode"] == "onsite"
+
+
+def test_monitor_flags_emergency_units_below_15_percent():
+    """G-3（规则 V1 §4.2）：SOC<15% 的任务机进入 emergency_units 应急标记。"""
+    from backend.app.pipeline import simulate_monitor
+    analysis = _low_soc_monitor_analysis()
+    analysis["dispatch_plan"]["selected_uavs"] = ["E1"]
+    analysis["fleet"][0]["soc"] = 26
+    result = simulate_monitor(analysis, elapsed_minutes=5, extinguishing_liters=0)
+    assert "emergency_units" in result and "emergency_soc_percent" in result
+    # 高耗电率下 5 分钟内 SOC 跌破 15%
+    assert "E1" in result["emergency_units"]

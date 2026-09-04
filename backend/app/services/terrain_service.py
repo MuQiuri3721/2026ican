@@ -20,8 +20,10 @@ except ImportError:  # pragma: no cover - dependency is listed, fallback is API-
     rasterio = None
     Window = None
 
-DEFAULT_LATITUDE = 32.1256451
-DEFAULT_LONGITUDE = 118.9584748
+# 紫金山主峰（头陀岭）DEM 实测高点：438 m @ (32.0725N, 118.8415E)。
+# 旧默认 (32.1256, 118.9585) 位于山体东北平原，等高线无山形，已替换。
+DEFAULT_LATITUDE = 32.0725
+DEFAULT_LONGITUDE = 118.8415
 DEFAULT_DEM_PATH = Path(__file__).resolve().parents[2] / "N32E118.hgt"
 MAX_GRID_SIZE = 240
 MAX_FEATURES = 500

@@ -5,8 +5,27 @@
   "co2_modules_c6": 4,
   "support_boxes_sup10": 6,
   "battery_packs": 16,
-  "forward_supply_points": [{"id":"base","name":"北侧前置补给点","position":{"x":100,"y":60},"available":true}],
-  "water_sources": [{"id":"reservoir-north","name":"北侧蓄水池","available":true,"capacity_liters":1200,"distance_m":680,"safe":true}],
+  "forward_supply_points": [
+    {
+      "id": "base",
+      "name": "北侧前置补给点",
+      "position": {
+        "x": 100,
+        "y": 60
+      },
+      "available": true
+    }
+  ],
+  "water_sources": [
+    {
+      "id": "reservoir-zixiahu",
+      "name": "紫霞湖水库",
+      "available": true,
+      "capacity_liters": 1200,
+      "distance_m": 1166,
+      "safe": true
+    }
+  ],
   "dry_powder_kg": 60,
   "nearby_water_available": true,
   "last_updated": "2026-09-03T10:00:00Z"

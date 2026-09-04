@@ -2,7 +2,7 @@
 
 领域对象响应带 `schema_version`（`uav-v1`、`fleet-v1`、`inventory-v1`、`analysis-v1`、`uav-dispatch-v1`）、单位、来源和更新时间；工具型/辅助接口（health、environment、terrain、tools、skills、events、rounds）不强制携带。旧字段仅在兼容入口/响应保留，业务规则读取新字段。字段级契约以 [api-contract.md](api-contract.md) 为唯一权威。
 
-坐标口径：任务内所有 `x/y`（`fleet.position`、`scene.fire_origin`、水源 `position`）共用同一套演示相对坐标（米），调度与闭环仿真只在此坐标系内算距离；GPS 参考值单独存放（`scene.fire_origin_gps` 与视觉 `fire_center` 的 `latitude/longitude`），只用于展示与环境查询，不参与距离计算（详见 api-contract.md §1.3）。
+坐标口径：任务内所有 `x/y`（`fleet.position`、`scene.fire_origin`、水源 `position`）共用同一套演示相对坐标（米），调度与闭环仿真只在此坐标系内算距离；GPS 参考值单独存放（`scene.fire_origin_gps`、`scene.water_sources[].latitude/longitude` 与视觉 `fire_center` 的 `latitude/longitude`），只用于展示与环境查询，不参与距离计算（详见 api-contract.md §1.3）。
 
 | 数据对象 | 关键字段 | 单位/枚举 | 来源与说明 |
 |---|---|---|---|

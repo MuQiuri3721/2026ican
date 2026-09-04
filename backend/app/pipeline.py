@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from .domain.schemas import InventorySnapshot, UAVRecord
-from .tools.core import build_fire_grid, resolve_wind_band, simulate_dispatch_candidate, score_candidate_plan, _agent_kappa
+from .tools.core import build_fire_grid, resolve_wind_band, select_water_source, simulate_dispatch_candidate, score_candidate_plan, v1_config, _agent_kappa
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -110,6 +110,34 @@ def calculate_dispatch(state: Dict[str, Any], fire: Dict[str, Any]) -> Dict[str,
     return {"can_control": can_control, "recommended_material": "water" if source["available"] else "dry_powder", "material_amount": required_liters, "required_drones": required_drones, "selected_uavs": selected, "estimated_minutes": resource["target_minutes"], "tasks": tasks, "reason": material_reason}
 
 
+def _evaluate_water_plan(scene: Dict[str, Any], inventory: Dict[str, Any]) -> Dict[str, Any]:
+    """就地取水六条件评估（规则 V1 §5.3）：全条件通过才改为就地补给，否则基地补给。
+
+    select_water_source 的判定：available、safe_access、capacity≥20L、路线安全、
+    取水循环后 SOC≥25%、比基地补给（4 min）至少节省 5 min。
+    """
+    source = (scene.get("water_sources") or [{}])[0]
+    evaluation = select_water_source(
+        sources=[{
+            "available": source.get("available", False),
+            "safe_access": source.get("safe", source.get("safe_access", False)),
+            "capacity_remaining": source.get("capacity_remaining", source.get("capacity_liters", 0)),
+            "fill_minutes": 8,
+            "distance_m": source.get("distance_m", 0),
+        }],
+        distance_m=source.get("distance_m", 0),
+        cycle_minutes=0,
+        base_fill_minutes=4,
+        soc_after_cycle=100,
+        route_safe=True,
+    )
+    if evaluation.get("selected") and evaluation.get("source"):
+        return {"mode": "onsite", "source_id": source.get("name"), "fill_minutes": 8,
+                "distance_m": source.get("distance_m", 0), "reason": "就地水源通过六条件评估且节省≥5分钟"}
+    return {"mode": "base", "fill_minutes": 4,
+            "reason": "优先基地补给；就地取水评估：" + evaluation.get("reason", "未通过")}
+
+
 def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], people_status: str = "unknown", constraints: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """V1 调度：枚举 E 组合 → 硬约束过滤 → 5 分钟离散仿真 → 多目标评分 J → 最优/备选方案。
 
@@ -135,9 +163,11 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
     wind_speed = float(fire.get("wind_speed", scene.get("wind_speed", 0)))
     band = resolve_wind_band(wind_speed)
     origin = scene.get("fire_origin", {"x": 0, "y": 0})
-    e_candidates = [u for u in state["fleet"] if u.get("uav_id", "") not in disabled_uavs and u.get("uav_id", "").startswith("E") and u.get("status") in {"available", "assigned"} and u.get("health", 0) >= 60 and u.get("soc", 0) >= 25 and (module == "water_20l" or u.get("payload_module") == module)]
-    recon = [u for u in state["fleet"] if u.get("uav_id", "") not in disabled_uavs and u.get("uav_id", "").startswith("R") and u.get("status") in {"available", "assigned"} and u.get("health", 0) >= 60 and u.get("soc", 0) >= 25]
-    support = [u for u in state["fleet"] if u.get("uav_id", "") not in disabled_uavs and u.get("uav_id", "").startswith("S") and u.get("status") in {"available", "assigned"} and u.get("health", 0) >= 60 and u.get("soc", 0) >= 25]
+    # 规则 V1 §4.2：SOC<35% 不得新接远程任务（new_task_floor_soc_percent）；25% 仅为返航硬约束。
+    new_task_floor = float(v1_config().get("new_task_floor_soc_percent", 35))
+    e_candidates = [u for u in state["fleet"] if u.get("uav_id", "") not in disabled_uavs and u.get("uav_id", "").startswith("E") and u.get("status") in {"available", "assigned"} and u.get("health", 0) >= 60 and u.get("soc", 0) >= new_task_floor and (module == "water_20l" or u.get("payload_module") == module)]
+    recon = [u for u in state["fleet"] if u.get("uav_id", "") not in disabled_uavs and u.get("uav_id", "").startswith("R") and u.get("status") in {"available", "assigned"} and u.get("health", 0) >= 60 and u.get("soc", 0) >= new_task_floor]
+    support = [u for u in state["fleet"] if u.get("uav_id", "") not in disabled_uavs and u.get("uav_id", "").startswith("S") and u.get("status") in {"available", "assigned"} and u.get("health", 0) >= 60 and u.get("soc", 0) >= new_task_floor]
     if fire.get("wind_band"):
         band = fire["wind_band"]
 
@@ -223,6 +253,10 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
     )[:8]
     control_value = simulation["control_minutes"] if simulation["controlled"] else None
     window = [round(control_value), round(control_value + 5)] if control_value is not None else None
+    # 契约（api-contract §7）：不可控时不得输出时间窗口——时限缺口场景把最快方案窗口只留在缺口信息里。
+    if time_gap is not None:
+        control_value = None
+        window = None
     return {
         "schema_version": "uav-dispatch-v1",
         "fleet_shape": {"reconnaissance": 2, "suppression": 4, "support": 2},
@@ -242,7 +276,7 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
         "fire_grid": fire.get("fire_grid"),
         "wind_band": band,
         "scoring": {"method": "J=0.40T+0.30B+0.15E+0.10M+0.05N", "lower_is_better": True, "chosen": chosen["score"], "simulation": {key: simulation[key] for key in ("controlled", "rounds_used", "stalled_reason", "swaps", "refills")}},
-        "water_source_plan": {"mode": "base", "fill_minutes": 4, "reason": "优先基地补给；就地取水需满足可用、安全、容量≥20L且节省≥5分钟"},
+        "water_source_plan": _evaluate_water_plan(scene, inventory),
         "replan_trigger": ["fire_load_increase_over_20_percent", "wind_band_changed", "soc_below_return_threshold", "agent_insufficient", "people_status_changed"],
         "estimated_control_time": {"earliest_minutes": window[0] if window else None, "latest_minutes": window[1] if window else None, "window_minutes": window, "unit": "min", "simulated": simulation["controlled"]},
         "estimated_minutes": window[1] if window else None,
@@ -265,7 +299,13 @@ def run_demo_analysis(scene_id: str, image_name: Optional[str], fire_override: O
         fire["fire_grid"] = {key: grid[key] for key in ("cell_area_m2", "cell_count", "intensity", "k_fuel", "k_wind", "k_slope", "fuel_type")}
     scene = state["scene"]
     dispatch = dispatch_override or deterministic_v1_dispatch(state, fire, people_status, constraints=constraints)
-    return {"fire_assessment": fire, "scene": {"fire_origin": scene["fire_origin"]}, "environment": {"wind_speed": scene["wind_speed"], "wind_direction": scene["wind_direction"], "altitude": scene["altitude"], "terrain": scene["terrain"], "nearest_water_distance_m": scene["water_sources"][0]["distance_m"]}, "dispatch_plan": dispatch, "source_image": image_name, "data_mode": "固定演示数据 · 规则引擎", "pipeline_stages": [{"id": "ingest", "label": "影像接入", "status": "completed", "source": "上传文件"}, {"id": "vision", "label": "视觉识别", "status": "demo", "source": "PWM-YOLO 适配器待接入"}, {"id": "environment", "label": "环境融合", "status": "completed", "source": "固定场景数据"}, {"id": "assessment", "label": "网格 FLP 评估", "status": "completed", "source": "规则引擎"}, {"id": "dispatch", "label": "离散仿真调度", "status": "completed", "source": "规则引擎"}], "fleet": state["fleet"], "inventory": state["inventory"], "explanation": f"当前为{fire['label']}，火情负荷 {fire['fire_load_flp']} FLP（{fire['fire_grid']['cell_count']} 个 100m² 网格），{scene['wind_direction']}风可能推动火势向{scene['wind_direction']}扩散。{dispatch['reason']}"}
+    # 单一来源：skill 链候选生成（观测+实时环境）产出的 FLP 回写火情评估，消除双算不一致。
+    if dispatch_override and dispatch.get("fire_load_flp"):
+        fire["fire_load_flp"] = dispatch["fire_load_flp"]
+        fire["growth_flp_per_hour"] = dispatch.get("growth_flp_per_hour", fire["growth_flp_per_hour"])
+        if dispatch.get("fire_grid"):
+            fire["fire_grid"] = dispatch["fire_grid"]
+    return {"fire_assessment": fire, "scene": {"fire_origin": scene["fire_origin"], "fire_origin_gps": scene.get("fire_origin_gps")}, "environment": {"wind_speed": scene["wind_speed"], "wind_direction": scene["wind_direction"], "altitude": scene["altitude"], "terrain": scene["terrain"], "nearest_water_distance_m": scene["water_sources"][0]["distance_m"]}, "dispatch_plan": dispatch, "source_image": image_name, "data_mode": "固定演示数据 · 规则引擎", "pipeline_stages": [{"id": "ingest", "label": "影像接入", "status": "completed", "source": "上传文件"}, {"id": "vision", "label": "视觉识别", "status": "demo", "source": "PWM-YOLO 适配器待接入"}, {"id": "environment", "label": "环境融合", "status": "completed", "source": "固定场景数据"}, {"id": "assessment", "label": "网格 FLP 评估", "status": "completed", "source": "规则引擎"}, {"id": "dispatch", "label": "离散仿真调度", "status": "completed", "source": "规则引擎"}], "fleet": state["fleet"], "inventory": state["inventory"], "explanation": f"当前为{fire['label']}，火情负荷 {fire['fire_load_flp']} FLP（{fire['fire_grid']['cell_count']} 个 100m² 网格），{scene['wind_direction']}风可能推动火势向{scene['wind_direction']}扩散。{dispatch['reason']}"}
 
 
 def simulate_monitor(
@@ -312,6 +352,8 @@ def simulate_monitor(
 
     stalled_agent = False
     soc_return_risk = False
+    emergency_soc = float(v1_config().get("emergency_soc_percent", 15))
+    emergency_units: list = []
     for _ in range(total_minutes):
         minute_suppression = 0.0
         for drone in fleet:
@@ -384,6 +426,8 @@ def simulate_monitor(
             else:
                 # R/S 及待命无人机按悬停耗电缓慢下降。
                 drone["soc"] = max(0.0, round(drone["soc"] - rate * 0.75 / 60, 2))
+            if 0.0 < drone.get("soc", 0) < emergency_soc and uid not in emergency_units:
+                emergency_units.append(uid)
             drone["battery"] = drone["soc"]
             drone["payload"] = drone["agent_remaining"]
             drone["last_updated"] = datetime.now().isoformat(timespec="seconds")
@@ -440,6 +484,8 @@ def simulate_monitor(
         "resource_consumed": {"water_liters": round(consumed, 2), "module": module},
         "resource_gap": ([{"resource": "water_liters", "required": requested_liters, "available": water_now, "gap": requested_liters - water_now, "resource_gap": True}] if requested_liters > water_now else []),
         "battery_plan": [{"uav_id": d["uav_id"], "soc_after": d["soc"], "status": d["status"], "agent_remaining": d.get("agent_remaining", 0)} for d in fleet if d.get("uav_id") in selected_ids],
+        "emergency_units": emergency_units,
+        "emergency_soc_percent": emergency_soc,
         "next_inventory": stock,
         "next_fleet": fleet,
     }

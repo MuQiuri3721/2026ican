@@ -1,128 +1,273 @@
-.plan-summary,.people-risk{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0;padding:10px;background:#f7f9fa;border-radius:5px;color:#6f7d84;font:10px 'DM Mono';line-height:1.5}.plan-summary b{color:#765392}.people-risk select{margin-left:6px;border:1px solid #dce3e6;border-radius:4px;padding:4px;background:#fff;color:#52636b;font:10px 'DM Mono'}.people-risk span{color:#bd5737}.approval-actions{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}.approval-actions .outline-btn{margin-top:0}.danger-btn{color:#bd5737!important;border-color:#e5b7a5!important}.monitor-result{line-height:1.7;overflow-wrap:anywhere}
-.environment-panel{grid-column:1/-1}.environment-controls{display:flex;justify-content:space-between;align-items:center;margin-top:15px;color:#8a969e;font:9px 'DM Mono'}.environment-controls label{display:flex;align-items:center;gap:7px}.environment-controls select{border:1px solid #dce3e6;border-radius:4px;padding:5px 7px;background:#fff;color:#52636b;font:9px 'DM Mono'}.environment-refresh{margin-top:0}.environment-meta{display:flex;gap:15px;flex-wrap:wrap;margin-top:12px;color:#9aa5ab;font:9px 'DM Mono'}.environment-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-top:14px}.environment-item{padding:10px;background:#f7f9fa;border-radius:5px}.environment-item span{display:block;color:#98a3aa;font-size:9px}.environment-item strong{display:block;margin-top:6px;font-size:11px}@media(max-width:700px){.environment-grid{grid-template-columns:repeat(2,1fr)}.environment-meta{gap:8px}.environment-controls{align-items:flex-start;gap:10px;flex-direction:column}}
+/* =====================================================================
+   EMBEROS 工作台 — 功能补丁层（FE-7~FE-15）
+   依赖 style.css 的 token（surface、line、ink、accent、语义色等）
+   ===================================================================== */
 
-.coordinate-editor{display:flex;align-items:center;gap:7px}.coordinate-editor label{gap:4px}.coordinate-editor input{width:106px;border:1px solid #dce3e6;border-radius:4px;padding:5px 6px;background:#fff;color:#52636b;font:9px 'DM Mono'}.coordinate-editor .outline-btn{margin-top:0;padding:5px 8px}.coordinate-error{margin-top:8px;color:#bd5737;font:9px 'DM Mono'}.map-node.road{color:#c26b32;background:#fff7ef}.environment-item strong{line-height:1.45}@media(max-width:700px){.coordinate-editor{flex-wrap:wrap}.coordinate-editor input{width:94px}}
-.drone-telemetry,.fleet-detail-meta{display:flex;gap:8px;flex-wrap:wrap;color:#8a969e;font:9px 'DM Mono'}.drone-telemetry span,.fleet-detail-meta span{padding:3px 5px;background:#f7f9fa;border-radius:3px}.drone-telemetry b,.fleet-detail-meta b{color:#52636b;font-weight:500}.round-list{display:grid;gap:7px;margin-top:10px}.round-list>div{display:flex;gap:10px;flex-wrap:wrap;padding:8px;background:#f7f9fa;border-left:2px solid #765392;color:#7b8790;font:9px 'DM Mono'}.round-list b{color:#765392}.fleet-detail-meta{margin:9px 0}.fleet-detail-meta span{display:inline-flex;gap:4px}.drone-telemetry{grid-column:4;align-items:center}@media(max-width:900px){.drone-telemetry{grid-column:auto}}
+/* ---------- 方案摘要 / 约束 / 审批 ---------- */
+.plan-summary,.people-risk{display:flex;gap:9px 12px;flex-wrap:wrap;align-items:center;margin:14px 0 0;padding:12px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-s);color:var(--ink-2);font:400 12.5px var(--font-data);line-height:1.6}
+.plan-summary b{color:var(--plan)}
+.people-risk label{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;color:var(--ink-3);font-size:12.5px;font-weight:600}
+.people-risk select{border:1px solid var(--line-strong);border-radius:6px;padding:6px 8px;background:var(--surface);color:var(--ink-2);font:400 12.5px var(--font-data)}
+.people-risk span{color:var(--warn);font-size:12.5px}
+.approval-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 0}
+.approval-actions .outline-btn{margin-top:0}
+.danger-btn{color:var(--fire-deep)!important;border-color:var(--fire-line)!important}
+.danger-btn:hover{border-color:var(--fire)!important}
+.monitor-result{line-height:1.7;overflow-wrap:anywhere}
 
-.model-status {
-  display: flex;
-  gap: 12px;
-}
+/* ---------- 环境面板 ---------- */
+.environment-panel{grid-column:1/-1}
+.environment-controls{display:flex;justify-content:space-between;align-items:center;margin-top:16px;gap:12px;flex-wrap:wrap;color:var(--ink-3);font:400 12px var(--font-data)}
+.environment-controls label{display:flex;align-items:center;gap:8px;font-weight:600;font-family:var(--font-ui);font-size:12.5px}
+.environment-controls select{border:1px solid var(--line-strong);border-radius:6px;padding:6px 9px;background:var(--surface);color:var(--ink-2);font:400 12.5px var(--font-data)}
+.environment-refresh{margin-top:0}
+.environment-meta{display:flex;gap:8px 18px;flex-wrap:wrap;margin-top:12px;color:var(--ink-3);font:400 12px var(--font-data)}
+.environment-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:14px}
+.environment-item{padding:12px 13px;background:var(--surface-2);border-radius:var(--radius-s)}
+.environment-item span{display:block;color:var(--ink-3);font-size:12px;font-weight:600}
+.environment-item strong{display:block;margin-top:7px;font-size:13px;line-height:1.5}
+.environment-item strong.is-empty{color:#8b98a3}
+@media(max-width:700px){.environment-grid{grid-template-columns:repeat(2,1fr)}.environment-meta{gap:6px 12px}.environment-controls{align-items:flex-start;flex-direction:column}}
 
-.model-status span {
-  display: inline-flex;
-  gap: 4px;
-}
+.coordinate-editor{display:flex;align-items:center;gap:8px}
+.coordinate-editor label{gap:5px}
+.coordinate-editor input{width:108px;border:1px solid var(--line-strong);border-radius:6px;padding:6px 8px;background:var(--surface);color:var(--ink-2);font:400 12.5px var(--font-data)}
+.coordinate-editor .outline-btn{margin-top:0;padding:7px 11px}
+.coordinate-error{margin-top:8px;color:var(--fire-deep);font:400 12px var(--font-data)}
+@media(max-width:700px){.coordinate-editor{flex-wrap:wrap}}
 
-.model-status b {
-  color: #5f7fc8;
-  font-weight: 500;
-}
+/* ---------- 监测轮次 / 遥测 ---------- */
+.round-list{display:grid;gap:8px;margin-top:12px}
+.round-list>div{display:flex;gap:8px 14px;flex-wrap:wrap;padding:10px 13px;background:var(--plan-soft);border:1px solid #e2d9f0;border-radius:var(--radius-s);color:var(--ink-2);font:400 12.5px var(--font-data)}
+.round-list b{color:var(--plan);font-weight:500}
+.drone-telemetry{grid-column:4;align-items:center}
+@media(max-width:900px){.drone-telemetry{grid-column:auto}}
 
-.model-status label.vlm-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: #5f7fc8;
-  font-weight: 500;
-  cursor: pointer;
-}
+/* ---------- 模型状态 / 报告查看器 ---------- */
+.model-status{display:flex;gap:14px;flex-wrap:wrap;row-gap:5px;margin-top:14px;font-size:12.5px;color:var(--ink-3)}
+.model-status span,.model-status label{display:inline-flex;gap:5px;align-items:center;white-space:nowrap}
+.model-status b{color:var(--ink-2);font-weight:600;margin-left:2px}
+.model-status label.vlm-toggle{color:var(--ink-2);font-weight:600;cursor:pointer}
+.report-viewer{margin-top:12px;border:1px solid var(--line);border-radius:var(--radius-s);background:var(--surface-2);padding:13px}
+.report-viewer-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font:700 13px var(--font-ui);color:var(--ink);margin-bottom:9px}
+.report-viewer-head small{font:400 11.5px var(--font-data);color:var(--ink-3);overflow-wrap:anywhere}
+.report-viewer pre{margin:0;max-height:340px;overflow:auto;font:400 12px/1.65 var(--font-data);color:var(--ink-2);white-space:pre-wrap;overflow-wrap:anywhere}
 
-.report-viewer {
-  margin-top: 10px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: #fbfcfd;
-  padding: 12px;
-}
+/* ---------- 审批输入 ---------- */
+.reason-input{flex:1 1 190px;min-width:160px;margin-top:0;border:1px solid var(--line-strong);border-radius:var(--radius-s);padding:9px 12px;font:400 12.5px var(--font-data);color:var(--ink-2);background:var(--surface)}
+.minute-input{width:60px;border:1px solid var(--line-strong);border-radius:6px;padding:6px;background:var(--surface);font:400 12.5px var(--font-data);color:var(--ink-2)}
+.uav-disable{gap:5px}
+.uav-disable input{accent-color:var(--accent)}
+.uav-disable span{color:var(--ink-2);font-family:var(--font-data);font-weight:400}
+.live-dot.offline{background:#e8973f;box-shadow:0 0 0 3px #e8973f26}
+.dropzone:focus-within{outline:2px solid var(--accent);outline-offset:2px}
 
-.report-viewer-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
-  font: 600 12px Manrope;
-  color: #42525c;
-  margin-bottom: 8px;
-}
-
-.report-viewer-head small {
-  font: 9px 'DM Mono';
-  color: #9aa5ab;
-  overflow-wrap: anywhere;
-}
-
-.report-viewer pre {
-  margin: 0;
-  max-height: 340px;
-  overflow: auto;
-  font: 10px/1.6 'DM Mono';
-  color: #4d5e68;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.reason-input {
-  flex: 1 1 170px;
-  min-width: 150px;
-  margin-top: 0;
-  border: 1px solid #dce3e6;
-  border-radius: 5px;
-  padding: 8px 10px;
-  font: 10px 'DM Mono';
-  color: #52636b;
-  background: #fff;
-}
-
-.minute-input {
-  width: 52px;
-  border: 1px solid #dce3e6;
-  border-radius: 4px;
-  padding: 4px;
-  font: 10px 'DM Mono';
-  color: #52636b;
-  background: #fff;
-}
-
-.uav-disable {
-  gap: 3px;
-}
-
-.uav-disable input {
-  accent-color: #2867f4;
-}
-
-.uav-disable span {
-  color: #52636b;
-}
-
-.live-dot.offline {
-  background: #e5a05c;
-  box-shadow: 0 0 0 3px #e5a05c22;
-}
-
-.dropzone:focus-within {
-  outline: 2px solid #9db7ff;
-  outline-offset: 2px;
-}
-
-@media (max-width: 700px) {
-  .plan-summary,.people-risk{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0;padding:10px;background:#f7f9fa;border-radius:5px;color:#6f7d84;font:10px 'DM Mono';line-height:1.5}.plan-summary b{color:#765392}.people-risk select{margin-left:6px;border:1px solid #dce3e6;border-radius:4px;padding:4px;background:#fff;color:#52636b;font:10px 'DM Mono'}.people-risk span{color:#bd5737}.approval-actions{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}.approval-actions .outline-btn{margin-top:0}.danger-btn{color:#bd5737!important;border-color:#e5b7a5!important}.monitor-result{line-height:1.7;overflow-wrap:anywhere}
-.environment-panel{grid-column:1/-1}.environment-controls{display:flex;justify-content:space-between;align-items:center;margin-top:15px;color:#8a969e;font:9px 'DM Mono'}.environment-controls label{display:flex;align-items:center;gap:7px}.environment-controls select{border:1px solid #dce3e6;border-radius:4px;padding:5px 7px;background:#fff;color:#52636b;font:9px 'DM Mono'}.environment-refresh{margin-top:0}.environment-meta{display:flex;gap:15px;flex-wrap:wrap;margin-top:12px;color:#9aa5ab;font:9px 'DM Mono'}.environment-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-top:14px}.environment-item{padding:10px;background:#f7f9fa;border-radius:5px}.environment-item span{display:block;color:#98a3aa;font-size:9px}.environment-item strong{display:block;margin-top:6px;font-size:11px}@media(max-width:700px){.environment-grid{grid-template-columns:repeat(2,1fr)}.environment-meta{gap:8px}.environment-controls{align-items:flex-start;gap:10px;flex-direction:column}}
-
-}
-
-/* 地图交互缩放与平移 */
-.large-map{overflow:hidden;cursor:grab;touch-action:none}.large-map:active{cursor:grabbing}.map-scene-layer{position:absolute;inset:0;z-index:1;transform-origin:center center;will-change:transform;transition:transform .15s ease}.map-scene-layer.dragging{transition:none}.map-scene-layer .terrain-svg{transform:none}.map-controls{position:absolute;right:20px;bottom:76px;z-index:8;display:flex;align-items:center;gap:4px;padding:5px;background:#fffdf0ee;border:1px solid #d8cbbd;border-radius:5px;box-shadow:0 5px 14px #5b3c6b1a}.map-controls button{width:27px;height:27px;padding:0;border:1px solid #d8cbbd;border-radius:4px;background:#fff;color:#604a3d;font:600 16px 'DM Mono';cursor:pointer}.map-controls button:hover,.map-controls button:focus-visible{background:#f2e7db;outline:2px solid #b88968;outline-offset:1px}.map-controls output{min-width:40px;text-align:center;color:#604a3d;font:10px 'DM Mono'}.map-source{position:absolute;left:20px;top:82px;z-index:5;padding:6px 8px;border:1px solid #d8cbbd;border-radius:4px;background:#fffdf0dd;color:#765d4b;font:9px 'DM Mono'}.map-source.fallback{color:#a8653d}@media(max-width:700px){.map-controls{right:12px;bottom:106px}.map-source{left:12px;top:70px;font-size:8px}}
-
-.large-map{background:#f1eee9;isolation:isolate;box-shadow:inset 0 0 0 1px #d9d0c7,inset 0 -70px 100px #9c8a7620}
+/* ---------- SVG 示意图分支（高德回退） ---------- */
+.large-map{overflow:hidden;cursor:grab;touch-action:none;background:#efece6;isolation:isolate;box-shadow:inset 0 0 0 1px #ded5c9,inset 0 -70px 100px #9c8a7620}
+.large-map:active{cursor:grabbing}
 .large-map .map-grid{display:none}
+.map-scene-layer{position:absolute;inset:0;z-index:1;transform-origin:center center;will-change:transform;transition:transform 150ms ease}
+.map-scene-layer.dragging{transition:none}
 .terrain-wash{position:absolute;inset:0;background:radial-gradient(ellipse at 56% 48%,#fff8 0 12%,transparent 44%),linear-gradient(135deg,#fff8 0 28%,transparent 62%),repeating-linear-gradient(112deg,transparent 0 34px,#9b80601a 35px 36px);z-index:-1}
 .terrain-svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 8px 8px #755b4216)}
-.contour-line{fill:none;stroke:#9b806b;stroke-width:1.35;opacity:.8;vector-effect:non-scaling-stroke}.major-contour{stroke:#765d4b;stroke-width:2;opacity:.95}.contour-label{fill:#765d4b;font:11px 'DM Mono';letter-spacing:.2px;paint-order:stroke;stroke:#f1eee9;stroke-width:4px;stroke-linejoin:round}.summit-ring{fill:none;stroke:#674c3a;stroke-width:1.5;stroke-dasharray:3 3}.summit-label,.summit-elevation{fill:#674c3a;font:10px 'DM Mono';paint-order:stroke;stroke:#f1eee9;stroke-width:3px}.summit-elevation{font-size:9px;font-weight:600}
-.terrain-caption,.contour-note,.slope-badge,.terrain-data,.map-legend{position:absolute;display:flex;align-items:center;background:#fffdf0dd;border:1px solid #d8cbbd;box-shadow:0 5px 14px #5b3c6b1a;color:#604a3d;font:10px 'DM Mono';backdrop-filter:blur(5px)}
-.terrain-caption{top:18px;left:20px;flex-direction:column;align-items:flex-start;gap:4px;padding:9px 11px;border-radius:6px}.terrain-caption strong{font:600 14px 'Barlow Condensed';letter-spacing:.3px;color:#4d3d32}.terrain-caption span{font-size:9px;color:#a06d47}.contour-note{top:19px;right:72px;gap:7px;padding:7px 9px;border-radius:5px}.contour-note b{color:#765d4b}.contour-note small{color:#9c8e84}.slope-badge{right:20px;top:72px;gap:7px;padding:7px 9px;border-radius:5px}.slope-badge span{color:#9c8e84}.slope-badge b{font-weight:500}.slope-badge i{height:14px;border-left:1px solid #d8cbbd}
-.large-map .route-line{background:#bd763e;box-shadow:0 0 0 3px #bd763e26;z-index:2}.large-map .map-node{z-index:3;border-color:#d4c8bd}.large-map .map-node.fire{box-shadow:0 0 0 4px #ed643422,0 4px 14px #4d31541f}.large-map .map-node.water{color:#277d98}.large-map .map-node.road{color:#b5652e}.large-map .map-node.drone{color:#4268c7}.large-map .map-compass{z-index:4;color:#684c3f;border-color:#c7b5a5}.large-map .wind-legend{z-index:4;color:#6c5445;background:#fffdf0dd;border:1px solid #d8cbbd;padding:7px 9px;border-radius:5px}
-.map-legend{left:20px;bottom:18px;gap:12px;padding:8px 10px;border-radius:5px}.map-legend span{display:flex;align-items:center;gap:5px}.map-legend i{display:inline-block;width:8px;height:8px;border-radius:50%}.legend-fire{background:#e96b3b}.legend-water{background:#3f9eb5}.legend-road{width:13px!important;height:2px!important;border-radius:0!important;background:#c27639}.legend-drone{background:#4b73d9}.legend-contour{height:2px!important;width:13px!important;border-radius:0!important;background:#795392}.terrain-data{right:20px;bottom:18px;gap:12px;padding:8px 10px;border-radius:5px}.terrain-data span{color:#9b8ba3}.terrain-data b{color:#594067;font-weight:500}
-.large-map .wind-legend{right:20px;bottom:66px;z-index:6;max-width:calc(100% - 40px);display:flex;align-items:center;gap:7px;color:#6c5445;background:#fffdf0eF;border:1px solid #d8cbbd;padding:7px 9px;border-radius:5px;line-height:1.35}.large-map .wind-legend span{min-width:0;overflow-wrap:anywhere}.map-source{z-index:7}
-@media(max-width:700px){.terrain-caption{left:12px;top:12px}.terrain-caption strong{font-size:12px}.contour-note{top:12px;right:12px}.slope-badge{top:62px;right:12px}.map-legend{left:12px;bottom:12px;gap:6px;flex-wrap:wrap;max-width:210px}.terrain-data{right:12px;bottom:12px;flex-direction:column;align-items:flex-start;gap:3px;padding:7px}.large-map .wind-legend{right:12px;bottom:114px;font-size:8px;max-width:calc(100% - 24px)}}
+.contour-line{fill:none;stroke:#9b806b;stroke-width:1.3;opacity:.75;vector-effect:non-scaling-stroke}
+.major-contour{stroke:#76604b;stroke-width:2;opacity:.9}
+.contour-label{fill:#6d5844;font:500 12px var(--font-data);paint-order:stroke;stroke:#efece6;stroke-width:4px;stroke-linejoin:round}
+.summit-ring{fill:none;stroke:#674c3a;stroke-width:1.5;stroke-dasharray:3 3}
+.summit-label,.summit-elevation{fill:#674c3a;font:400 12px var(--font-data);paint-order:stroke;stroke:#efece6;stroke-width:3px}
+.summit-elevation{font-size:11px;font-weight:500}
+.terrain-caption,.contour-note,.slope-badge,.terrain-data,.map-legend{position:absolute;display:flex;align-items:center;background:#fffdf6ee;border:1px solid #ddd2c2;box-shadow:var(--shadow-1);color:#5d4c3d;font:400 12px var(--font-data);backdrop-filter:blur(5px)}
+.terrain-caption{top:16px;left:18px;flex-direction:column;align-items:flex-start;gap:4px;padding:10px 12px;border-radius:var(--radius-s)}
+.terrain-caption strong{font:700 14px var(--font-ui);color:#45372c}
+.terrain-caption span{font-size:11.5px;color:#96683f}
+.contour-note{top:17px;right:74px;gap:7px;padding:8px 11px;border-radius:var(--radius-s)}
+.contour-note b{color:#5d4c3d}.contour-note small{color:#8b7c6c}
+.slope-badge{right:18px;top:66px;gap:8px;padding:8px 11px;border-radius:var(--radius-s)}
+.slope-badge span{color:#8b7c6c}.slope-badge b{font-weight:500}.slope-badge i{height:14px;border-left:1px solid #ddd2c2}
+.large-map .route-line{background:#bd763e;box-shadow:0 0 0 3px #bd763e26}
+.large-map .map-node{border-color:#d4c8bd}
+.large-map .map-node.fire{box-shadow:0 0 0 4px #d9541e22,var(--shadow-1)}
+.large-map .map-node.water{color:#1f7fa0}
+.large-map .map-node.drone{color:var(--accent)}
+.large-map .map-compass{z-index:4;color:#684c3f;border-color:#c7b5a5;background:#fffdf6ee}
+.large-map .wind-legend{max-width:calc(100% - 40px);line-height:1.5;background:#fffdf6ee;border:1px solid #ddd2c2;color:#6c5445;padding:8px 11px;border-radius:var(--radius-s)}
+.large-map .wind-legend span{min-width:0;overflow-wrap:anywhere}
+.map-controls{position:absolute;right:18px;bottom:74px;z-index:8;display:flex;align-items:center;gap:4px;padding:6px;background:#fffdf6ee;border:1px solid #ddd2c2;border-radius:var(--radius-s);box-shadow:var(--shadow-1)}
+.map-controls button{width:32px;height:32px;padding:0;border:1px solid #ddd2c2;border-radius:6px;background:var(--surface);color:#5d4c3d;font:600 16px var(--font-data);cursor:pointer}
+.map-controls button:hover{background:#f4ecdd}
+.map-controls output{min-width:44px;text-align:center;color:#5d4c3d;font:400 12px var(--font-data)}
+.map-scale{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:6;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 11px;border:1px solid #ddd2c2;border-radius:var(--radius-s);background:#fffdf6ee;color:#5d4c3d;font:400 12px var(--font-data);backdrop-filter:blur(5px)}
+.map-scale i{display:block;height:4px;border:1px solid #5d4c3d;border-top:none;min-width:44px}
+.map-scale b{font-weight:500}
+@media(max-width:700px){.map-controls{right:12px;bottom:100px}.map-scale{bottom:12px}.terrain-caption{left:12px;top:12px}.contour-note{top:12px;right:12px}.slope-badge{top:60px;right:12px}.map-legend{flex-wrap:wrap;max-width:230px}}
+
+/* 图例 → 图层开关 chips（地图工作台工具栏内） */
+.map-legend{gap:2px}
+.legend-item{display:flex;align-items:center;gap:6px;border:0;white-space:nowrap;background:transparent;color:#5d4c3d;font:500 12.5px var(--font-data);cursor:pointer;padding:5px 9px;border-radius:6px;transition:background var(--speed) ease,opacity var(--speed) ease;-webkit-tap-highlight-color:transparent}
+.map-toolbar .map-legend{position:static;background:transparent;border:0;box-shadow:none;padding:0;backdrop-filter:none}
+.map-toolbar .legend-item{color:var(--ink-2)}
+.map-toolbar .legend-item:hover{background:var(--surface-2)}
+.legend-item.off{opacity:.35;text-decoration:line-through}
+.legend-item i,.map-legend i{display:inline-block;width:9px;height:9px;border-radius:50%}
+.legend-fire{background:var(--fire)}
+.legend-water{background:#1f7fa0}
+.legend-road{width:14px!important;height:2px!important;border-radius:0!important;background:#bd763e}
+.legend-drone{background:var(--accent)}
+.legend-contour{height:2px!important;width:14px!important;border-radius:0!important;background:var(--plan)}
+.legend-evac{width:14px!important;height:2px!important;border-radius:0!important;background:var(--ok)}
+.map-node{cursor:pointer}
+.map-node.map-node-hover,.map-node.map-node-active{z-index:25;transform:scale(1.12);box-shadow:0 0 0 3px #2563eb55,var(--shadow-1)}
+.map-node.map-node-active{box-shadow:0 0 0 3px #2563eb88,var(--shadow-1)}
+.map-node.map-node-pulse{z-index:26;animation:markerPulse 1s ease-out 2}
+@keyframes markerPulse{0%{box-shadow:0 0 0 0 #2563eb88}70%{box-shadow:0 0 0 14px #2563eb00}100%{box-shadow:0 0 0 0 #2563eb00}}
+
+/* ---------- 地图工作台（FE-15 修订） ---------- */
+.main-map{max-width:1780px;padding:20px 22px 26px}
+.map-view-full{padding:18px 20px 20px;display:flex;flex-direction:column;gap:14px}
+.map-toolbar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+.map-toolbar-heading{display:flex;align-items:baseline;gap:12px;min-width:0}
+.map-toolbar-heading h2{font:700 20px/1.25 var(--font-ui);margin:0}
+.map-toolbar-heading p{margin:0;color:var(--ink-3);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.map-toolbar-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.map-stage{display:flex;gap:14px;align-items:stretch}
+.tactical-map-wrap{position:relative;flex:1;min-width:0;height:calc(100vh - 318px);min-height:520px;border-radius:var(--radius);overflow:hidden;background:#0e141b;box-shadow:var(--shadow-2)}
+.tactical-map-wrap .large-map{position:absolute;inset:0;height:auto;margin-top:0;border-radius:0}
+.tactical-amap{position:absolute;inset:0}
+/* 底部状态栏：等高线来源 + 提示 */
+.map-statusbar{display:flex;align-items:center;gap:10px 20px;flex-wrap:wrap;color:var(--ink-3);font:400 12px var(--font-data);padding:0 2px}
+.map-source{display:inline-flex;align-items:center;gap:7px;color:var(--ink-2)}
+.map-source::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--plan)}
+.map-source.fallback{color:var(--warn)}
+.map-coords{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);display:flex;align-items:center;gap:7px;background:#101820e0;color:#e8eef2;font:500 12.5px/1 var(--font-data);padding:8px 13px;border-radius:999px;z-index:6;pointer-events:none;letter-spacing:.4px}
+/* 右侧停靠信息面板列 */
+.map-side-rail{width:300px;flex-shrink:0;display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - 318px);min-height:520px;overflow-y:auto;padding-right:3px}
+.map-side-rail .water-panel,.map-side-rail .deploy-panel,.map-side-rail .evolution-panel,.map-side-rail .terrain-data,.map-side-rail .slope-badge,.map-side-rail .wind-legend{position:static;width:auto;max-height:none;backdrop-filter:none}
+.rail-terrain{display:flex;flex-direction:column;gap:12px}
+.map-side-rail::-webkit-scrollbar{width:6px}
+.map-side-rail::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:3px}
+
+/* ---------- 停靠面板：水源 / 部署 / 演化 / 地形 ---------- */
+.water-panel,.deploy-panel,.evolution-panel{display:flex;flex-direction:column;gap:7px;padding:13px 14px;border:1px solid var(--line);border-radius:var(--radius-s);background:var(--surface);color:var(--ink-2);font:400 12.5px var(--font-data);box-shadow:var(--shadow-1)}
+.water-panel-head,.deploy-head,.evolution-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.water-panel-head b,.deploy-head b{font:700 13.5px var(--font-ui);color:var(--ink)}
+.evolution-head b{font:700 13px var(--font-ui);color:var(--ink)}
+.water-panel-head small,.deploy-head small,.evolution-head small{color:var(--ink-3);font-size:11.5px}
+.water-row{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);cursor:pointer;transition:border-color var(--speed) ease,background var(--speed) ease;-webkit-tap-highlight-color:transparent}
+.water-row:hover{border-color:var(--accent-line)}
+.water-row.preferred{border-color:#2e9db4;background:#f2fafc}
+.water-row b{font-weight:600;color:var(--ink);font-family:var(--font-ui);font-size:13px}
+.water-row span{color:var(--ink-3)}
+.water-row small{color:#8b98a3;overflow-wrap:anywhere}
+.water-dot{width:9px;height:9px;border-radius:50%;margin-bottom:2px}
+.water-dot.wt-reservoir{background:#2c7fb8}
+.water-dot.wt-lake{background:#41b6c4}
+.water-dot.wt-river{background:#5ba88f}
+.water-dot.wt-pond{background:#8ab97d}
+.water-dot.wt-water{background:#8bb8c9}
+.water-row.linked,.deploy-row.linked{border-color:var(--accent);background:var(--accent-soft)}
+.deploy-panel{max-height:280px;overflow:auto}
+.deploy-rows{display:flex;flex-direction:column;gap:6px}
+.deploy-row{display:grid;grid-template-columns:30px 1fr 48px 34px;grid-template-areas:"id meta soc pct" "task task task task";align-items:center;gap:3px 8px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--surface);cursor:pointer;transition:border-color var(--speed) ease,background var(--speed) ease;-webkit-tap-highlight-color:transparent}
+.deploy-row:hover{border-color:var(--accent-line)}
+.deploy-row.selected{border-color:var(--accent);background:var(--accent-soft)}
+.deploy-row b{grid-area:id;color:var(--accent);font-weight:500}
+.deploy-row span{grid-area:meta;color:var(--ink-3);font-family:var(--font-ui);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.deploy-row .deploy-soc{grid-area:soc;height:5px;background:#e8ecef;border-radius:3px;overflow:hidden}
+.deploy-soc i{display:block;height:100%;background:#27ae83;border-radius:3px}
+.deploy-row small{grid-area:pct;color:#8b98a3;text-align:right}
+.deploy-row em{grid-area:task;font-style:normal;color:var(--ink-2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.evolution-panel svg{width:100%;height:32px}
+.evolution-line{fill:none;stroke:var(--fire);stroke-width:2;vector-effect:non-scaling-stroke}
+.evolution-dot-label{fill:#8b98a3;font:400 11px var(--font-data)}
+.terrain-data{display:flex;flex-wrap:wrap;gap:5px 16px;border:1px solid var(--line);border-radius:var(--radius-s);padding:12px 14px;background:var(--surface);color:var(--ink-3);font:400 12.5px var(--font-data);position:static;box-shadow:var(--shadow-1)}
+.terrain-data b{color:var(--ink);font-weight:500}
+.slope-badge{position:static;display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:var(--radius-s);padding:11px 14px;background:var(--surface);color:var(--ink-2);font:400 12.5px var(--font-data);box-shadow:var(--shadow-1)}
+.slope-badge span{color:var(--ink-3)}
+.slope-badge i{height:14px;border-left:1px solid var(--line)}
+.wind-legend{position:static;border:1px solid var(--line);border-radius:var(--radius-s);padding:11px 14px;background:var(--surface);color:var(--ink-2);font:400 12.5px var(--font-data);box-shadow:var(--shadow-1)}
+.water-panel::-webkit-scrollbar,.deploy-panel::-webkit-scrollbar{width:6px}
+.water-panel::-webkit-scrollbar-thumb,.deploy-panel::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:3px}
+
+/* ---------- SVG 分支专属浮层 ---------- */
+.fire-zone-ring{position:absolute;transform:translate(-50%,-50%);aspect-ratio:1;border-radius:50%;border:1.5px dashed var(--fire);background:radial-gradient(circle,#d9541e33 0%,#d9541e08 70%);z-index:2;pointer-events:none;animation:zonePulse 2.4s ease-in-out infinite}
+@keyframes zonePulse{0%,100%{opacity:.85}50%{opacity:.55}}
+.fire-zone-label{position:absolute;left:50%;top:100%;transform:translate(-50%,4px);white-space:nowrap;font:400 11.5px var(--font-data);color:var(--fire-deep);background:var(--fire-soft);padding:3px 6px;border-radius:5px;border:1px solid var(--fire-line)}
+.evacuation-overlay{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none}
+.evacuation-line{fill:none;stroke:var(--ok);stroke-width:2.5;stroke-dasharray:6 4;vector-effect:non-scaling-stroke;opacity:.95;filter:drop-shadow(0 0 4px #0e8a5f66)}
+.evacuation-exit{z-index:4;color:var(--ok);background:var(--ok-soft);border-color:var(--ok-line)}
+.evacuation-summary{color:var(--ok)!important}
+
+/* ---------- 详情卡（地图标记点击） ---------- */
+.marker-detail{position:absolute;z-index:30;width:250px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-s);background:#fffffff7;box-shadow:var(--shadow-2);color:var(--ink-2);font:400 12.5px var(--font-data);backdrop-filter:blur(5px)}
+.marker-detail-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:7px}
+.marker-detail-head b{font:700 13.5px var(--font-ui);color:var(--ink)}
+.marker-detail-close{border:0;background:transparent;color:#8b98a3;font-size:17px;line-height:1;cursor:pointer;padding:0 2px}
+.marker-detail-close:hover{color:var(--fire-deep)}
+.marker-detail-row{display:flex;justify-content:space-between;gap:12px;padding:4px 0;border-bottom:1px dashed #e5e9ec}
+.marker-detail-row:last-child{border-bottom:none}
+.marker-detail-row span{color:#8b98a3}
+.marker-detail-row b{color:var(--ink);font-weight:500;text-align:right;overflow-wrap:anywhere}
+
+/* ---------- 高德覆盖物（卫星影像上保持可读） ---------- */
+.tmap-fire{display:flex;align-items:center;gap:8px;background:#c93a10ec;color:#fff;border-radius:999px;padding:7px 13px 7px 10px;font:700 13px/1 var(--font-ui);box-shadow:0 4px 16px #c93a1055;white-space:nowrap}
+.tmap-fire i{width:10px;height:10px;border-radius:50%;background:#ffb199;box-shadow:0 0 0 3px #ffffff44;animation:tmapFirePulse 1.6s ease-out infinite}
+.tmap-water{display:flex;flex-direction:column;align-items:center;gap:2px;background:#0d2b3ee6;color:#dff3ff;border-radius:9px;padding:7px 10px;font:600 12.5px/1.3 var(--font-ui);border:1px solid #7fd4ff44;box-shadow:0 4px 14px #08182066;cursor:pointer}
+.tmap-water em{font:400 11.5px/1.2 var(--font-data);font-style:normal;color:#9fd8f2;white-space:nowrap}
+.tmap-water i{width:9px;height:9px;border-radius:50%}
+.tmap-water i.wt-reservoir{background:#38b6ff}.tmap-water i.wt-lake{background:#2fa8d5}.tmap-water i.wt-river{background:#5ccfe6}.tmap-water i.wt-pond{background:#7fdcae}.tmap-water i.wt-water{background:#8ab6d6}
+.tmap-water.preferred{border-color:#ffd166;box-shadow:0 0 0 2px #ffd16644,0 4px 14px #08182066}
+.tmap-water.tmap-active,.tmap-water.tmap-hover{transform:scale(1.08);box-shadow:0 0 0 3px #7fd4ff66,0 4px 14px #08182066}
+.tmap-drone{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--accent);color:#fff;font:500 12.5px/1 var(--font-data);border:2px solid #ffffffcc;box-shadow:0 3px 10px #10243f88;cursor:pointer;position:relative;transition:transform 150ms ease-out,box-shadow 150ms ease-out}
+.tmap-drone i{position:absolute;inset:-7px;border-radius:50%;border:1.5px dashed #ffffff55}
+.tmap-drone.selected{background:var(--fire)}
+.tmap-drone.tmap-active,.tmap-drone.tmap-hover{transform:scale(1.12);box-shadow:0 0 0 4px #ffffff55,0 3px 10px #10243f88}
+.tmap-drone.tmap-pulse{animation:tmapPulse 1s ease-out 2}
+.tmap-road{display:flex;flex-direction:column;align-items:center;background:#241b0fe6;color:#f5e3c8;border-radius:8px;padding:6px 10px;font:600 12.5px/1.3 var(--font-ui);border:1px solid #d9a45b55}
+.tmap-road em{font:400 11.5px/1 var(--font-data);font-style:normal;color:#d9b98c;white-space:nowrap}
+.tmap-exit{display:flex;flex-direction:column;align-items:center;background:#0d3324e6;color:#c9f5e2;border-radius:8px;padding:6px 10px;font:600 12.5px/1.3 var(--font-ui);border:1px solid #22c58b66}
+.tmap-exit em{font:400 11.5px/1 var(--font-data);font-style:normal;color:#8fd9bd;white-space:nowrap}
+.tmap-contour-label{background:#101820cc;color:#f0e6d4;font:400 11.5px/1.4 var(--font-data);padding:2px 6px;border-radius:4px;white-space:nowrap;display:inline-block}
+.tmap-route-label{background:#101820d9;color:#ffd166;font:700 12px/1 var(--font-ui);padding:5px 10px;border-radius:999px;white-space:nowrap;border:1px solid #ffd16644;display:inline-block}
+.tmap-route-label.water{color:#7fd4ff;border-color:#7fd4ff44}
+/* 出动推演相位徽章（FE-17）：颜色随状态，空文本隐藏 */
+.tmap-badge{position:absolute;left:50%;top:-17px;transform:translateX(-50%);white-space:nowrap;font:500 11px/1 var(--font-data);padding:3px 7px;border-radius:999px;background:#101820e6;color:#dfe9f2;border:1px solid #ffffff33}
+.tmap-badge:empty{display:none}
+.tmap-badge.flying{background:#1d4fd8e6;color:#fff;border-color:#9db9ff55}
+.tmap-badge.working{background:#c93a10e6;color:#fff;border-color:#ffb19955}
+.tmap-badge.returning{background:#5b3a86e6;color:#f0e6ff;border-color:#c9a8ff55}
+.tmap-badge.servicing{background:#0d3324e6;color:#c9f5e2;border-color:#22c58b55}
+.tmap-badge.charging{background:#1d2b50e6;color:#cfe0ff;border-color:#7fa4ff55}
+.tmap-badge.orbit{background:#132a4ae6;color:#cfe4ff;border-color:#7fa4ff44}
+.sim-clock{font:500 12px var(--font-data);color:var(--ink-2);background:var(--accent-soft);border:1px solid var(--accent-line);padding:8px 12px;border-radius:999px;white-space:nowrap}
+@keyframes tmapFirePulse{0%{box-shadow:0 0 0 0 #ffb199aa}70%{box-shadow:0 0 0 8px #ffb19900}100%{box-shadow:0 0 0 0 #ffb19900}}
+@keyframes tmapPulse{0%{box-shadow:0 0 0 0 #2563eb88}70%{box-shadow:0 0 0 16px #2563eb00}100%{box-shadow:0 0 0 0 #2563eb00}}
+
+/* ---------- 交互反馈 / 可达性 ---------- */
+.deploy-row,.water-row,.outline-btn,.primary,.legend-item{-webkit-tap-highlight-color:transparent}
+.outline-btn:active,.primary:active{transform:translateY(1px)}
+.deploy-panel,.water-panel,.evolution-panel,.marker-detail{animation:panelIn 240ms cubic-bezier(.16,1,.3,1)}
+@keyframes panelIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+nav button:focus-visible,.tab-pills button:focus-visible,.dropzone:focus-visible,.icon-btn:focus-visible,.outline-btn:focus-visible,.primary:focus-visible,.danger-btn:focus-visible,.reset-link:focus-visible,.text-btn:focus-visible,.monitor-btn:focus-visible,.legend-item:focus-visible,.deploy-row:focus-visible,.water-row:focus-visible,.history-row:focus-visible,.notice-close:focus-visible,.marker-detail-close:focus-visible,.environment-refresh:focus-visible,.roster-row .outline-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.outline-btn:disabled,.danger-btn:disabled,.text-btn:disabled,.monitor-btn:disabled,.reset-link:disabled{opacity:.5;cursor:not-allowed;pointer-events:none}
+.empty-hint{padding:16px;text-align:center;color:var(--ink-2);font-size:13px;line-height:1.7}
+.empty-hint b{display:block;color:var(--ink);margin-bottom:4px}
+.skeleton-row{height:36px;border-radius:var(--radius-s);background:linear-gradient(90deg,#eceff2 25%,#f5f7f8 45%,#eceff2 65%);background-size:200% 100%;animation:skeletonShimmer 1.3s ease-out infinite;margin:8px 0}
+@keyframes skeletonShimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+.tab-pills button:focus-visible{background:var(--surface);box-shadow:inset 0 0 0 2px var(--accent)}
+
+/* ---------- 响应式 / 动效兜底 ---------- */
+@media (max-width:1100px){
+.map-stage{flex-direction:column}
+.tactical-map-wrap{height:60vh;min-height:420px}
+.map-side-rail{width:auto;max-height:none;min-height:0;flex-direction:row;flex-wrap:wrap}
+.map-side-rail .water-panel,.map-side-rail .deploy-panel,.map-side-rail .evolution-panel{flex:1 1 250px}
+}
+@media (prefers-reduced-motion: reduce){
+*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+.skeleton-row{animation:none}
+.fire-zone-ring{animation:none}
+.tmap-fire i,.tmap-drone.tmap-pulse{animation:none}
+.map-node.map-node-pulse{animation:none;box-shadow:0 0 0 3px #2563eb88}
+.map-node{transition:none}
+}

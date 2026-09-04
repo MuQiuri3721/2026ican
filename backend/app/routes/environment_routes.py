@@ -16,8 +16,8 @@ def environment(
     latitude: float | None = None,
     longitude: float | None = None,
     environment_mode: str | None = None,
-    water_radius_m: int = Query(3000, gt=0, le=50000),
-    road_radius_m: int = Query(3000, gt=0, le=50000),
+    water_radius_m: int = Query(5000, gt=0, le=50000),
+    road_radius_m: int = Query(5000, gt=0, le=50000),
 ):
     try:
         return EnvironmentTool().run(scene_id=scene_id, latitude=latitude, longitude=longitude,
@@ -29,8 +29,8 @@ def environment(
 
 @router.get("/api/terrain/contours")
 def terrain_contours(
-    latitude: float = Query(32.1256451, ge=-90, le=90),
-    longitude: float = Query(118.9584748, ge=-180, le=180),
+    latitude: float = Query(32.0725, ge=-90, le=90),
+    longitude: float = Query(118.8415, ge=-180, le=180),
     radius_deg: float = Query(0.04, gt=0, le=0.2),
     interval_m: float = Query(20, ge=1, le=500),
     max_points: int = Query(180, ge=20, le=240),

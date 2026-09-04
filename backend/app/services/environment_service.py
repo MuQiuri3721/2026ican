@@ -26,11 +26,15 @@ from rasterio.warp import transform
 # 默认 DEM 位于 后端/N32E118.hgt
 DEFAULT_DEM_PATH = Path(__file__).resolve().parents[2] / "N32E118.hgt"
 
-DEFAULT_WATER_RADIUS_M = 3000
-DEFAULT_ROAD_RADIUS_M = 3000
+DEFAULT_WATER_RADIUS_M = 5000
+DEFAULT_ROAD_RADIUS_M = 5000
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+# 主源在国内网络常被重置；mail.ru 镜像经实测含完整中国数据（紫霞湖/黄马水库等）
+OVERPASS_MIRROR_URLS = (
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+)
 
 WORLD_COVER_CLASSES = {
     10: "Tree Cover",
@@ -106,20 +110,22 @@ def haversine_distance_m(lat1, lon1, lat2, lon2):
 def overpass_query(query, timeout=30, retries=2):
     last_error = None
 
-    for attempt in range(retries):
-        try:
-            response = requests.post(
-                OVERPASS_URL,
-                data={"data": query},
-                headers={"User-Agent": "ForestFire-EnvironmentTool/1.0"},
-                timeout=timeout,
-            )
-            response.raise_for_status()
-            return response.json().get("elements", [])
-        except requests.RequestException as exc:
-            last_error = exc
-            if attempt < retries - 1:
-                time.sleep(2 ** (attempt + 1))
+    # 主源被墙时连接级错误毫秒级暴露，重试 1 次即快速切换镜像；镜像保留完整退避重试
+    for url, attempts in ((OVERPASS_URL, 1), *((u, retries) for u in OVERPASS_MIRROR_URLS)):
+        for attempt in range(attempts):
+            try:
+                response = requests.post(
+                    url,
+                    data={"data": query},
+                    headers={"User-Agent": "ForestFire-EnvironmentTool/1.0"},
+                    timeout=(3, timeout),
+                )
+                response.raise_for_status()
+                return response.json().get("elements", [])
+            except requests.RequestException as exc:
+                last_error = exc
+                if attempt < attempts - 1:
+                    time.sleep(2 ** (attempt + 1))
 
     raise RuntimeError(f"Overpass 请求失败: {last_error}")
 
@@ -245,7 +251,7 @@ def get_weather(latitude, longitude):
     response = requests.get(
         OPEN_METEO_URL,
         params=params,
-        timeout=20,
+        timeout=(3, 15),
     )
     response.raise_for_status()
 
@@ -449,6 +455,8 @@ def get_water_sources(
     return {
         "found": bool(features),
         "feature_count": len(features),
+        # 全量水体按距离排序截断，供前端真实地图全量打点（契约：只增不破）。
+        "features": features[:20],
         "nearest": features[0] if features else None,
         "preferred": preferred[0] if preferred else None,
         "distance_note": "到 OSM 水体代表点的近似距离",

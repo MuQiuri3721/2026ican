@@ -58,6 +58,7 @@ GPS 参考值单独存放、只用于展示与环境查询，**不参与距离�
 | 数据 | 键名 | 含义 |
 |---|---|---|
 | `data/scene.json` 的 `fire_origin_gps` | `latitude/longitude` | 火点的 GPS 参考位置 |
+| `data/scene.json` 的 `water_sources[].latitude/longitude` | `latitude/longitude` | 演示水源的 GPS 参考位置（仅用于地图精准标注，不参与距离计算） |
 | 视觉 `fire_center` | `latitude/longitude` | 检测火点的 GPS 参考（历史版本曾用 `x/y` 键存经纬度，已废弃） |
 | 环境查询与上传接口 | `latitude/longitude` | 标准经纬度参数，用于真实环境服务 |
 
@@ -136,17 +137,17 @@ queued → running → awaiting_confirmation → executing → completed
 
 ### 3.1 `GET /api/environment`
 
-Query：`scene_id`（默认 `forest-demo-01`）、`latitude`、`longitude`、`environment_mode`（`demo|real|auto|offline`，缺省 auto：有坐标走 real、无坐标走 demo）、`water_radius_m`、`road_radius_m`（默认 3000，1–50000）。
+Query：`scene_id`（默认 `forest-demo-01`）、`latitude`、`longitude`、`environment_mode`（`demo|real|auto|offline`，缺省 auto：有坐标走 real、无坐标走 demo）、`water_radius_m`、`road_radius_m`（默认 5000，1–50000）。
 
 响应（EnvironmentTool 统一信封，真实/演示同构）：
 
 ```json
 {
-  "scene_id": "forest-demo-01", "name": "青龙山演示林区",
+  "scene_id": "forest-demo-01", "name": "紫金山演示林区",
   "mode": "demo", "status": "ok", "source": "demo-data",
   "wind_speed": 6.5, "wind_direction": "西北",
   "altitude": 320, "terrain": "丘陵",
-  "water_sources": [{"name": "北侧蓄水池", "distance_m": 800, "available": true, "position": {"x": 118.788, "y": 32.04}}],
+  "water_sources": [{"name": "北侧蓄水池", "distance_m": 150, "available": true, "position": {"x": 20, "y": -20}, "latitude": 32.0701, "longitude": 118.8432}],
   "nearest_water": {"...同上首项"}, "preferred_water": {"..."},
   "road_context": null, "landcover": null, "raw": {"...完整数据"}
 }
@@ -158,7 +159,7 @@ Query：`scene_id`（默认 `forest-demo-01`）、`latitude`、`longitude`、`en
 
 ### 3.2 `GET /api/terrain/contours`
 
-Query：`latitude`（默认 32.1256451）、`longitude`（默认 118.9584748）、`radius_deg`（默认 0.04，≤0.2）、`interval_m`（默认 20，1–500）、`max_points`（默认 180，20–240）。
+Query：`latitude`（默认 32.0725，紫金山主峰）、`longitude`（默认 118.8415）、`radius_deg`（默认 0.04，≤0.2）、`interval_m`（默认 20，1–500）、`max_points`（默认 180，20–240）。
 
 成功：GeoJSON `{"type": "FeatureCollection", "status": "ok", "source": "N32E118.hgt", "location": {...}, "bounds": {"radius_deg": 0.04}, "interval_m": 20, "features": [...]}`。
 失败不抛 5xx：返回空 FeatureCollection，`status="fallback"`、`source="demo-data-fallback"`，`fallback.code ∈ {invalid_parameters, invalid_coordinates, rasterio_unavailable, dem_no_data, dem_unavailable}`。
@@ -220,7 +221,7 @@ Query：`latitude`（默认 32.1256451）、`longitude`（默认 118.9584748）�
 | `fleet_snapshot` | string，默认 `"default"` | 兼容保留 |
 | `latitude` / `longitude` | float/null | 范围 ±90 / ±180 |
 | `environment_mode` | string/null | `demo|real|auto|offline` |
-| `water_search_radius_m` / `road_search_radius_m` | int，默认 3000（别名 `water_radius_m`/`road_radius_m`） | 1–50000 |
+| `water_search_radius_m` / `road_search_radius_m` | int，默认 5000（别名 `water_radius_m`/`road_radius_m`） | 1–50000 |
 | `metadata` | object/null | 透传到环境结果 |
 | `fire_type` | string，默认 `"vegetation"` | `electrical/oil/chemical` 触发 C6 |
 | `people_status` | `confirmed|absent|unknown`，默认 unknown | 人员分支 |
@@ -267,7 +268,7 @@ Query：`latitude`（默认 32.1256451）、`longitude`（默认 118.9584748）�
 
 ### 5.2 `POST /api/analyze/upload`（multipart/form-data）
 
-Form 字段：`file`（必填，≤200MB，JPG/PNG/MP4，服务端做魔数校验）、`frames`（可选，1+ 张早前帧图片；主文件自动作为序列最新一帧，共 ≥2 帧时逐帧检测并输出面积趋势）、`scene_id`、`use_vlm`、`latitude`、`longitude`、`environment_mode`、`water_search_radius_m`、`road_search_radius_m`。文件落盘 `uploads/<12hex>-<原名>`，随后行为与 `POST /api/analyze` 一致。类型不符 415、超限 413、魔数不符 415（上传文件随之删除）。
+Form 字段（全部为 multipart 表单字段，显式 `Form(...)` 绑定）：`file`（必填，≤200MB，JPG/PNG/MP4，服务端做魔数校验）、`frames`（可选，1+ 张早前帧图片；主文件自动作为序列最新一帧，共 ≥2 帧时逐帧检测并输出面积趋势）、`scene_id`、`use_vlm`、`latitude`、`longitude`、`environment_mode`、`people_status`（confirmed/absent/unknown，confirmed 时核心链追加疏散分支）、`water_search_radius_m`、`road_search_radius_m`。文件落盘 `uploads/<12hex>-<原名>`，随后行为与 `POST /api/analyze` 一致。类型不符 415、超限 413、魔数不符 415（上传文件随之删除）。
 
 多帧序列响应附加字段：`result.visual_sequence = {"frame_count": N, "frames": [{image_name, fire_area_m2, smoke_area_m2, growth_rate, confidence}], "trend": {status, trend, growth_rate, areas_m2}}`；趋势状态 `ok` 时序列增长率与最新帧面积显式驱动火情重算。
 
@@ -437,7 +438,11 @@ Query：`once`（可选，`1` = 仅推送当前事件快照后结束，供一次
 
 ## 8. 调度与闭环关键规则（契约级）
 
-- 候选生成：E 子群枚举 1–4 架组合（受 `constraints.max_drones`、`disabled_uavs` 限制），硬约束过滤（status ∈ available/assigned、health≥60、SOC≥25、模块与火情类型兼容）→ 5 分钟离散仿真 → `J = 0.40T + 0.30B + 0.15E + 0.10M + 0.05N`（越小越优）→ 最优 + 备选（≤8 个）。
+- 候选生成：E 子群枚举 1–4 架组合（受 `constraints.max_drones`、`disabled_uavs` 限制），硬约束过滤（status ∈ available/assigned、health≥60、**SOC≥35% 新任务底线**（`new_task_floor_soc_percent`，25% 仅为返航阈值）、模块与火情类型兼容）→ 5 分钟离散仿真 → `J = 0.40T + 0.30B + 0.15E + 0.10M + 0.05N`（越小越优）→ 最优 + 备选（≤8 个）。
+- 就地取水六条件评估（`select_water_source`）真实执行：available、safe_access、容量≥20L、路线安全、循环后 SOC≥25%、比基地节省≥5 分钟；不通过则 `water_source_plan.mode=base` 并在 reason 记录评估结论。
+- 硬时限：`constraints.target_minutes` 剔除全部超时可控方案；全超时时判不可控并输出 `time_limit` 缺口（`estimated_control_time` 置空，见 §7）。
+- 闭环监测输出 `emergency_units`（SOC<`emergency_soc_percent`(15%) 的任务机，规则 V1 §4.2 应急回收标记）。
+- 有人分支（people=confirmed）核心链追加疏散：`result.agent.skill_chain.evacuation`（BFS 路线避开火点风险网格，含 steps/estimated_minutes/risk_cells）。
 - 至少 1 架 R 在线监测；S 按人员分支分配（confirmed→通信/疏散指引，absent→物流，unknown→复核与后备）。
 - 药剂 κ 表（`configs/simulation.json`）：植被火 W20=1.0、C6=0.25；电气水剂=0（排除）、C6=1.5。`fire_type ∈ {electrical, oil, chemical}` 默认 C6。
 - 重规划触发：FLP 上升 >20%、风速档位变化、预计返航 SOC<25%、药剂不足、人员状态变化、资源/续航动作（resupply/return/reinforce）。

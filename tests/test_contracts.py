@@ -223,16 +223,19 @@ def test_domain_contract_rejects_invalid_payload_and_negative_inventory():
 
 
 def test_time_limit_constraint_filters_overtime_plans():
-    """硬时限（target_minutes）剔除全部超时方案时必须输出时限缺口且判不可控（规则文档 §8.2）。"""
+    """硬时限（target_minutes）剔除全部超时方案时必须输出时限缺口且判不可控（规则文档 §8.2）。
+
+    小火观测（260 m²，I=1）真实窗口约 9–14 分钟，时限 5 分钟即全部超时。
+    """
     client = TestClient(app)
     limited = client.post("/api/analyze", json={
         "scene_id": "forest-demo-01", "image_name": "small-fire.jpg", "environment_mode": "offline",
-        "constraints": {"max_drones": 4, "target_minutes": 30},
+        "constraints": {"max_drones": 4, "target_minutes": 5},
     })
     assert limited.status_code == 200, limited.text
     plan = client.get(f"/api/tasks/{limited.json()['analysis_id']}/plan").json()["plan"]
     gap = next(g for g in plan["resource_gap"] if g["resource"] == "time_limit")
-    assert gap["required"] == 30.0 and gap["available"] > 30
+    assert gap["required"] == 5.0 and gap["available"] > 5
     assert plan["can_control"] is False
 
     baseline = client.post("/api/analyze", json={"scene_id": "forest-demo-01", "image_name": "small-fire.jpg", "environment_mode": "offline"})
@@ -252,11 +255,30 @@ def test_scene_fixture_coordinates_share_one_relative_frame():
     fleet = json.loads((ROOT / "data" / "fleet.json").read_text(encoding="utf-8"))
     for uav in fleet:
         position = uav["position"]
-        assert 0 <= position["x"] <= 500 and 0 <= position["y"] <= 500
+        # 基地已迁至紫霞湖（火点西南约 830m），坐标允许为负；仍须与火点同一定位框架
+        assert -1500 <= position["x"] <= 1500 and -1500 <= position["y"] <= 1500
 
     vision = json.loads((ROOT / "data" / "vision_observations.json").read_text(encoding="utf-8"))
     for observation in vision.values():
         assert set(observation["fire_center"]) == {"latitude", "longitude"}
+
+
+def test_demo_water_source_carries_display_gps():
+    """演示水源带 GPS 参考（api-contract §1.3/§3.1）：仅展示用，demo 环境信封原样透传供地图精准标注。"""
+    import math
+
+    scene = json.loads((ROOT / "data" / "scene.json").read_text(encoding="utf-8"))
+    for water in scene["water_sources"]:
+        assert math.isfinite(water["latitude"]) and math.isfinite(water["longitude"])
+        # GPS 与相对坐标 position 并存，互不替代
+        assert {"x", "y"} <= set(water["position"])
+
+    from backend.app.tools.environment import EnvironmentTool
+
+    envelope = EnvironmentTool().run(scene_id="forest-demo-01", environment_mode="offline")
+    demo_water = envelope["water_sources"][0]
+    assert demo_water["latitude"] == scene["water_sources"][0]["latitude"]
+    assert demo_water["longitude"] == scene["water_sources"][0]["longitude"]
 
 
 def test_dispatch_and_monitor_share_scene_origin_frame():

@@ -1,6 +1,6 @@
 {
   "scene_id": "forest-demo-01",
-  "name": "青龙山演示林区",
+  "name": "紫金山演示林区",
   "wind_speed": 6.5,
   "wind_direction": "西北",
   "wind_direction_deg": 315,
@@ -9,7 +9,25 @@
   "slope_deg": 12,
   "fuel_type": "general_forest",
   "fire_type": "vegetation",
-  "fire_origin": {"x": 140, "y": 60},
-  "fire_origin_gps": {"latitude": 32.04, "longitude": 118.78},
-  "water_sources": [{"name": "北侧蓄水池", "distance_m": 150, "available": true, "position": {"x": 20, "y": -20}}]
+  "fire_origin": {
+    "x": 140,
+    "y": 60
+  },
+  "fire_origin_gps": {
+    "latitude": 32.0688,
+    "longitude": 118.8432
+  },
+  "water_sources": [
+    {
+      "name": "北侧蓄水池",
+      "distance_m": 150,
+      "available": true,
+      "position": {
+        "x": 20,
+        "y": -20
+      },
+      "latitude": 32.0701,
+      "longitude": 118.8432
+    }
+  ]
 }

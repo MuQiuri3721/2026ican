@@ -7,3 +7,8 @@ data/reports/
 data/analysis_store.db
 backend/uploads/
 .zcode/
+e2e/artifacts/
+e2e/*.log
+e2e/curl_ps.json
+e2e/ps_check.json
+e2e/small.json

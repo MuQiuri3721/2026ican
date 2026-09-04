@@ -40,6 +40,9 @@ class SkillOrchestrator:
             if name == "candidate_generation":
                 results.setdefault("resource_matching", results[name].get("resource_matching", {}))
                 results.setdefault("drone_dispatch", results[name].get("drone_dispatch", {}))
+        # 规则 V1 §9：确认有人时疏散分支进入核心链（路线避开火点风险网格）。
+        if context.get("people_status") == "confirmed" and "evacuation" in self.registry.list():
+            results["evacuation"] = self.run("evacuation", {**context, **results})
         return results
 
     LEGACY_ORDER = [

@@ -1,3 +1,4 @@
+import math
 from typing import Any, Dict, Optional
 
 from ..tools.registry import ToolRegistry, build_registry
@@ -33,8 +34,8 @@ class EnvironmentAssessmentSkill(BaseSkill):
             "scene_id": scene_id,
             "latitude": context.get("latitude"),
             "longitude": context.get("longitude"),
-            "water_radius_m": context.get("water_search_radius_m", 3000),
-            "road_radius_m": context.get("road_search_radius_m", 3000),
+            "water_radius_m": context.get("water_search_radius_m", 5000),
+            "road_radius_m": context.get("road_search_radius_m", 5000),
             "environment_mode": context.get("environment_mode"),
             "metadata": context.get("metadata"),
         })
@@ -86,7 +87,9 @@ class RoutePlanningSkill(BaseSkill):
     name = "route_planning"
     def run(self, context):
         assignment = context.get("drone_dispatch", {}).get("assignment", {}).get("data", {})
-        return {"status": "demo", "route": self.registry.execute("plan_route", {"origin": {"x": 0, "y": 0}, "target": {"x": 800, "y": 0}}), "assigned_tasks": assignment.get("tasks", []), "source": "rules"}
+        target = context.get("candidate_generation", {}).get("fire_origin") or {"x": 800, "y": 0}
+        route = self.registry.execute("plan_route", {"origin": {"x": 0, "y": 0}, "target": target})
+        return {"status": "rules", "route": route, "assigned_tasks": assignment.get("tasks", []), "source": "rules"}
 class TaskExecutionSkill(BaseSkill):
     name = "task_execution"
     def run(self, context):
@@ -107,7 +110,41 @@ class ClosedLoopSkill(BaseSkill):
 class EvacuationSkill(BaseSkill):
     name = "evacuation"
     status = "extension"
-    def run(self, context): return {"status": "not_implemented", "message": "人群疏散属于扩展能力。"}
+    def run(self, context):
+        """有人分支的确定性疏散路线：以火点为中心封闭风险网格，BFS 规避后输出路径与预估时间。
+
+        风险半径由火情面积等效圆换算为网格数（api-contract §6 坐标口径：米制相对坐标）。
+        """
+        candidate = context.get("candidate_generation", {})
+        origin = candidate.get("fire_origin") or {"x": 0, "y": 0}
+        fire_area = float(context.get("fire_perception", {}).get("observation", {}).get("fire_area_m2", 1800) or 1800)
+        grid_cols = grid_rows = 12
+        cell_meters = 40
+        center = (grid_cols // 2, grid_rows // 2)
+        radius_cells = max(1, math.ceil(math.sqrt(max(fire_area, 1) / math.pi) / cell_meters))
+        blocked = [
+            [col, row]
+            for row in range(grid_rows)
+            for col in range(grid_cols)
+            if math.hypot(col - center[0], row - center[1]) <= radius_cells
+        ]
+        start = [max(0, center[0] - radius_cells - 1), center[1]]
+        if start in blocked:
+            start = [0, 0]
+        route = self.registry.execute("plan_evacuation_route", {
+            "start": start, "exit_cell": [grid_cols - 1, grid_rows - 1], "blocked": blocked,
+            "grid_cols": grid_cols, "grid_rows": grid_rows, "cell_meters": cell_meters,
+        })
+        data = route.get("data", {})
+        return {
+            "status": "ok" if data.get("found") else "blocked",
+            "people_branch": context.get("people_status", "unknown"),
+            "fire_origin": origin,
+            "risk_cells": len(blocked),
+            "start": start,
+            **data,
+            "source": "rules",
+        }
 
 class PeopleAssessmentSkill(BaseSkill):
     name = "people_assessment"
@@ -142,6 +179,20 @@ class CandidateGenerationSkill(BaseSkill):
             "fire_type": context.get("fire_type", "vegetation"),
             "wind_speed": environment.get("wind_speed", state["scene"].get("wind_speed", 0)),
         }
+        # FLP 必须由网格公式计算（与 pipeline assess_fire 同一冻结公式），
+        # 不能退化成 fire_area/常数——audit §三.1 与 api-contract §8 的要求。
+        if not fire.get("fire_load_flp"):
+            grid = self.registry.execute("build_fire_grid", {
+                "fire_area_m2": fire.get("fire_area_m2", 1800),
+                "wind_speed": fire.get("wind_speed", 0),
+                "slope_deg": state["scene"].get("slope_deg", 12),
+                "fuel_type": state["scene"].get("fuel_type", "general_forest"),
+                "intensity": min(4, max(1, assessment.get("level", 2))),
+            })
+            grid_data = grid.get("data", {})
+            fire["fire_load_flp"] = grid_data.get("fire_load_flp")
+            fire["fire_grid"] = {key: grid_data[key] for key in ("cell_area_m2", "cell_count", "intensity", "k_fuel", "k_wind", "k_slope", "fuel_type")}
+            fire["growth_flp_per_hour"] = round(float(fire["fire_load_flp"]) * float(fire.get("growth_rate", 0.42)), 2)
         plan = deterministic_v1_dispatch(
             state,
             fire,
@@ -159,6 +210,7 @@ class CandidateGenerationSkill(BaseSkill):
         }
         return {
             "v1_dispatch": plan,
+            "fire_origin": state["scene"].get("fire_origin", {"x": 0, "y": 0}),
             "resource_matching": legacy_resource,
             "drone_dispatch": legacy_dispatch,
             "candidates": tasks,

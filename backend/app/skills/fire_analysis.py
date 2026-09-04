@@ -25,8 +25,8 @@ class FireAnalysisSkill:
                 "scene_id": scene_id,
                 "latitude": context.get("latitude"),
                 "longitude": context.get("longitude"),
-                "water_radius_m": context.get("water_search_radius_m", 3000),
-                "road_radius_m": context.get("road_search_radius_m", 3000),
+                "water_radius_m": context.get("water_search_radius_m", 5000),
+                "road_radius_m": context.get("road_search_radius_m", 5000),
                 "environment_mode": context.get("environment_mode"),
             }),
             "assessment": lambda context: {"mode": "rules", "status": "delegated-to-pipeline"},
@@ -36,8 +36,8 @@ class FireAnalysisSkill:
             "scene_id": scene_id, "image_name": image_name,
             "latitude": context.get("latitude") if isinstance(context, dict) else None,
             "longitude": context.get("longitude") if isinstance(context, dict) else None,
-            "water_search_radius_m": context.get("water_search_radius_m", 3000) if isinstance(context, dict) else 3000,
-            "road_search_radius_m": context.get("road_search_radius_m", 3000) if isinstance(context, dict) else 3000,
+            "water_search_radius_m": context.get("water_search_radius_m", 5000) if isinstance(context, dict) else 5000,
+            "road_search_radius_m": context.get("road_search_radius_m", 5000) if isinstance(context, dict) else 5000,
         })
         return {"plan": plan.as_dict(), "analysis": run_demo_analysis(scene_id, image_name)}
 

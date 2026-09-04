@@ -100,8 +100,8 @@ class AnalysisInput(BaseModel):
     latitude: Optional[float] = Field(default=None, ge=-90, le=90)
     longitude: Optional[float] = Field(default=None, ge=-180, le=180)
     environment_mode: Optional[str] = None
-    water_search_radius_m: int = Field(default=3000, gt=0, le=50000, validation_alias=AliasChoices("water_search_radius_m", "water_radius_m"))
-    road_search_radius_m: int = Field(default=3000, gt=0, le=50000, validation_alias=AliasChoices("road_search_radius_m", "road_radius_m"))
+    water_search_radius_m: int = Field(default=5000, gt=0, le=50000, validation_alias=AliasChoices("water_search_radius_m", "water_radius_m"))
+    road_search_radius_m: int = Field(default=5000, gt=0, le=50000, validation_alias=AliasChoices("road_search_radius_m", "road_radius_m"))
     metadata: Optional[Dict[str, Any]] = None
     fire_type: str = "vegetation"
     people_status: PeopleStatus = PeopleStatus.UNKNOWN

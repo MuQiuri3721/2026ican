@@ -1,3 +1,4 @@
+import threading
 from typing import Any, Dict, Optional
 
 from ..pipeline import load_demo_state
@@ -6,8 +7,13 @@ from .base import BaseTool, ToolError
 
 
 # 紫金山天文台附近的公开演示坐标；真实项目应优先使用影像元数据。
-DEFAULT_LATITUDE = 32.1256451
-DEFAULT_LONGITUDE = 118.9584748
+# 紫金山主峰（头陀岭）DEM 实测高点，与 terrain_service 默认值保持一致。
+DEFAULT_LATITUDE = 32.0725
+DEFAULT_LONGITUDE = 118.8415
+
+# single-flight：冷缓存时前端并发发出多路相同请求，只放行一路抓取，其余等待后读缓存
+_inflight_guard = threading.Lock()
+_inflight: Dict[str, threading.Event] = {}
 
 
 class EnvironmentTool(BaseTool):
@@ -20,8 +26,8 @@ class EnvironmentTool(BaseTool):
         scene_id: str = "forest-demo-01",
         latitude: Optional[float] = None,
         longitude: Optional[float] = None,
-        water_radius_m: int = 3000,
-        road_radius_m: int = 3000,
+        water_radius_m: int = 5000,
+        road_radius_m: int = 5000,
         environment_mode: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
@@ -56,27 +62,57 @@ class EnvironmentTool(BaseTool):
                     if metadata:
                         result["metadata"] = metadata
                     return result
-                raw = environment_service.get_environment(
-                    latitude, longitude,
-                    water_radius_m=water_radius_m,
-                    road_radius_m=road_radius_m,
-                )
-                if raw.get("status") == "invalid_input":
-                    return self._error(scene_id, "invalid_coordinates", raw.get("error", "经纬度无效"), raw) if mode == "real" else self._fallback(scene_id, "invalid_coordinates", raw.get("error", "经纬度无效"), raw)
-                data = self._normalize(scene_id, raw, mode="real", source="environment_service")
-                data["location"] = raw.get("location", {"latitude": latitude, "longitude": longitude})
-                if metadata:
-                    data["metadata"] = metadata
-                environment_cache.set(cache_key, data)
-                return data
+                leader = False
+                wait_event: Optional[threading.Event] = None
+                with _inflight_guard:
+                    existing = _inflight.get(cache_key)
+                    if existing is None:
+                        _inflight[cache_key] = threading.Event()
+                        leader = True
+                    else:
+                        wait_event = existing
+                if not leader:
+                    # 另一路相同请求正在抓取：等它落地后读缓存；未落地（失败/超时）再自己抓
+                    wait_event.wait(timeout=120)
+                    waited, _ = environment_cache.get_with_stale(cache_key)
+                    if waited is not None:
+                        result = dict(waited)
+                        if metadata:
+                            result["metadata"] = metadata
+                        return result
+                try:
+                    raw = environment_service.get_environment(
+                        latitude, longitude,
+                        water_radius_m=water_radius_m,
+                        road_radius_m=road_radius_m,
+                    )
+                    if raw.get("status") == "invalid_input":
+                        return self._error(scene_id, "invalid_coordinates", raw.get("error", "经纬度无效"), raw) if mode == "real" else self._fallback(scene_id, "invalid_coordinates", raw.get("error", "经纬度无效"), raw)
+                    data = self._normalize(scene_id, raw, mode="real", source="environment_service")
+                    data["location"] = raw.get("location", {"latitude": latitude, "longitude": longitude})
+                    if metadata:
+                        data["metadata"] = metadata
+                    # partial（个别数据源失败）不写缓存：空结果不该占住 5 分钟 TTL，下次请求重试数据源
+                    if raw.get("status") == "ok":
+                        environment_cache.set(cache_key, data)
+                    return data
+                except Exception as error:
+                    stale_value, is_stale = environment_cache.get_with_stale(cache_key)
+                    if stale_value is not None and is_stale:
+                        stale = dict(stale_value)
+                        stale["status"] = "stale"
+                        stale["stale"] = True
+                        stale["fallback"] = {"code": "environment_unavailable", "message": str(error)}
+                        return stale
+                    return self._error(scene_id, "environment_unavailable", str(error)) if mode == "real" else self._fallback(scene_id, "environment_unavailable", str(error))
+                finally:
+                    if leader:
+                        with _inflight_guard:
+                            done = _inflight.pop(cache_key, None)
+                        if done is not None:
+                            done.set()
             except Exception as error:
-                stale_value, is_stale = environment_cache.get_with_stale(cache_key)
-                if stale_value is not None and is_stale:
-                    stale = dict(stale_value)
-                    stale["status"] = "stale"
-                    stale["stale"] = True
-                    stale["fallback"] = {"code": "environment_unavailable", "message": str(error)}
-                    return stale
+                # 抓取阶段异常已在内层处理；此处兜底参数换算等前置步骤
                 return self._error(scene_id, "environment_unavailable", str(error)) if mode == "real" else self._fallback(scene_id, "environment_unavailable", str(error))
 
     def _demo(self, scene_id: str, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -108,15 +144,15 @@ class EnvironmentTool(BaseTool):
 
     @classmethod
     def _normalize(cls, scene_id: str, raw: Dict[str, Any], mode: str, source: str) -> Dict[str, Any]:
-        # environment_service wraps each provider as {status, data}; water itself
-        # returns nearest/preferred rather than a features collection.
+        # environment_service wraps each provider as {status, data}; water returns
+        # the full features collection (capped at 20, distance-sorted) when available.
         weather = cls._module_data(raw, "weather")
         terrain = cls._module_data(raw, "terrain")
         water = cls._module_data(raw, "water")
         road = cls._module_data(raw, "road")
         landcover = cls._module_data(raw, "landcover")
         features = water.get("features")
-        if not isinstance(features, list):
+        if not isinstance(features, list) or not features:
             features = [item for item in (water.get("nearest"), water.get("preferred")) if item]
         status = raw.get("status") or mode
         return {
