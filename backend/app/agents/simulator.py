@@ -43,6 +43,13 @@ class SimulatorAgent(BaseAgent):
             "wind_speed": snapshot.get("wind_speed"),
             "people": snapshot.get("people"),
         }
+        try:  # 处置经验接地（FE-27）：按本轮触发器/态势检索知识库，LLM 研判可引用
+            from ..services.knowledge import query_knowledge
+            topic = " ".join(filter(None, [snapshot.get("situation") or "", *(snapshot.get("triggers") or []), "火情 研判"]))
+            refs = query_knowledge(topic, top_k=2)
+            brief["knowledge"] = [{"section": r["section"], "text": r["text"][:160]} for r in refs.get("results", [])]
+        except Exception:  # noqa: BLE001 —— 知识库缺失不阻断研判
+            pass
         judgment, source = self._judge_llm(brief)
         if judgment is None:
             judgment, source = _conservative_judgment(brief), "conservative-fallback"

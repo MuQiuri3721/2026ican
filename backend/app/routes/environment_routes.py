@@ -4,7 +4,7 @@
 """
 from fastapi import APIRouter, HTTPException, Query
 
-from ..services.terrain_service import generate_contours
+from ..services.terrain_service import generate_contours, generate_grid
 from ..tools.environment import EnvironmentTool
 
 router = APIRouter()
@@ -25,6 +25,12 @@ def environment(
                                      road_radius_m=road_radius_m)
     except (ValueError, TypeError) as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.get("/api/terrain/grid")
+def terrain_grid(latitude: float = 32.0725, longitude: float = 118.8415, radius_deg: float = 0.04, size: int = 141):
+    """规则高程网格（FE-29 三维地形）：HGT 窗口重采样 size×size。"""
+    return generate_grid(latitude=latitude, longitude=longitude, radius_deg=radius_deg, size=size)
 
 
 @router.get("/api/terrain/contours")

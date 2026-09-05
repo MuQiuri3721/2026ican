@@ -93,6 +93,50 @@ def _contours(grid: np.ndarray, levels: list[float], lons: np.ndarray, lats: np.
     return features
 
 
+def generate_grid(latitude: float = DEFAULT_LATITUDE, longitude: float = DEFAULT_LONGITUDE,
+                  radius_deg: float = 0.04, size: int = 141, dem_path: str | Path | None = None) -> dict[str, Any]:
+    """规则高程网格（FE-29 三维地形）：HGT 窗口重采样为 size×size，供前端 three.js 位移地形。"""
+    try:
+        latitude, longitude = float(latitude), float(longitude)
+        radius_deg, size = float(radius_deg), int(size)
+    except (TypeError, ValueError) as error:
+        return _empty_fallback("invalid_parameters", str(error))
+    if not -90 <= latitude <= 90 or not -180 <= longitude <= 180:
+        return _empty_fallback("invalid_coordinates", "latitude/longitude 超出有效范围")
+    if not 0 < radius_deg <= 0.2 or not 40 <= size <= 241:
+        return _empty_fallback("invalid_parameters", "radius_deg 或 size 超出允许范围")
+    if rasterio is None:
+        return _empty_fallback("rasterio_unavailable", "DEM 读取依赖未安装")
+    path = Path(dem_path) if dem_path else DEFAULT_DEM_PATH
+    try:
+        with rasterio.open(path) as dataset:
+            row, col = dataset.index(longitude, latitude)
+            half = max(2, int(radius_deg / abs(dataset.transform.e) / 2))
+            win = min(max(size, 2 * half + 1), 4 * half + 1)
+            half = win // 2
+            window = Window(col - half, row - half, win, win)
+            data = dataset.read(1, window=window, boundless=True, masked=True).astype(float)
+            grid = data.filled(np.nan)
+            if not np.isfinite(grid).any():
+                return _empty_fallback("dem_no_data", "目标区域没有有效 DEM 数据")
+            stride = max(1, int(math.ceil(max(grid.shape) / size)))
+            grid = grid[::stride, ::stride]
+            transform = dataset.window_transform(window)
+            xs = transform.c + (np.arange(grid.shape[1]) + 0.5) * transform.a * stride
+            ys = transform.f + (np.arange(grid.shape[0]) + 0.5) * transform.e * stride
+        valid = grid[np.isfinite(grid)]
+        return {"status": "ok", "source": "N32E118.hgt",
+                "location": {"latitude": latitude, "longitude": longitude},
+                "nx": int(grid.shape[1]), "ny": int(grid.shape[0]),
+                "cell_m": round(abs(transform.a) * stride, 1),
+                "min_elev": round(float(valid.min()), 1), "max_elev": round(float(valid.max()), 1),
+                "lon0": round(float(xs[0]), 6), "lat0": round(float(ys[0]), 6),
+                "lon1": round(float(xs[-1]), 6), "lat1": round(float(ys[-1]), 6),
+                "elevations": [[round(float(v), 1) if np.isfinite(v) else None for v in row] for row in grid]}
+    except (FileNotFoundError, OSError, ValueError, RuntimeError) as error:
+        return _empty_fallback("dem_unavailable", str(error), location={"latitude": latitude, "longitude": longitude})
+
+
 def generate_contours(latitude: float = DEFAULT_LATITUDE, longitude: float = DEFAULT_LONGITUDE,
                       radius_deg: float = 0.04, interval_m: float = 20, max_points: int = 180,
                       dem_path: str | Path | None = None) -> dict[str, Any]:

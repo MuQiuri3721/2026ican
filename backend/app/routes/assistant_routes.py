@@ -15,6 +15,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from ..agentkit import audit_numbers, chat, llm_available, llm_status
+from ..services.knowledge import knowledge_stats, query_knowledge
 from ..domain.store import analysis_store
 
 router = APIRouter()
@@ -28,6 +29,14 @@ class ChatQuestion(BaseModel):
     question: str
 
 
+@router.get("/api/knowledge")
+async def knowledge_endpoint(query: str = "", top_k: int = 3):
+    """经验知识库检索（FE-27）：带 query 返回最相关片段，不带返回索引统计。"""
+    if query:
+        return query_knowledge(query, top_k=top_k)
+    return knowledge_stats()
+
+
 @router.post("/api/tasks/{task_id}/chat")
 async def task_chat(task_id: str, payload: ChatQuestion):
     question = payload.question.strip()[:300]  # 防超长输入撑爆上下文
@@ -38,13 +47,15 @@ async def task_chat(task_id: str, payload: ChatQuestion):
         raise HTTPException(status_code=404, detail="分析任务不存在")
 
     brief = _task_brief(item)
+    refs = query_knowledge(question, top_k=2)
+    knowledge_text = "\n".join(f"[{r['source_name']}·{r['section']}] {r['text'][:180]}" for r in refs.get("results", []))
     answer: str | None = None
     if llm_available():
         # agentkit.chat 为同步 requests 调用，线程池执行避免阻塞事件循环
         answer = await asyncio.to_thread(
             chat,
             [{"role": "system", "content": SAFETY_RULE},
-             {"role": "user", "content": f"任务实时数据（规则引擎产出，不可修改）：\n{brief}\n\n指挥员提问：{question}"}],
+             {"role": "user", "content": f"任务实时数据（规则引擎产出，不可修改）：\n{brief}\n\n知识库参考：\n{knowledge_text or '无相关片段'}\n\n指挥员提问：{question}"}],
             300,
         )
     if not answer:

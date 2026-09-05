@@ -12,6 +12,7 @@
     "@amap/amap-jsapi-loader": "^1.0.1",
     "@vitejs/plugin-vue": "latest",
     "lucide-vue-next": "latest",
+    "three": "^0.185.0",
     "vite": "latest",
     "vue": "latest"
   }

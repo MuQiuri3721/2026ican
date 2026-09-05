@@ -25,6 +25,7 @@ SIMULATOR_PROMPT = (
     '{"situation": "一句话态势", "severity": "low|medium|high|critical", "evidence": ["要点"], '
     '"decision": "continue|replan|terminate", "reason": "决策理由"}。'
     "没有预设触发表——由你自己发现征兆、自己定级、自己决定；拿不准时选 continue。"
+    "brief.knowledge 是按本轮征兆检索到的处置经验（来自团队规则/思路/论文），研判理由可引用其要点。"
 )
 
 APPROVER_PROMPT = "你是交互审批 Agent：向指挥员解释调度方案（标注每个数字的来源），说明为何建议批准或调整。"

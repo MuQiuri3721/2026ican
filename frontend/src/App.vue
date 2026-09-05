@@ -1,7 +1,8 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import TacticalMap from './components/TacticalMap.vue'
 import ChatPanel from './components/ChatPanel.vue'
+const Terrain3D = defineAsyncComponent(() => import('./components/Terrain3D.vue'))
 import PhaseStepper from './components/PhaseStepper.vue'
 import EvolutionChart from './components/EvolutionChart.vue'
 import {
@@ -1024,6 +1025,66 @@ async function loadHistory() {
 // 问答面板可用性：GLM available 与否由 loadServiceStatus 拉取的 /api/llm-status 决定（FE-22）
 const chatEnabled = computed(() => Boolean(llmInfo.value && llmInfo.value.available))
 const streamMode = ref('agent') // 大屏右栏：协作流（六角色黑板消息）/ 事件流（任务事件）
+// —— 三维地形（FE-29）：高程网格懒加载 + 演示态势投影 ——
+const mapMode = ref('2d')
+const terrainGrid = ref(null)
+const terrainGridLoading = ref(false)
+async function loadTerrainGrid() {
+  if (terrainGrid.value || terrainGridLoading.value) return
+  terrainGridLoading.value = true
+  try {
+    const { latitude, longitude } = environmentCoordinates.value
+    const query = new URLSearchParams({ latitude: String(latitude), longitude: String(longitude), radius_deg: '0.04', size: '141' })
+    const response = await fetch(`/api/terrain/grid?${query}`)
+    if (!response.ok) throw new Error(String(response.status))
+    const payload = await response.json()
+    if (payload.status === 'ok') terrainGrid.value = payload
+  } catch (error) {
+    addLog('三维地形网格加载失败 · 可稍后重试')
+    console.warn(error)
+  } finally { terrainGridLoading.value = false }
+}
+function toggleMapMode(mode) {
+  mapMode.value = mode
+  if (mode === '3d') loadTerrainGrid()
+  addLog(`林区态势切换 ${mode === '3d' ? '三维模型' : '平面战术图'}`)
+}
+const fire3dGps = computed(() => fireGpsValue())
+const fire3dRadius = computed(() => {
+  const area = Number(result.value.fire_assessment && result.value.fire_assessment.fire_area_m2)
+  return Number.isFinite(area) && area > 0 ? Math.max(40, Math.sqrt(area / Math.PI)) : 120
+})
+const fire3dActive = computed(() => Boolean(result.value.fire_assessment))
+const fleetAvgGps = computed(() => {
+  const fire = fire3dGps.value
+  const origin = analysisResult.value && analysisResult.value.scene ? analysisResult.value.scene.fire_origin : null
+  const withPosition = drones.value.filter((drone) => drone.position)
+  if (!fire || !origin || !withPosition.length) return fire
+  const avg = withPosition.reduce((acc, drone) => ({ x: acc.x + drone.position.x, y: acc.y + drone.position.y }), { x: 0, y: 0 })
+  const n = withPosition.length
+  return {
+    latitude: fire.latitude + (avg.y / n - origin.y) / 111320,
+    longitude: fire.longitude + (avg.x / n - origin.x) / (111320 * Math.cos(fire.latitude * Math.PI / 180)),
+  }
+})
+const stations3d = computed(() => {
+  const stations = []
+  if (fleetAvgGps.value) stations.push({ name: '紫霞湖基地', gps: fleetAvgGps.value, color: '#f0a848' })
+  const preferred = environment.value && environment.value.preferred_water
+  if (preferred && preferred.latitude != null) stations.push({ name: preferred.name || '首选水源', gps: { latitude: Number(preferred.latitude), longitude: Number(preferred.longitude) }, color: '#5fb8d9' })
+  return stations
+})
+const evac3dPath = computed(() => {
+  const eva = analysisResult.value && analysisResult.value.agent && analysisResult.value.agent.skill_chain
+    ? analysisResult.value.agent.skill_chain.evacuation : null
+  const origin = analysisResult.value && analysisResult.value.scene ? analysisResult.value.scene.fire_origin : null
+  const fire = fire3dGps.value
+  if (!eva || !eva.found || !Array.isArray(eva.path) || !origin || !fire) return []
+  return eva.path.map(([c, r]) => ({
+    latitude: fire.latitude + ((r - 6) * 40) / 111320,
+    longitude: fire.longitude + ((c - 6) * 40) / (111320 * Math.cos(fire.latitude * Math.PI / 180)),
+  }))
+})
 // LLM 状态轻量轮询（FE-22 自查优化）：GLM 降级/恢复时头部徽标 30s 内跟上，不写日志
 let llmPollTimer = null
 async function refreshLlmInfo() {
@@ -1443,6 +1504,7 @@ onBeforeUnmount(() => {
 
 onMounted(() => {
   loadServiceStatus()
+  loadTerrainGrid()
   loadFleetAndInventory()
   loadEnvironment()
   loadContours()
@@ -1478,11 +1540,12 @@ onMounted(() => {
 
       <section v-else-if="activeTab === 'fleet'" class="detail-view"><div class="detail-heading"><div><h2>无人机集群</h2><p>当前集群共有 {{ drones.length }} 架无人机，状态数据来自 /api/fleet。</p></div><span class="status-tag"><span class="live-dot"></span> 全部在线</span></div><div class="fleet-roster"><div v-for="group in fleetGroups" :key="group.key" class="roster-group"><div class="roster-group-head"><b>{{ group.label }}</b><small>{{ group.drones.length }} 架 · {{ group.role }}</small></div><div class="roster-table"><div v-for="drone in group.drones" :key="drone.id" class="roster-row"><div class="roster-id"><div :class="['drone-icon', drone.color]"><Zap :size="16" /></div><div><strong>{{ drone.id }}</strong><span>{{ drone.label }}</span></div></div><span :class="['roster-state', drone.status === '执行中' ? 'active-status' : '']"><i></i>{{ drone.status }}</span><div class="roster-soc"><div class="battery-bar"><i :style="{ width: drone.soc + '%' }"></i></div><b>{{ drone.soc }}%</b></div><span class="roster-payload">模块 {{ moduleLabel(drone.module) }} · 药剂 {{ drone.payload }}</span><span class="roster-num"><small>信号</small>{{ drone.signal }}%</span><span class="roster-num"><small>健康</small>{{ drone.health }}%</span><span class="roster-task" :title="drone.task">{{ drone.task }}</span><button class="outline-btn" @click="toggleFleetDetail(drone.id)"><ListFilter :size="14" /> {{ expandedFleet.has(drone.id) ? '收起遥测' : '遥测' }}</button><div v-if="expandedFleet.has(drone.id)" class="fleet-detail-extra"><span>速度 {{ drone.speed_mps ?? '—' }} m/s</span><span>耗电 {{ drone.energy_rate_percent_per_hour ?? '—' }} %/h</span><span>高度 {{ (drone.position && drone.position.z != null) ? drone.position.z + ' m' : '—' }}</span><span>编号 {{ drone.uav_id || drone.id }}</span><span>任务 {{ drone.task }}</span></div></div></div></div></div></section>
 
-      <section v-else-if="activeTab === 'map'" class="detail-view map-view map-view-full screen"><div class="map-toolbar"><div class="map-toolbar-heading"><h2>林区态势</h2><PhaseStepper :stage="screenStage.stage" :done="screenStage.done" :dead="screenStage.dead" :replans="replanCount" /></div><div class="map-toolbar-tools"><div class="map-legend" role="group" aria-label="图层开关"><button v-for="(label, key) in LAYER_LABELS" :key="key" :class="['legend-item', { off: !layerVisibility[key] }]" :aria-pressed="layerVisibility[key]" @click.stop="toggleLayer(key)"><i :class="'legend-' + key"></i>{{ label }}</button></div><button :class="['legend-item', { off: !voiceOn }]" :aria-pressed="voiceOn" :title="voiceOn ? '疏散语音广播已开启（点击静音）' : '疏散语音广播已静音（点击开启）'" @click.stop="toggleVoice"><i class="legend-evac"></i>语音广播</button><span class="status-tag orange"><MapPinned :size="14" /> {{ environmentCoordinates.longitude.toFixed(6) }}°E · {{ environmentCoordinates.latitude.toFixed(6) }}°N</span></div></div>
+      <section v-else-if="activeTab === 'map'" class="detail-view map-view map-view-full screen"><div class="map-toolbar"><div class="map-toolbar-heading"><h2>林区态势</h2><PhaseStepper :stage="screenStage.stage" :done="screenStage.done" :dead="screenStage.dead" :replans="replanCount" /></div><div class="map-toolbar-tools"><span class="view-toggle"><button :class="['legend-item', { on: mapMode === '2d' }]" :aria-pressed="mapMode === '2d'" @click.stop="toggleMapMode('2d')">🗺 平面</button><button :class="['legend-item', { on: mapMode === '3d' }]" :aria-pressed="mapMode === '3d'" @click.stop="toggleMapMode('3d')">🏔 三维</button></span><div class="map-legend" role="group" aria-label="图层开关"><button v-for="(label, key) in LAYER_LABELS" :key="key" :class="['legend-item', { off: !layerVisibility[key] }]" :aria-pressed="layerVisibility[key]" @click.stop="toggleLayer(key)"><i :class="'legend-' + key"></i>{{ label }}</button></div><button :class="['legend-item', { off: !voiceOn }]" :aria-pressed="voiceOn" :title="voiceOn ? '疏散语音广播已开启（点击静音）' : '疏散语音广播已静音（点击开启）'" @click.stop="toggleVoice"><i class="legend-evac"></i>语音广播</button><span class="status-tag orange"><MapPinned :size="14" /> {{ environmentCoordinates.longitude.toFixed(6) }}°E · {{ environmentCoordinates.latitude.toFixed(6) }}°N</span></div></div>
       <div class="screen-kpis"><div v-for="kpi in screenKpis" :key="kpi.label" :class="['skpi', 'tone-' + kpi.tone]"><b>{{ kpi.value }}<small>{{ kpi.unit }}</small></b><span>{{ kpi.label }}<em>{{ kpi.sub }}</em></span></div></div>
       <div class="map-screen-body"><div class="map-main-col"><div class="tactical-map-wrap" @click="dismissMarker">
-        <TacticalMap v-if="amapReady" ref="tacticalMapRef" :result="result" :environment="environment" :drones="drones" :water-list="waterSourcesList" :contours="contourData" :layer-visibility="layerVisibility" :selected-uavs="(analysisResult?.dispatch_plan?.selected_uavs || [])" :mission="mission" :scenario-preview="scenarioPreview" :focus-pulse="focusPulse" :hovered-drone-id="hoveredDroneId" :hovered-water-id="hoveredWaterId" :active-marker-id="activeMarker?.id || ''" :default-center="environmentCoordinates" @select-marker="selectMarker" @coords="cursorCoords = $event" @ready="addLog('高德卫星底图加载完成')" @fallback="onAmapFallback" />
-        <div v-else class="large-map" @wheel.prevent="handleMapWheel" @pointerdown="startMapDrag" @pointermove="moveMap" @pointerup="stopMapDrag" @pointercancel="stopMapDrag" @pointerleave="stopMapDrag">
+        <Terrain3D v-if="mapMode === '3d'" :grid="terrainGrid" :fire-gps="fire3dGps" :fire-radius-m="fire3dRadius" :fire-active="fire3dActive" :drones="drones" :mission="mission" :fire-origin="(analysisResult && analysisResult.scene ? analysisResult.scene.fire_origin : null)" :stations="stations3d" :evac-path="evac3dPath" :people-status="peopleStatus" />
+        <TacticalMap v-else-if="amapReady && mapMode === '2d'" ref="tacticalMapRef" :result="result" :environment="environment" :drones="drones" :water-list="waterSourcesList" :contours="contourData" :layer-visibility="layerVisibility" :selected-uavs="(analysisResult?.dispatch_plan?.selected_uavs || [])" :mission="mission" :scenario-preview="scenarioPreview" :focus-pulse="focusPulse" :hovered-drone-id="hoveredDroneId" :hovered-water-id="hoveredWaterId" :active-marker-id="activeMarker?.id || ''" :default-center="environmentCoordinates" @select-marker="selectMarker" @coords="cursorCoords = $event" @ready="addLog('高德卫星底图加载完成')" @fallback="onAmapFallback" />
+        <div v-else-if="mapMode === '2d'" class="large-map" @wheel.prevent="handleMapWheel" @pointerdown="startMapDrag" @pointermove="moveMap" @pointerup="stopMapDrag" @pointercancel="stopMapDrag" @pointerleave="stopMapDrag">
         <div class="map-scene-layer" :class="{ dragging: mapDragging }" :style="mapLayerStyle"><div class="terrain-wash"></div><div class="map-grid"></div><svg class="terrain-svg" viewBox="0 0 1000 520" preserveAspectRatio="none" aria-label="紫金山局部相对俯视等高线示意图"><defs><pattern id="topoGrid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#b7a9a0" stroke-width=".6" opacity=".42"/></pattern></defs><rect width="1000" height="520" fill="url(#topoGrid)"/><g v-if="layerVisibility.contour" class="contours"><g v-for="line in contourPaths" :key="line.d"><path class="contour-line" :class="{ 'major-contour': line.major }" :d="line.d"/><text v-if="line.major && line.elevation != null" class="contour-label" :x="line.labelX" :y="line.labelY">{{ line.elevation }} m</text></g></g><circle class="summit-ring" cx="560" cy="248" r="16"/><text class="summit-label" x="560" y="244" text-anchor="middle">峰顶</text><text class="summit-elevation" x="560" y="258" text-anchor="middle">{{ terrainVisual.elevation }} m</text></svg><div class="terrain-caption"><strong>紫金山 · 局部地形态势</strong><span>SRTM DEM 实测等高线 · 标注实际位置</span></div><div class="contour-note"><span>等高距</span><b>{{ contourData?.interval_m ?? terrainVisual.contourStep }} m</b><small>{{ contourData?.source || '合成等高线' }}</small></div><div class="water-panel" aria-label="水源标注清单"><div class="water-panel-head"><b>水源标注</b><small>{{ waterSourcesList.length }} 处 · 按距离排序</small></div><div v-for="(water, index) in waterSourcesList.slice(0, 5)" :key="water.id" :class="['water-row', { preferred: water.preferred, linked: hoveredWaterId === water.id }]" @mouseenter="hoveredWaterId = water.id" @mouseleave="hoveredWaterId = ''" @click="water.position && selectMarker({ id: water.id, type: 'water', x: water.position.x, y: water.position.y })" :title="'点击查看水源详情'"><i class="water-dot" :class="'wt-' + waterTypeClass(water.type)"></i><b>{{ water.preferred ? '★ ' : '' }}{{ water.name }}</b><span>{{ water.type }} · {{ water.distance != null ? water.distance + 'm' : '距离未知' }}</span><small v-if="water.coordinates">{{ water.coordinates.longitude.toFixed(6) }}°E, {{ water.coordinates.latitude.toFixed(6) }}°N</small><small v-else>相对坐标</small></div><div v-if="!waterSourcesList.length" class="water-row"><span>当前环境无水源数据（可切换环境模式后刷新）</span></div></div><div v-for="(route, index) in mapRoutes" :key="route.name + index" class="route-line" :style="{ left: `${25 + index * 4}%`, top: `${48 + index * 3}%`, width: `${30 + (index % 3) * 8}%`, transform: `rotate(${-16 + index * 4}deg)` }"></div><div v-if="fireZone && layerVisibility.fire" class="fire-zone-ring" :style="{ left: fireZone.x, top: fireZone.y, width: fireZone.size }" :title="`火情等效范围 ${Math.round(Math.sqrt(Math.PI * (analysisResult?.fire_assessment?.fire_area_m2 || 0)))}m`"><span class="fire-zone-label">火区 ≈ {{ formatNumber(analysisResult?.fire_assessment?.fire_area_m2 || 0) }} m²</span></div><svg v-if="evacuationOverlay && layerVisibility.evacuation" class="evacuation-overlay" viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="疏散路线"><polyline :points="evacuationOverlay.points" class="evacuation-line"/></svg><div v-if="evacuationOverlay && layerVisibility.evacuation" class="map-node evacuation-exit" :style="{ left: evacuationOverlay.exit.x, top: evacuationOverlay.exit.y }"><span>出口 · 约 {{ evacuationOverlay.minutes }} 分钟</span></div><div v-for="marker in mapMarkers" :key="marker.id" :class="['map-node', marker.type, marker.waterType ? 'wt-' + waterTypeClass(marker.waterType) : '', { 'map-node-preferred': marker.preferred, 'map-node-active': activeMarker && activeMarker.id === marker.id, 'map-node-hover': hoveredDroneId === marker.id || hoveredWaterId === marker.id, 'map-node-pulse': focusPulse === marker.id }]" :style="{ left: marker.x, top: marker.y }" :title="marker.title || marker.label" @click.stop="selectMarker(marker)"><svg v-if="marker.type === 'drone'" class="node-quad" viewBox="0 0 40 40" :style="{ color: SUBGROUP_COLORS[marker.sub] || '#2563eb' }"><circle class="nq-track" cx="20" cy="20" r="15.5"/><circle class="nq-arc" cx="20" cy="20" r="15.5" transform="rotate(-90 20 20)" :stroke-dasharray="quadDash(marker.soc)"/><path class="nq-arms" d="M13 13 L27 27 M27 13 L13 27"/><circle class="nq-body" cx="20" cy="20" r="5"/></svg><component v-else :is="marker.icon" :size="17" :fill="marker.type === 'fire' ? 'currentColor' : undefined" /><span>{{ marker.label }}</span></div>
 
         <div class="map-compass">N</div>
@@ -1494,7 +1557,7 @@ onMounted(() => {
 <div class="marker-detail-head"><b>{{ activeMarker.title }}</b><button class="marker-detail-close" aria-label="关闭详情" @click.stop="activeMarker = null">×</button></div>
 <div class="marker-detail-body"><div v-for="row in activeMarker.rows" :key="row.k" class="marker-detail-row"><span>{{ row.k }}</span><b>{{ row.v }}</b></div></div>
 </div>
-      <div v-if="amapReady" class="map-coords" aria-live="polite" aria-label="光标经纬度"><Crosshair :size="13" /> <template v-if="cursorCoords">{{ cursorCoords.longitude.toFixed(6) }}°E · {{ cursorCoords.latitude.toFixed(6) }}°N</template><template v-else>移动鼠标读取经纬度</template></div>
+      <div v-if="amapReady && mapMode === '2d'" class="map-coords" aria-live="polite" aria-label="光标经纬度"><Crosshair :size="13" /> <template v-if="cursorCoords">{{ cursorCoords.longitude.toFixed(6) }}°E · {{ cursorCoords.latitude.toFixed(6) }}°N</template><template v-else>移动鼠标读取经纬度</template></div>
       </div>
       <EvolutionChart :rounds="activeRounds" /></div>
       <aside class="map-side-rail" aria-label="态势信息栏">
