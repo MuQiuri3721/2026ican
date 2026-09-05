@@ -752,6 +752,7 @@ function formatNumber(value) {
 function selectNav(id) {
   activeTab.value = id
   if (id === 'command') viewTab.value = 'overview'
+  else if (id === 'logs') viewTab.value = '' // 清除 agents/history 页签残留，否则侧边栏/铃铛进日志会命中 agents/history 分支
 }
 
 function selectView(id) {
@@ -776,13 +777,26 @@ function logTime(log, index) {
   return `09:${String(20 - index).padStart(2, '0')}`
 }
 
-function selectHistoryTask(task) {
+async function selectHistoryTask(task) {
   if (!task?.analysis_id) return
-  applyEnvelope(task)
-  monitorResult.value = task.result?.monitor || null
-  currentStage.value = task.stages?.at(-1)?.stage || task.stages?.at(-1)?.name || '历史任务已恢复'
-  if (Array.isArray(task.stages)) stages.value = task.stages
-  if (Array.isArray(task.result?.fleet)) updateDrones(task.result)
+  // 列表走 slim 摘要（不含 result），点击时按需拉取完整信封再恢复。
+  let full = task
+  if (!task.result) {
+    try {
+      const detail = await fetch(`/api/analyze/${task.analysis_id}`)
+      if (!detail.ok) throw new Error('任务详情获取失败')
+      full = await detail.json()
+    } catch (error) {
+      errorMessage.value = '历史任务详情暂不可用。'
+      console.warn(error)
+      return
+    }
+  }
+  applyEnvelope(full)
+  monitorResult.value = full.result?.monitor || null
+  currentStage.value = full.stages?.at(-1)?.stage || full.stages?.at(-1)?.name || '历史任务已恢复'
+  if (Array.isArray(full.stages)) stages.value = full.stages
+  if (Array.isArray(full.result?.fleet)) updateDrones(full.result)
   loadEvents(task.analysis_id)
   viewTab.value = 'overview'
   activeTab.value = 'command'
@@ -995,7 +1009,7 @@ async function loadEvents(id = analysisId.value) {
 async function loadHistory() {
   historyLoading.value = true
   try {
-    const response = await fetch('/api/analyzes')
+    const response = await fetch('/api/analyzes?limit=50&slim=1')
     if (!response.ok) throw new Error('历史任务接口不可用')
     historyTasks.value = (await response.json()).items || []
   } catch (error) {
@@ -1435,7 +1449,7 @@ onMounted(() => {
     </aside>
 
     <main :class="{ 'main-map': activeTab === 'map' }">
-      <header><div><div class="breadcrumb">COMMAND CENTER <span>/</span> {{ activeTab.toUpperCase() }}</div><h1>森林火灾救援工作台</h1><p>多源感知 · 智能研判 · 集群调度 · 闭环处置</p></div><div class="header-actions"><button class="icon-btn" title="查看通知"><Bell :size="18" /><i></i></button><span class="status-tag" :class="llmInfo?.available ? '' : 'orange'" :title="llmInfo?.available ? 'GLM 在线研判' : 'LLM 未配置 · 确定性降级'"><Activity :size="14" /> LLM {{ llmInfo?.available ? '在线' : '离线' }}</span><div class="utc">本地时间<br><strong>{{ todayLabel }}</strong></div></div></header>
+      <header><div><div class="breadcrumb">COMMAND CENTER <span>/</span> {{ activeTab.toUpperCase() }}</div><h1>森林火灾救援工作台</h1><p>多源感知 · 智能研判 · 集群调度 · 闭环处置</p></div><div class="header-actions"><button class="icon-btn" title="查看任务事件通知" @click="selectNav('logs')"><Bell :size="18" /><i></i></button><span class="status-tag" :class="llmInfo?.available ? '' : 'orange'" :title="llmInfo?.available ? 'GLM 在线研判' : 'LLM 未配置 · 确定性降级'"><Activity :size="14" /> LLM {{ llmInfo?.available ? '在线' : '离线' }}</span><div class="utc">本地时间<br><strong>{{ todayLabel }}</strong></div></div></header>
       <section class="toolbar"><div class="tab-pills" role="tablist" aria-label="任务视图"><button role="tab" :aria-selected="viewTab === 'overview'" :class="{ selected: viewTab === 'overview' }" @click="selectView('overview')">任务概览</button><button role="tab" :aria-selected="viewTab === 'monitor'" :class="{ selected: viewTab === 'monitor' }" @click="selectView('monitor')">实时监测</button><button role="tab" :aria-selected="viewTab === 'history'" :class="{ selected: viewTab === 'history' }" @click="selectView('history')">历史任务</button><button role="tab" :aria-selected="viewTab === 'agents'" :class="{ selected: viewTab === 'agents' }" @click="selectView('agents')">Agent 协作</button></div><div class="toolbar-right"><span class="task-badge">任务状态 · {{ displayStatus }}</span><span class="sync"><span class="live-dot"></span> {{ currentStage }}</span><button class="primary" :disabled="analyzing" @click="startAnalysis"><Bot :size="17" /> {{ analyzing ? '分析中…' : '启动智能研判' }}</button></div></section>
       <div v-if="errorMessage" class="notice" role="status"><Activity :size="16" /><span>{{ errorMessage }}</span><button v-if="canRetryAnalysis" class="outline-btn notice-retry" :disabled="analyzing" @click="startAnalysis">重试研判</button><button class="notice-close" title="关闭提示" @click="errorMessage = ''">×</button></div>
 

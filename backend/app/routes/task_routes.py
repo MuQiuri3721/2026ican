@@ -221,8 +221,16 @@ def llm_status():
 
 
 @router.get("/api/analyzes")
-def list_analyses():
-    return {"items": [item.model_dump() for item in analysis_store.list()]}
+def list_analyses(limit: int | None = Query(None, gt=0, le=1000), slim: bool = Query(False)):
+    """任务列表。`limit` 截取最新 N 条；`slim=1` 只返回列表页摘要字段（不含 result 等重负载），
+    完整信封经 /api/analyze/{id} 按需获取——历史页曾因全量信封在数百任务下拖慢首屏。"""
+    items = analysis_store.list()
+    if limit is not None:
+        items = items[:limit]
+    if slim:
+        keys = ("analysis_id", "status", "created_at", "updated_at", "monitor_round", "resource_locks", "input")
+        items = [{key: value for key, value in item.model_dump().items() if key in keys} for item in items]
+    return {"items": items}
 
 
 @router.get("/api/analyze/{analysis_id}")

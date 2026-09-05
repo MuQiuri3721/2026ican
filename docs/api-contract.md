@@ -278,7 +278,7 @@ Form 字段（全部为 multipart 表单字段，显式 `Form(...)` 绑定）：
 
 ### 5.3 `GET /api/analyzes` · `GET /api/analyze/{analysis_id}` · `GET /api/analyze/{analysis_id}/events`
 
-- 列表：`{"items": [AnalysisEnvelope...]}`（新任务在前）。
+- 列表：`{"items": [AnalysisEnvelope...]}`（新任务在前）。查询参数 `limit`（1–1000，截取最新 N 条）与 `slim=1`（只含 analysis_id/status/created_at/updated_at/monitor_round/resource_locks/input 摘要字段，不含 result/stages 等重负载；完整信封经 `GET /api/analyze/{id}` 按需获取）。缺省不传时行为不变（全量完整信封）。
 - 单个：`AnalysisEnvelope`；不存在 404。
 - 事件：`{"analysis_id": "...", "events": [TaskEvent...]}`，`TaskEvent = {timestamp, stage, message, source}`。
 

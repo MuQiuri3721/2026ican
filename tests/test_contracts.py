@@ -301,6 +301,13 @@ def test_tools_endpoint_lists_full_registry():
     assert "simulate_dispatch_candidate" in tools and "detect_fire" in tools
 
 
+def test_analyzes_list_limit_and_slim():
+    """/api/analyzes 的 limit/slim 参数（FE-24 性能收口）：slim 摘要不含 result，limit 截取最新 N 条。"""
+    client = TestClient(app)
+    created = client.post("/api/analyze", json={"scene_id": "forest-demo-01", "image_name": "small-fire.jpg", "environment_mode": "offline"})
+    assert created.status_code == 200
+    client.post(f"/api/tasks/{created.json()['analysis_id']}/approval", json={"action": "terminate"})
+
     slim = client.get("/api/analyzes?limit=5&slim=1").json()["items"]
     assert 1 <= len(slim) <= 5
     newest = slim[0]
