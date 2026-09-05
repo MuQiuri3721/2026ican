@@ -717,7 +717,7 @@ function resetMapView() { mapZoom.value = 1; mapPan.value = { x: 0, y: 0 } }
 function startMapDrag(event) {
   if (event.button !== 0) return
   // 交互元素（标记/图例/面板/控件）不触发地图拖拽，避免 pointer capture 吞掉点击
-  if (event.target?.closest?.('.map-node, .map-legend, .map-controls, .water-panel, .deploy-panel, .evolution-panel, .map-source, .marker-detail')) return
+  if (event.target?.closest?.('.map-node, .map-legend, .map-controls, .water-panel, .deploy-panel, .map-source, .marker-detail, .stream-panel')) return
   mapDragging.value = true
   event.currentTarget?.setPointerCapture?.(event.pointerId)
   mapDragStart.value = { x: event.clientX - mapPan.value.x, y: event.clientY - mapPan.value.y }
@@ -1023,6 +1023,14 @@ async function loadHistory() {
 
 // 问答面板可用性：GLM available 与否由 loadServiceStatus 拉取的 /api/llm-status 决定（FE-22）
 const chatEnabled = computed(() => Boolean(llmInfo.value && llmInfo.value.available))
+// LLM 状态轻量轮询（FE-22 自查优化）：GLM 降级/恢复时头部徽标 30s 内跟上，不写日志
+let llmPollTimer = null
+async function refreshLlmInfo() {
+  try {
+    const response = await fetch('/api/llm-status')
+    if (response.ok) llmInfo.value = await response.json()
+  } catch (error) { /* 瞬时失败保住旧状态 */ }
+}
 
 async function loadServiceStatus() {
   try {
@@ -1423,9 +1431,10 @@ function onKeydown(event) {
   if (reportViewer.value.open) toggleReport()
 }
 
-onMounted(() => window.addEventListener('keydown', onKeydown))
+onMounted(() => { window.addEventListener('keydown', onKeydown); refreshLlmInfo(); llmPollTimer = window.setInterval(refreshLlmInfo, 30000) })
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown)
+  if (llmPollTimer) { window.clearInterval(llmPollTimer); llmPollTimer = null }
   closeEventStream()
   stopMission(false)
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)

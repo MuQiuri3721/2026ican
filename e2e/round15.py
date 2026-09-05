@@ -51,6 +51,8 @@ def main() -> int:
         page.wait_for_function("document.querySelectorAll('.chat-bubble.agent:not(.typing)').length >= 2", timeout=60000)
         bubbles = page.locator(".chat-bubble").count()
         ok &= report(15, "多轮问答历史", bubbles >= 4, f"bubbles={bubbles}")
+        second = page.locator(".chat-bubble.agent:not(.typing)").last.inner_text()
+        ok &= report(15, "回答接地库存数据", any(ch.isdigit() for ch in second), second[:90])
 
         session.assert_clean_console("round15")
         ok &= report(15, "控制台无错误", True)

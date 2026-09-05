@@ -131,7 +131,6 @@
 .map-toolbar-heading h2{font:700 20px/1.25 var(--font-ui);margin:0}
 .map-toolbar-heading p{margin:0;color:var(--ink-3);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .map-toolbar-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.map-stage{display:flex;gap:14px;align-items:stretch}
 .tactical-map-wrap{position:relative;flex:1;min-width:0;height:calc(100vh - 318px);min-height:520px;border-radius:var(--radius);overflow:hidden;background:#0e141b;box-shadow:var(--shadow-2)}
 .tactical-map-wrap .large-map{position:absolute;inset:0;height:auto;margin-top:0;border-radius:0}
 .tactical-amap{position:absolute;inset:0}
@@ -143,17 +142,16 @@
 .map-coords{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);display:flex;align-items:center;gap:7px;background:#101820e0;color:#e8eef2;font:500 12.5px/1 var(--font-data);padding:8px 13px;border-radius:999px;z-index:6;pointer-events:none;letter-spacing:.4px}
 /* 右侧停靠信息面板列 */
 .map-side-rail{width:300px;flex-shrink:0;display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - 318px);min-height:520px;overflow-y:auto;padding-right:3px}
-.map-side-rail .water-panel,.map-side-rail .deploy-panel,.map-side-rail .evolution-panel,.map-side-rail .terrain-data,.map-side-rail .slope-badge,.map-side-rail .wind-legend{position:static;width:auto;max-height:none;backdrop-filter:none}
+.map-side-rail .water-panel,.map-side-rail .deploy-panel,.map-side-rail .terrain-data,.map-side-rail .slope-badge,.map-side-rail .wind-legend{position:static;width:auto;max-height:none;backdrop-filter:none}
 .rail-terrain{display:flex;flex-direction:column;gap:12px}
 .map-side-rail::-webkit-scrollbar{width:6px}
 .map-side-rail::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:3px}
 
 /* ---------- 停靠面板：水源 / 部署 / 演化 / 地形 ---------- */
-.water-panel,.deploy-panel,.evolution-panel{display:flex;flex-direction:column;gap:7px;padding:13px 14px;border:1px solid var(--line);border-radius:var(--radius-s);background:var(--surface);color:var(--ink-2);font:400 12.5px var(--font-data);box-shadow:var(--shadow-1)}
-.water-panel-head,.deploy-head,.evolution-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.water-panel,.deploy-panel{display:flex;flex-direction:column;gap:7px;padding:13px 14px;border:1px solid var(--line);border-radius:var(--radius-s);background:var(--surface);color:var(--ink-2);font:400 12.5px var(--font-data);box-shadow:var(--shadow-1)}
+.water-panel-head,.deploy-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .water-panel-head b,.deploy-head b{font:700 13.5px var(--font-ui);color:var(--ink)}
-.evolution-head b{font:700 13px var(--font-ui);color:var(--ink)}
-.water-panel-head small,.deploy-head small,.evolution-head small{color:var(--ink-3);font-size:11.5px}
+.water-panel-head small,.deploy-head small{color:var(--ink-3);font-size:11.5px}
 .water-row{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);cursor:pointer;transition:border-color var(--speed) ease,background var(--speed) ease;-webkit-tap-highlight-color:transparent}
 .water-row:hover{border-color:var(--accent-line)}
 .water-row.preferred{border-color:#2e9db4;background:#f2fafc}
@@ -178,7 +176,6 @@
 .deploy-soc i{display:block;height:100%;background:#27ae83;border-radius:3px}
 .deploy-row small{grid-area:pct;color:#8b98a3;text-align:right}
 .deploy-row em{grid-area:task;font-style:normal;color:var(--ink-2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.evolution-panel svg{width:100%;height:32px}
 .evolution-line{fill:none;stroke:var(--fire);stroke-width:2;vector-effect:non-scaling-stroke}
 .evolution-dot-label{fill:#8b98a3;font:400 11px var(--font-data)}
 .terrain-data{display:flex;flex-wrap:wrap;gap:5px 16px;border:1px solid var(--line);border-radius:var(--radius-s);padding:12px 14px;background:var(--surface);color:var(--ink-3);font:400 12.5px var(--font-data);position:static;box-shadow:var(--shadow-1)}
@@ -294,7 +291,7 @@
 /* ---------- 交互反馈 / 可达性 ---------- */
 .deploy-row,.water-row,.outline-btn,.primary,.legend-item{-webkit-tap-highlight-color:transparent}
 .outline-btn:active,.primary:active{transform:translateY(1px)}
-.deploy-panel,.water-panel,.evolution-panel,.marker-detail{animation:panelIn 240ms cubic-bezier(.16,1,.3,1)}
+.deploy-panel,.water-panel,.marker-detail{animation:panelIn 240ms cubic-bezier(.16,1,.3,1)}
 @keyframes panelIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 nav button:focus-visible,.tab-pills button:focus-visible,.dropzone:focus-visible,.icon-btn:focus-visible,.outline-btn:focus-visible,.primary:focus-visible,.danger-btn:focus-visible,.reset-link:focus-visible,.text-btn:focus-visible,.monitor-btn:focus-visible,.legend-item:focus-visible,.deploy-row:focus-visible,.water-row:focus-visible,.history-row:focus-visible,.notice-close:focus-visible,.marker-detail-close:focus-visible,.environment-refresh:focus-visible,.roster-row .outline-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
 select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
@@ -307,7 +304,6 @@ select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 
 /* ---------- 响应式 / 动效兜底 ---------- */
 @media (max-width:1100px){
-.map-stage{flex-direction:column}
 .tactical-map-wrap{height:60vh;min-height:420px}
 .map-side-rail{width:auto;max-height:none;min-height:0;flex-direction:row;flex-wrap:wrap}
 .map-side-rail .water-panel,.map-side-rail .deploy-panel,.map-side-rail .evolution-panel{flex:1 1 250px}
