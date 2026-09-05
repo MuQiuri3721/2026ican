@@ -19,6 +19,7 @@ const props = defineProps({
   hoveredWaterId: { type: String, default: '' },
   activeMarkerId: { type: String, default: '' },
   mission: { type: Object, default: null },
+  scenarioPreview: { type: Object, default: null },
   defaultCenter: { type: Object, default: () => ({ latitude: 32.0725, longitude: 118.8415 }) },
 })
 const emit = defineEmits(['select-marker', 'coords', 'ready', 'fallback'])
@@ -27,9 +28,40 @@ const containerEl = shallowRef(null)
 const map = shallowRef(null)
 // AMap 命名空间只挂实例上，避免被 Vue 深响应式代理（官方 Vue3 建议 shallowRef）。
 const AMapNS = shallowRef(null)
-const layerOverlays = { fire: [], contour: [], water: [], drone: [], road: [], evacuation: [] }
+const layerOverlays = { fire: [], contour: [], water: [], drone: [], road: [], evacuation: [], scenario: [] }
 const markerIndex = new Map()
+// 无人机渲染位置平滑插值（FE-20，firepatrol 式 lerp）：吸收相位校准/重渲染带来的跳变
+const animPos = new Map()
 let pulseTimer = null
+
+// 子群配色（与 App.vue SUBGROUP_COLORS / 指挥大屏同源口径）
+const SUBGROUP_COLOR = { reconnaissance: '#4f8dff', suppression: '#ff7a45', support: '#2fbd8b' }
+
+// 四旋翼标记节点（FE-20）：SOC 电量环 + 旋翼(旋转) + 机臂/机身，子群着色，<25% 转火红
+function droneNode(drone, selected) {
+  const soc = Math.max(0, Math.min(100, Number(drone.soc) || 0))
+  const circumference = 2 * Math.PI * 15.5
+  const arc = (soc / 100 * circumference).toFixed(1)
+  const sub = SUBGROUP_COLOR[drone.subgroup] || '#4f8dff'
+  const node = document.createElement('div')
+  node.className = `tmap-drone${selected ? ' selected' : ''}${soc < 25 ? ' soc-low' : ''}`
+  node.dataset.drone = drone.id
+  node.style.setProperty('--sub', sub)
+  node.innerHTML = `
+    <svg class="tmap-quad" viewBox="0 0 40 40" aria-hidden="true">
+      <circle class="tmap-track" cx="20" cy="20" r="15.5"/>
+      <circle class="tmap-arc" cx="20" cy="20" r="15.5" transform="rotate(-90 20 20)" stroke-dasharray="${arc} ${circumference.toFixed(1)}"/>
+      <g class="tmap-props">
+        <circle cx="10" cy="10" r="4.6"/><circle cx="30" cy="10" r="4.6"/>
+        <circle cx="10" cy="30" r="4.6"/><circle cx="30" cy="30" r="4.6"/>
+      </g>
+      <path class="tmap-arms" d="M13 13 L27 27 M27 13 L13 27"/>
+      <circle class="tmap-body" cx="20" cy="20" r="4.4"/>
+    </svg>
+    <b>${drone.id}</b>
+    <em class="tmap-badge"></em>`
+  return node
+}
 
 // ---------- WGS-84 <-> GCJ-02（标准偏移算法，中国境外原样返回） ----------
 const GCJ_A = 6378245.0
@@ -114,8 +146,26 @@ function preferredWaterItem() {
 
 // ---------- 覆盖物渲染 ----------
 function clearLayer(key) {
+  if (key === 'fire') stopFirePulse() // 光晕 rAF 随图层清理停止
   if (map.value && layerOverlays[key].length) map.value.remove(layerOverlays[key])
   layerOverlays[key] = []
+}
+
+// ---------- 火圈呼吸光晕（FE-21，范式参考 firepatrol 火格热力脉动） ----------
+let firePulseRaf = 0
+function stopFirePulse() {
+  if (firePulseRaf) { cancelAnimationFrame(firePulseRaf); firePulseRaf = 0 }
+}
+function startFirePulse(halo, baseRadius) {
+  stopFirePulse()
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  const tick = (ts) => {
+    const phase = 0.5 + 0.5 * Math.sin(ts / 700)
+    halo.setRadius(baseRadius * (1.12 + 0.22 * phase))
+    halo.setOptions({ fillOpacity: 0.18 - 0.12 * phase, strokeOpacity: 0.32 - 0.24 * phase })
+    firePulseRaf = requestAnimationFrame(tick)
+  }
+  firePulseRaf = requestAnimationFrame(tick)
 }
 function clearAll() {
   for (const key of Object.keys(layerOverlays)) clearLayer(key)
@@ -128,7 +178,7 @@ function addOverlay(key, overlay, meta) {
     overlay.tmapMeta = meta
     markerIndex.set(meta.id, overlay)
   }
-  if (!props.layerVisibility[key]) overlay.hide?.()
+  if (props.layerVisibility[key] === false) overlay.hide?.() // 未纳入图层开关的层（scenario）恒可见
   return overlay
 }
 function percentOf(lngLat) {
@@ -163,10 +213,18 @@ function contourColor(elevation, min, max) {
 function renderFire() {
   clearLayer('fire')
   if (!props.layerVisibility.fire) return
+  if (props.scenarioPreview) return // 演训预览态：随机火点替代默认火点标记
   const center = fireGps()
   const gcj = wgs2gcj(center.latitude, center.longitude)
   const lngLat = [gcj.lng, gcj.lat]
   const radius = fireRadiusM()
+  const halo = new AMapNS.value.Circle({
+    center: lngLat, radius: radius * 1.25,
+    strokeColor: '#ff6a3d', strokeWeight: 1.5, strokeOpacity: 0.3,
+    fillColor: '#ff5533', fillOpacity: 0.12, bubble: true, zIndex: 51,
+  })
+  addOverlay('fire', halo)
+  startFirePulse(halo, radius)
   const circle = new AMapNS.value.Circle({
     center: lngLat, radius,
     strokeColor: '#ff6a3d', strokeWeight: 2, strokeStyle: 'dashed', strokeOpacity: 0.95,
@@ -268,6 +326,7 @@ function renderWater() {
 
 function renderDrones() {
   clearLayer('drone')
+  animPos.clear() // 标记重建后插值状态作废，首帧直接落到目标位
   if (!props.layerVisibility.drone) return
   const drones = props.drones || []
   if (!drones.length) return
@@ -286,8 +345,7 @@ function renderDrones() {
     const gcj = wgs2gcj(point.latitude, point.longitude)
     const lngLat = [gcj.lng, gcj.lat]
     const selected = props.selectedUavs.includes(drone.id)
-    const contentNode = elt(`tmap-drone ${selected ? 'selected' : ''}`, `<b>${drone.id}</b><em class="tmap-badge"></em><i></i>`)
-    contentNode.dataset.drone = drone.id
+    const contentNode = droneNode(drone, selected)
     const marker = new AMapNS.value.Marker({
       position: lngLat, zIndex: 108, anchor: 'center',
       title: `${drone.id} ${drone.label} · SOC ${drone.soc ?? '—'}% · ${drone.status}${selected ? ' · 出动' : ''}`,
@@ -344,8 +402,28 @@ function renderEvacuation() {
   addOverlay('evacuation', exitMarker)
 }
 
+function renderScenarioPreview() {
+  clearLayer('scenario')
+  const preview = props.scenarioPreview
+  if (!preview || !preview.gps) return
+  const gcj = wgs2gcj(preview.gps.latitude, preview.gps.longitude)
+  const lngLat = [gcj.lng, gcj.lat]
+  const circle = new AMapNS.value.Circle({
+    center: lngLat, radius: Math.max(40, preview.radiusMeters),
+    strokeColor: '#ff6a3d', strokeWeight: 2, strokeStyle: 'dashed', strokeOpacity: 0.95,
+    fillColor: '#ff5533', fillOpacity: 0.16, bubble: true, zIndex: 52,
+  })
+  addOverlay('scenario', circle)
+  const marker = new AMapNS.value.Marker({
+    position: lngLat, zIndex: 120, anchor: 'bottom-center',
+    content: `<div class="tmap-fire"><i></i><span>演训火点 · ≈${Math.round(preview.areaM2).toLocaleString()} m²</span></div>`,
+  })
+  addOverlay('scenario', marker)
+}
+
 function renderAll() {
   if (!map.value || !AMapNS.value) return
+  renderScenarioPreview()
   renderFire()
   renderContours()
   renderWater()
@@ -408,6 +486,8 @@ function setDroneClasses() {
 const MISSION_MS_PER_MIN = 1200
 const MISSION_PHASE_LABELS = { flying: '出动中', working: '喷洒作业', returning: '返航中', servicing: '基地补水', charging: '基地充电', orbit: '侦察盘旋', parked: '待命' }
 let missionRaf = 0
+let missionFallbackTimer = 0
+let missionLastTickMs = 0
 
 function missionPhaseAt(phases, tMinutes) {
   let acc = 0
@@ -432,6 +512,7 @@ function smoothProgress(p) {
 function missionTick() {
   const mission = props.mission
   if (!mission?.active) { missionRaf = 0; return }
+  missionLastTickMs = Date.now()
   const fire = fireGps()
   const metersPerLat = 111320
   const metersPerLng = 111320 * Math.cos((fire.latitude * Math.PI) / 180)
@@ -453,17 +534,38 @@ function missionTick() {
     } else if (phase.kind === 'working') {
       const seed = [...unit.id].reduce((sum, ch) => sum + ch.charCodeAt(0), 0)
       const angle = (seed % 8) * (Math.PI / 4)
-      lat = fire.latitude + (45 * Math.sin(angle)) / metersPerLat
-      lng = fire.longitude + (45 * Math.cos(angle)) / metersPerLng
+      // 120m 散位：喷洒机围火分布，卫星图缩放级别下可分辨（45m 会叠成一团）
+      lat = fire.latitude + (120 * Math.sin(angle)) / metersPerLat
+      lng = fire.longitude + (120 * Math.cos(angle)) / metersPerLng
     } else if (phase.kind === 'orbit') {
       const angle = (t / 2.5) * Math.PI * 2 - Math.PI / 2
       lat = fire.latitude + (150 * Math.sin(angle)) / metersPerLat
       lng = fire.longitude + (150 * Math.cos(angle)) / metersPerLng
     }
+    // 平滑趋近目标（firepatrol 式 lerp）：逐帧向相位目标位收敛，吸收校准跳变
+    let cur = animPos.get(unit.id)
+    if (!cur || !Number.isFinite(cur.lat)) {
+      cur = { lat, lng }
+      animPos.set(unit.id, cur)
+    } else {
+      cur.lat += (lat - cur.lat) * 0.28
+      cur.lng += (lng - cur.lng) * 0.28
+      lat = cur.lat
+      lng = cur.lng
+    }
     const gcj = wgs2gcj(lat, lng)
     overlay.setPosition([gcj.lng, gcj.lat])
     const node = overlay.getContent?.()
-    const badge = node instanceof Node ? node.querySelector('.tmap-badge') : null
+    const root = node instanceof Node ? node : null
+    if (root) {
+      // 实时位置写入 dataset（E2E 断言用；AMap 的地图定位在父层容器，读不到标记自身位移）
+      root.dataset.longitude = gcj.lng.toFixed(6)
+      root.dataset.latitude = gcj.lat.toFixed(6)
+      // 作业/飞行态驱动样式（喷洒脉冲环、旋翼加速）
+      root.classList.toggle('working', phase.kind === 'working')
+      root.classList.toggle('flying', phase.kind === 'flying')
+    }
+    const badge = root ? root.querySelector('.tmap-badge') : null
     if (badge) {
       const label = MISSION_PHASE_LABELS[phase.kind] || ''
       if (badge.textContent !== label) badge.textContent = label
@@ -476,8 +578,21 @@ function missionTick() {
 
 function restartMissionClock() {
   if (missionRaf) cancelAnimationFrame(missionRaf)
+  if (missionFallbackTimer) clearInterval(missionFallbackTimer)
   missionRaf = 0
-  if (!props.mission?.active) return
+  if (!props.mission?.active) {
+    // 推演结束：摘掉作业/飞行态样式，避免脉冲环滞留
+    for (const overlay of markerIndex.values()) {
+      const root = overlay?.getContent?.()
+      if (root instanceof Node && root.dataset?.drone) root.classList.remove('working', 'flying')
+    }
+    return
+  }
+  // headless/后台标签会节流 rAF：低频 interval 兜底驱动，保证推演不冻结
+  missionFallbackTimer = window.setInterval(() => {
+    if (!props.mission?.active) return
+    if (Date.now() - missionLastTickMs > 220) missionTick()
+  }, 160)
   missionRaf = requestAnimationFrame(missionTick)
 }
 
@@ -513,6 +628,7 @@ watch(() => props.layerVisibility, () => applyVisibility(), { deep: true })
 watch(() => [props.activeMarkerId, props.hoveredDroneId, props.hoveredWaterId], () => syncActiveClasses())
 watch(() => props.focusPulse, (id) => { if (id) pulseMarker(id) })
 watch(() => props.mission, () => restartMissionClock(), { deep: false })
+watch(() => props.scenarioPreview, () => { if (map.value) renderScenarioPreview() })
 
 onMounted(async () => {
   const key = import.meta.env.VITE_AMAP_KEY
@@ -542,6 +658,7 @@ onMounted(async () => {
     instance.on('zoomend', applyWaterZoom)
     renderAll()
     applyWaterZoom()
+    restartMissionClock()
     emit('ready')
   } catch (error) {
     console.warn('[TacticalMap] 高德地图加载失败，回退示意图', error)
@@ -551,7 +668,9 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   clearTimeout(pulseTimer)
+  stopFirePulse()
   if (missionRaf) cancelAnimationFrame(missionRaf)
+  if (missionFallbackTimer) clearInterval(missionFallbackTimer)
   clearAll()
   if (map.value) {
     map.value.destroy()

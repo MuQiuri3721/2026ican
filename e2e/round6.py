@@ -14,6 +14,10 @@ def main() -> int:
         session.goto_app()
         session.page.get_by_text("系统运行正常").wait_for(timeout=15000)
 
+        # 库重置后自建历史（3 条离线研判），保证恢复场景自洽
+        for index in range(3):
+            session.api("POST", "/api/analyze", {"scene_id": "forest-demo-01", "image_name": f"round6-{index}.jpg", "environment_mode": "offline"})
+
         # 历史任务页（数据来自后端 /api/analyzes，重启后应有记录）；FE-12 后工具栏页签为 role=tab
         session.page.get_by_role("tab", name="历史任务").click()
         session.page.locator(".history-row").first.wait_for(timeout=15000)

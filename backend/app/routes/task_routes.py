@@ -158,6 +158,10 @@ async def stream_task_events(task_id: str, once: bool = Query(False)):
         events = item.events
         for event in reversed(events):
             yield f"data: {json.dumps(event.model_dump(), ensure_ascii=False)}\n\n"
+        msg_seq = 0
+        for message in analysis_store.get_messages(task_id):
+            msg_seq = message["seq"]
+            yield "event: agent_message\ndata: " + json.dumps(message, ensure_ascii=False) + "\n\n"
         if once:
             yield f"event: done\ndata: {json.dumps({'status': item.status}, ensure_ascii=False)}\n\n"
             return
@@ -178,6 +182,12 @@ async def stream_task_events(task_id: str, once: bool = Query(False)):
                     yield f"data: {json.dumps(event.model_dump(), ensure_ascii=False)}\n\n"
                 sent = total
                 idle_ticks = 0
+            fresh_messages = analysis_store.get_messages(task_id, after_seq=msg_seq)
+            if fresh_messages:
+                for message in fresh_messages:
+                    msg_seq = message["seq"]
+                    yield "event: agent_message\ndata: " + json.dumps(message, ensure_ascii=False) + "\n\n"
+                idle_ticks = 0
             else:
                 idle_ticks += 1
                 if idle_ticks % 15 == 0:
@@ -189,6 +199,25 @@ async def stream_task_events(task_id: str, once: bool = Query(False)):
             await asyncio.sleep(1)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+@router.get("/api/tasks/{task_id}/agent-messages")
+def agent_messages(task_id: str, after_seq: int = 0):
+    if analysis_store.get(task_id) is None:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    return {"items": analysis_store.get_messages(task_id, after_seq)}
+
+
+@router.get("/api/scenarios/random")
+def random_scenario():
+    from ..domain.scenarios import random_scenario as _random
+    return _random()
+
+
+@router.get("/api/llm-status")
+def llm_status():
+    from ..agentkit import llm_status as _llm_status
+    return _llm_status()
 
 
 @router.get("/api/analyzes")

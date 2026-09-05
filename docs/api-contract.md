@@ -227,6 +227,7 @@ Query：`latitude`（默认 32.0725，紫金山主峰）、`longitude`（默认 
 | `fire_type` | string，默认 `"vegetation"` | `electrical/oil/chemical` 触发 C6 |
 | `people_status` | `confirmed|absent|unknown`，默认 unknown | 人员分支 |
 | `constraints` | object/null | 支持 `max_drones`（1–4）、`disabled_uavs`、`material_module`、`target_minutes`（分钟硬时限：全部可控候选超时时判不可控并输出 `time_limit` 缺口） |
+| `scenario` | object/null | 演训模拟随机火情（FE-18）：`{"fire_origin": {"x","y"}, "fire_area_m2", "growth_rate"}`；数值非法 422、越界钳位（x∈[-500,700]、y∈[-1000,800]、面积 200–12000、增长率 0.05–1.5）。存在时跳过影像识别，`fire_assessment`/`dispatch`/`result.scene.fire_origin(_gps)` 全部由场景驱动（GPS 锚点按紫霞湖基地反演） |
 
 成功响应：完整任务信封 `AnalysisEnvelope`，`status="awaiting_confirmation"`：
 
@@ -364,6 +365,14 @@ Form 字段（全部为 multipart 表单字段，显式 `Form(...)` 绑定）：
 Query：`once`（可选，`1` = 仅推送当前事件快照后结束，供一次性拉取与测试）。
 
 流程：先发送 `retry: 3000`，再按时间序逐条 `data: {TaskEvent JSON}`；随后保持连接（上限约 5 分钟，客户端 EventSource 自动重连续传），每秒检查新事件并增量推送，15 秒无事件发送 `: keep-alive` 注释；任务进入终态且事件推尽后发送 `event: done`（`data: {"status": ...}`）并结束。任务不存在 404。响应头 `Content-Type: text/event-stream`、`Cache-Control: no-cache`。
+
+### 5.11 `GET /api/llm-status`
+
+返回 GLM 解释层状态超集：`{connected, configured, available, degraded, fail_streak, model, mode}`。`connected/configured` 取决于 `FIREOPS_LLM_API_KEY`（进程环境变量，不入库）；连续失败 ≥2 次 `available=false` 且 `degraded=true`（前端徽标转降级态），成功一次即恢复；`mode` 为 `glm` 或 `deterministic-offline`。接口恒 200，不抛错、不主动探测远端。
+
+### 5.12 `POST /api/tasks/{task_id}/chat`
+
+请求体 `{"question": string}`：空串/纯空白 400，任务不存在 404。行为：汇总任务黑板摘要（阶段/火情/环境/方案/缺口/最新轮次）作为接地数据，GLM 依据摘要回答（system 铁律：只允许解释与复述给定数据，禁止编造或新增数值）；GLM 未配置或调用失败时回落确定性摘要文案，接口不 5xx。响应 `{answer, llm}`：GLM 回答经数字事后审计——任务数据中不存在的数字会被内嵌 `⚠` 标注（只标注不阻断），`llm` 为 §5.11 同构状态对象。
 
 ## 6. 数据契约
 

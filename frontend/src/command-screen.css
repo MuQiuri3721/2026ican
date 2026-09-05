@@ -1,0 +1,186 @@
+/* =====================================================================
+   指挥大屏层（FE-19） — 林区态势页专属深色大屏体系
+   交互范式与版式参考 firepatrol-agents 指挥大屏（阶段轨 / KPI 条 / 演化时间轴 / 事件流），
+   配色适配 EMBEROS：深松林黑底 + 火焰琥珀强调，数据继续用 DM Mono。
+   作用域全部收敛在 .map-view.screen，不影响其他页签（R9 hero 断言不受波及）。
+   ===================================================================== */
+
+.map-view.screen{
+  --scr-bg0:#0b120f;
+  --scr-bg1:#0e1713;
+  --scr-panel:#121b17;
+  --scr-panel-2:#17221d;
+  --scr-line:#243430;
+  --scr-line2:#31493f;
+  --scr-ink:#e6ede9;
+  --scr-muted:#8fa39a;
+  --scr-ember:#f0a848;
+  --scr-ok:#5fbd92;
+  --scr-warn:#e2b95d;
+  --scr-danger:#e07856;
+  --scr-blue:#7fb3ff;
+  padding:16px 20px 16px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  background:linear-gradient(180deg,var(--scr-bg1),var(--scr-bg0));
+  border:1px solid #1c2a24;
+  box-shadow:none;
+  color:var(--scr-ink);
+}
+
+/* ---------- 工具栏 + 阶段轨 ---------- */
+.map-view.screen .map-toolbar-heading h2{color:var(--scr-ink)}
+.map-view.screen .map-toolbar-heading p{color:var(--scr-muted)}
+.map-view.screen .map-toolbar .legend-item{color:var(--scr-muted)}
+.map-view.screen .map-toolbar .legend-item:hover{background:var(--scr-panel-2)}
+.map-view.screen .map-toolbar .legend-item.off{color:#5c6f66}
+.map-view.screen .status-tag{background:#122019;border:1px solid #2a4636}
+.ph-step{display:flex;align-items:center;min-width:0;overflow:hidden}
+.ph-stage{display:flex;align-items:center;flex-shrink:0}
+.ph-no{font:500 9.5px var(--font-data);color:#5a6f65;letter-spacing:.5px;margin-right:4px}
+.ph-node{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--scr-line2);background:#101a15;color:#6c8177;transition:all .3s}
+.ph-node svg{display:block}
+.ph-label{font-size:11px;color:var(--scr-muted);margin:0 2px;white-space:nowrap}
+.ph-link{width:14px;height:2px;background:var(--scr-line2);margin:0 5px;border-radius:1px}
+.ph-done .ph-node{border-color:#3f7a5e;color:#8fd9b6;background:#0e2018}
+.ph-done .ph-label,.ph-done .ph-no{color:#7ea393}
+.ph-done .ph-link{background:linear-gradient(90deg,#3f7a5e,#3f7a5e55)}
+.ph-active .ph-node{border-color:var(--scr-ember);color:#ffd9a0;background:radial-gradient(circle at 34% 30%,#f6c26b,#8a5a1e 72%);box-shadow:0 0 14px #f0a84888;animation:phPulse 1.8s infinite}
+.ph-active .ph-label{color:var(--scr-ember);font-weight:700}
+.ph-active .ph-no{color:var(--scr-ember)}
+.ph-dead .ph-active .ph-node{background:radial-gradient(circle at 34% 30%,#e08d6f,#7c2d12);border-color:var(--scr-danger);box-shadow:0 0 12px #e0785688;animation:none}
+.ph-dead .ph-active .ph-label,.ph-dead .ph-active .ph-no{color:var(--scr-danger)}
+@keyframes phPulse{50%{box-shadow:0 0 22px #f0a848cc}}
+.ph-replan{margin-left:10px;font:500 11px/1.2 var(--font-data);color:var(--scr-warn);border:1px dashed #a28437;padding:3px 9px;border-radius:999px;white-space:nowrap;flex-shrink:0}
+
+/* ---------- KPI 数据条 ---------- */
+.screen-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.skpi{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:3px;padding:10px 14px 9px;background:linear-gradient(180deg,var(--scr-panel-2),var(--scr-panel));border:1px solid var(--scr-line);border-radius:10px;min-width:0}
+.skpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--scr-line2)}
+.skpi.tone-ember::before{background:var(--scr-ember)}
+.skpi.tone-danger::before{background:var(--scr-danger)}
+.skpi.tone-blue::before{background:var(--scr-blue)}
+.skpi.tone-green::before{background:var(--scr-ok)}
+.skpi.tone-slate::before{background:#5c7a6d}
+.skpi b{font:600 20px/1.15 var(--font-data);color:var(--scr-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.skpi b small{font:400 11px var(--font-data);color:var(--scr-muted);margin-left:3px}
+.skpi.tone-ember b{color:var(--scr-ember)}
+.skpi.tone-danger b{color:var(--scr-danger)}
+.skpi.tone-blue b{color:var(--scr-blue)}
+.skpi.tone-green b{color:var(--scr-ok)}
+.skpi span{display:flex;justify-content:space-between;gap:8px;color:var(--scr-muted);font-size:11.5px;line-height:1.2;white-space:nowrap}
+.skpi span em{font-style:normal;overflow:hidden;text-overflow:ellipsis;color:#75907f}
+
+/* ---------- 主区：左 地图+演化 / 右 信息栏 ---------- */
+.map-screen-body{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px 14px;height:calc(100vh - 392px);min-height:580px}
+.map-main-col{display:flex;flex-direction:column;gap:12px;min-height:0}
+.map-view.screen .tactical-map-wrap{flex:1;height:auto;min-height:400px;border:1px solid #1c2a24}
+
+/* 演化时间轴（EvolutionChart） */
+.evo-panel{display:flex;flex-direction:column;gap:6px;padding:12px 14px;background:var(--scr-panel);border:1px solid var(--scr-line);border-radius:10px}
+.evo-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.evo-head b{font:700 13px var(--font-ui);color:var(--scr-ink)}
+.evo-stat{font:400 12px var(--font-data);color:var(--scr-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.evo-stat b{color:var(--scr-ember);font-weight:500}
+.evo-svg{width:100%;height:150px;display:block}
+.evo-empty{padding:26px 10px;text-align:center;color:#75907f;font-size:12.5px;line-height:1.7}
+
+/* 右侧信息栏（深色化 + 高度撑满） */
+.map-view.screen .map-side-rail{max-height:none;min-height:0;overflow-y:auto}
+.map-view.screen .water-panel,.map-view.screen .deploy-panel,.map-view.screen .stream-panel,.map-view.screen .terrain-data,.map-view.screen .slope-badge,.map-view.screen .wind-legend{background:var(--scr-panel);border-color:var(--scr-line);color:var(--scr-muted);box-shadow:none}
+/* rail 空间不足时禁止 flex 压缩面板（overflow:auto 会让 min-height 归零，deploy 曾被压没） */
+.map-view.screen .deploy-panel,.map-view.screen .water-panel{flex-shrink:0}
+.map-view.screen .water-panel-head b,.map-view.screen .deploy-head b,.map-view.screen .stream-head b{color:var(--scr-ink)}
+.map-view.screen .water-row{background:var(--scr-panel-2);border-color:var(--scr-line);color:var(--scr-muted)}
+.map-view.screen .water-row:hover{border-color:#3d5c4e}
+.map-view.screen .water-row.preferred{border-color:#8a6d2f;background:#1d2418}
+.map-view.screen .water-row b{color:var(--scr-ink)}
+.map-view.screen .water-row small{color:#5c7a6d;overflow-wrap:anywhere}
+.map-view.screen .deploy-row{background:var(--scr-panel-2);border-color:var(--scr-line);color:var(--scr-muted)}
+.map-view.screen .deploy-row:hover{border-color:#3d5c4e}
+.map-view.screen .deploy-row.selected{border-color:var(--scr-ember);background:#1f2016}
+.map-view.screen .deploy-row.linked{border-color:var(--scr-blue);background:#141f2b}
+.map-view.screen .deploy-row b{color:var(--scr-ink)}
+.map-view.screen .deploy-row span{color:var(--scr-muted)}
+.map-view.screen .deploy-row em{color:#a8bfae}
+.map-view.screen .deploy-row .deploy-soc{background:#0d1512}
+.map-view.screen .deploy-soc i{background:var(--scr-ok)}
+.map-view.screen .deploy-soc i.soc-mid{background:var(--scr-warn)}
+.map-view.screen .deploy-soc i.soc-low{background:var(--scr-danger)}
+.map-view.screen .deploy-row small{color:#5c7a6d}
+.deploy-group-label{display:flex;align-items:center;gap:8px;margin:4px 0 -1px;font:700 11px var(--font-ui);letter-spacing:.6px;color:var(--scr-muted)}
+.deploy-group-label::after{content:"";flex:1;height:1px;background:var(--scr-line)}
+.map-view.screen .terrain-data b,.map-view.screen .slope-badge b{color:var(--scr-ink)}
+.map-view.screen .slope-badge i{border-left-color:var(--scr-line)}
+
+/* 事件流（为多 Agent 消息流预留同一容器：logs 驱动，类型芯片 + 计数） */
+.stream-panel{display:flex;flex-direction:column;gap:7px;padding:13px 14px;border:1px solid var(--scr-line);border-radius:10px;background:var(--scr-panel);font:400 12.5px var(--font-data);color:var(--scr-muted);min-height:150px;flex:1}
+.stream-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.stream-head b{font:700 13.5px var(--font-ui);color:var(--scr-ink)}
+.stream-head small{color:#5c7a6d;font-size:11.5px;white-space:nowrap}
+.stream-rows{display:flex;flex-direction:column;gap:0;overflow-y:auto;min-height:0}
+.stream-row{display:flex;align-items:flex-start;gap:8px;padding:7px 2px;border-top:1px solid #1a2620;line-height:1.5}
+.stream-row:first-child{border-top:0}
+.stream-row.latest .stream-text{color:var(--scr-ink)}
+.stream-time{flex-shrink:0;font:400 11px var(--font-data);color:#5c7a6d;padding-top:1px}
+.stream-chip{flex-shrink:0;font:500 10.5px/1 var(--font-data);padding:3px 7px;border-radius:999px;border:1px solid;white-space:nowrap;margin-top:1px}
+.stream-text{min-width:0;overflow-wrap:anywhere;color:var(--scr-muted);font-size:12px}
+.stream-empty{padding:14px 4px;color:#5c7a6d;font-size:12px;line-height:1.7}
+.stream-rows::-webkit-scrollbar,.map-view.screen .map-side-rail::-webkit-scrollbar{width:6px}
+.stream-rows::-webkit-scrollbar-thumb,.map-view.screen .map-side-rail::-webkit-scrollbar-thumb{background:var(--scr-line2);border-radius:3px}
+
+/* 标记详情卡 / 光标读数 / 底部状态栏（深色化） */
+.map-view.screen .marker-detail{background:#121b17f5;border-color:var(--scr-line);color:var(--scr-muted);backdrop-filter:blur(6px)}
+.map-view.screen .marker-detail-head b{color:var(--scr-ink)}
+.map-view.screen .marker-detail-close{color:#5c7a6d}
+.map-view.screen .marker-detail-close:hover{color:var(--scr-danger)}
+.map-view.screen .marker-detail-row{border-bottom-color:#1f2d26}
+.map-view.screen .marker-detail-row span{color:#5c7a6d}
+.map-view.screen .marker-detail-row b{color:var(--scr-ink)}
+.map-view.screen .map-statusbar{color:#5c7a6d}
+.map-view.screen .map-source{color:var(--scr-muted)}
+.map-view.screen .map-source::before{background:var(--scr-ember)}
+.map-view.screen .map-source.fallback{color:var(--scr-warn)}
+
+/* ---------- SVG 回退分支（.large-map）深色适配 ---------- */
+.map-view.screen .large-map{background:#0e1512;box-shadow:inset 0 0 0 1px #1d2b25,inset 0 -70px 100px #00000055}
+.map-view.screen .contour-line{stroke:#54705f;opacity:.6}
+.map-view.screen .major-contour{stroke:#87a795;opacity:.85}
+.map-view.screen .contour-label{fill:#a9c0b2;stroke:#0e1512}
+.map-view.screen .summit-ring{stroke:#8fa39a}
+.map-view.screen .summit-label,.map-view.screen .summit-elevation{fill:#c9d8ce;stroke:#0e1512}
+.map-view.screen .terrain-caption,.map-view.screen .contour-note,.map-view.screen .slope-badge,.map-view.screen .map-controls,.map-view.screen .map-scale,.map-view.screen .wind-legend{background:#121b17f2;border-color:var(--scr-line);color:var(--scr-muted);backdrop-filter:blur(5px)}
+.map-view.screen .terrain-caption strong{color:var(--scr-ink)}
+.map-view.screen .terrain-caption span{color:#a8845a}
+.map-view.screen .contour-note b,.map-view.screen .map-scale,.map-view.screen .map-controls output{color:var(--scr-muted)}
+.map-view.screen .contour-note small,.map-view.screen .slope-badge span{color:#5c7a6d}
+.map-view.screen .map-controls button{background:var(--scr-panel-2);border-color:var(--scr-line2);color:var(--scr-muted)}
+.map-view.screen .map-controls button:hover{background:#20302a}
+.map-view.screen .map-scale i{border-color:var(--scr-muted)}
+.map-view.screen .route-line{background:#c98a4b;box-shadow:0 0 0 3px #c98a4b26}
+.map-view.screen .map-node{background:#17221dee;border-color:var(--scr-line2);color:var(--scr-muted);box-shadow:0 2px 8px #00000066}
+.map-view.screen .map-node.fire{color:#ff9c72}
+.map-view.screen .map-node.water{color:#7fd0e8}
+.map-view.screen .map-node.drone{color:#9cc2ff;background:#16202eee}
+.map-view.screen .map-node.road{color:#e0b57a;background:#221b10ee}
+.map-view.screen .map-compass{color:var(--scr-muted);border-color:var(--scr-line2);background:#121b17f2}
+
+.map-view.screen .nq-track{stroke:#ffffff2e}
+.map-view.screen .nq-arms{stroke:#c9d8ce}
+
+/* ---------- 响应式 / 动效兜底 ---------- */
+@media (max-width:1250px){
+  .screen-kpis{grid-template-columns:repeat(6,1fr)}
+  .skpi{grid-column:span 2}
+}
+@media (max-width:1100px){
+  .map-screen-body{grid-template-columns:1fr;height:auto}
+  .map-view.screen .tactical-map-wrap{height:56vh;min-height:380px;flex:none}
+  .map-side-rail{flex-direction:row;flex-wrap:wrap}
+  .stream-panel{flex:1 1 260px}
+}
+@media (prefers-reduced-motion: reduce){
+  .ph-active .ph-node{animation:none}
+  .evo-svg animate{display:none}
+}

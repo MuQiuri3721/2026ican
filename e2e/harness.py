@@ -43,6 +43,9 @@ class Session:
 
     def _on_response(self, response) -> None:
         if response.status >= 400:
+            # 终止任务时在途轮次被后端拒绝（409）属预期竞态，不算错误
+            if response.status == 409 and response.url.rstrip("/").endswith("/rounds"):
+                return
             self.bad_responses.append(f"{response.status} {response.url}")
 
     def _on_console(self, msg) -> None:

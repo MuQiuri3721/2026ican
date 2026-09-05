@@ -1,12 +1,14 @@
 from typing import Any, Dict, List, Optional
 
 import json
+import time
 from uuid import uuid4
 from datetime import datetime
 from pathlib import Path
 
 from ..domain.schemas import AnalysisInput, MonitorInput, TaskEvent, FeedbackRoundInput, ReplanRequest
 from ..domain.store import analysis_store
+from ..agents import APPROVER, COMMANDER, RECON, SIMULATOR, SUPPORT, SUPPRESSION
 from ..pipeline import run_demo_analysis, simulate_monitor
 from ..skills.orchestrator import SkillExecutionError, SkillOrchestrator
 from ..tools.core import analyze_with_vlm, resolve_wind_band
@@ -16,7 +18,29 @@ REPORTS_DIR = ROOT / "data" / "reports"
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _normalize_scenario(raw: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """演训模拟场景（FE-18）钳位校验：非法类型 → 422，数值越界 → 钳到演示合理区间。"""
+    if not raw:
+        return None
+    if not isinstance(raw, dict):
+        raise ValueError("scenario 必须是对象")
+    origin = raw.get("fire_origin") or {}
+    try:
+        x = float(origin.get("x"))
+        y = float(origin.get("y"))
+        area = float(raw.get("fire_area_m2"))
+        growth = float(raw.get("growth_rate", 0.42))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("scenario.fire_origin/fire_area_m2/growth_rate 数值非法") from exc
+    return {
+        "fire_origin": {"x": min(max(x, -500.0), 700.0), "y": min(max(y, -1000.0), 800.0)},
+        "fire_area_m2": min(max(area, 200.0), 12000.0),
+        "growth_rate": min(max(growth, 0.05), 1.5),
+    }
+
+
 class AnalysisService:
+
     """统一分析应用服务：所有入口共享同一份任务、规则和 Agent 链结果。"""
 
     def __init__(self, orchestrator: Optional[SkillOrchestrator] = None):
@@ -32,8 +56,10 @@ class AnalysisService:
             "upload" if request.image_path else "api",
         )
         try:
+            scenario = _normalize_scenario(request.scenario)
             context = {
                 "scene_id": request.scene_id,
+                "scenario": scenario,
                 "image_name": request.image_name or "default",
                 "image_path": request.image_path,
                 "latitude": request.latitude,
@@ -49,11 +75,25 @@ class AnalysisService:
                 "strict_real": request.environment_mode == "real",
                 "fire_center": ({"latitude": request.latitude, "longitude": request.longitude} if request.latitude is not None and request.longitude is not None else None),
             }
+            people_label = {"confirmed": "在场", "absent": "不在场", "unknown": "情况不明"}.get(request.people_status.value, "情况不明")
+            image_label = request.image_name or request.image_path or ("随机演训火情" if request.scenario else "未命名输入")
+            try:
+                COMMANDER.intake(item.analysis_id, image_label, people_label)
+            except Exception:
+                pass
             agent = self.orchestrator.run_analysis(context)
             # 观测数据显式驱动规则管线：小火上传按小火计算，而不是固定默认火情。
             chain = agent.get("skill_chain", {})
             observation = chain.get("fire_perception", {}).get("observation", {})
-            fire_override = {key: observation[key] for key in ("fire_area_m2", "smoke_area_m2", "growth_rate") if observation.get(key) is not None}
+            # 演训模拟场景（FE-18）优先于影像观测：scenario 直接驱动火情数值
+            if scenario:
+                fire_override = {
+                    "fire_area_m2": scenario["fire_area_m2"],
+                    "smoke_area_m2": round(scenario["fire_area_m2"] * 2.33, 1),
+                    "growth_rate": scenario["growth_rate"],
+                }
+            else:
+                fire_override = {key: observation[key] for key in ("fire_area_m2", "smoke_area_m2", "growth_rate") if observation.get(key) is not None}
             # 多帧序列（api-contract §5.2）：frames 为早前帧，主文件自动作为最新一帧，趋势显式驱动火情重算。
             visual_sequence = None
             if frame_paths:
@@ -77,8 +117,22 @@ class AnalysisService:
                 people_status=request.people_status.value,
                 constraints=request.constraints,
                 dispatch_override=chain.get("candidate_generation", {}).get("v1_dispatch"),
+                scenario=scenario,
             )
             self._merge_agent_result(result, agent)
+            # ---- Agent 协作层（AG-1）：角色消息 + LLM advisory，任何失败不阻塞主管线 ----
+            try:
+                fire = result.get("fire_assessment", {})
+                dispatch = result.get("dispatch_plan", {})
+                people_label = {"confirmed": "在场", "absent": "不在场", "unknown": "情况不明"}.get(request.people_status.value, "情况不明")
+                RECON.finding(item.analysis_id, fire, people_label)
+                max_drones = int((request.constraints or {}).get("max_drones", 4) or 4)
+                strategy, strategy_source = SUPPRESSION.size_strategy(fire, min(max_drones, 4))
+                SUPPRESSION.plan(item.analysis_id, dispatch, fire, strategy, strategy_source, max_drones)
+                SUPPORT.branch(item.analysis_id, request.people_status.value == "confirmed")
+                APPROVER.prepare(item.analysis_id, result)
+            except Exception:
+                pass
             # 轮次触发的自动重规划不带 constraints，回读 result["constraints"] 继承用户约束。
             result["constraints"] = request.constraints
             if visual_sequence and visual_sequence.get("frame_count", 0) >= 2:
@@ -160,7 +214,17 @@ class AnalysisService:
         # Adjust is a transactional replacement: release the old lock and create
         # a new version which must be approved separately.
         if request.action == "adjust":
-            return self.replan(analysis_id, ReplanRequest(constraints=request.constraints, triggers=["manual_adjust"]))
+            result = self.replan(analysis_id, ReplanRequest(constraints=request.constraints, triggers=["manual_adjust"]))
+            try:
+                COMMANDER.arbitration(analysis_id, request.action, request.reason or "")
+            except Exception:
+                pass
+            self._persist_dispatch_report(analysis_id)
+            return result
+        try:
+            COMMANDER.arbitration(analysis_id, request.action, request.reason or "")
+        except Exception:
+            pass
         self._persist_dispatch_report(analysis_id)
         return approved.model_dump()
 
@@ -249,6 +313,25 @@ class AnalysisService:
             triggers.append("people_status_changed")
         if action in {"resupply", "return"} and "resource_or_soc" not in triggers:
             triggers.append("resource_or_soc")
+        # ---- 每轮自主研判（AG-2）：LLM 优先 / conservative 降级；仅 GLM 来源可追加 replan 触发器 ----
+        try:
+            fleet_now = analysis_store.fleet(analysis_id)
+            snapshot = {
+                "round": request.round,
+                "flp_before": previous_flp,
+                "flp_after": monitor_data.get("next_fire_load_flp"),
+                "action": action,
+                "triggers": list(triggers),
+                "min_soc": min((unit.get("soc", 100) for unit in fleet_now), default=100),
+                "water_liters": (analysis_store.inventory(analysis_id) or {}).get("water_liters"),
+                "wind_speed": request.wind_speed or (result.get("result", {}).get("environment", {}) or {}).get("wind_speed"),
+                "people": (result.get("result", {}).get("dispatch_plan", {}) or {}).get("people_branch"),
+            }
+            judgment = SIMULATOR.judge(analysis_id, snapshot)
+            if judgment.get("decision") == "replan" and judgment.get("source") == "glm" and "llm_judgment_replan" not in triggers:
+                triggers.append("llm_judgment_replan")
+        except Exception:
+            pass
         round_data = {
             "round": request.round,
             "before": before,
@@ -265,6 +348,9 @@ class AnalysisService:
             "replan_triggers": triggers,
             "next_action": "awaiting_confirmation" if triggers else action,
         }
+        if analysis_store.get(analysis_id).status == "terminated":
+            # 推演期间任务被终止：本轮作废，不得覆盖终态
+            raise ValueError("任务已终止，本轮反馈作废")
         latest = analysis_store.get(analysis_id); analysis_store.update(analysis_id, rounds=[*latest.rounds, round_data])
         if triggers:
             analysis_store.add_event(analysis_id, "replan", "触发重规划关键事件：" + "、".join(triggers), "rules")
@@ -320,7 +406,18 @@ class AnalysisService:
         temporary = target.with_name(f".{target.name}.{uuid4().hex}.tmp")
         try:
             temporary.write_text(payload, encoding="utf-8")
-            temporary.replace(target)
+            # Windows 下目标文件可能被并发读取/杀软扫描瞬时锁定，replace 重试几次
+            last_error = None
+            for _ in range(5):
+                try:
+                    temporary.replace(target)
+                    last_error = None
+                    break
+                except PermissionError as error:
+                    last_error = error
+                    time.sleep(0.15)
+            if last_error is not None:
+                raise last_error
         finally:
             temporary.unlink(missing_ok=True)
 

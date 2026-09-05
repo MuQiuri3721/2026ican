@@ -6,6 +6,8 @@
 /* ---------- 方案摘要 / 约束 / 审批 ---------- */
 .plan-summary,.people-risk{display:flex;gap:9px 12px;flex-wrap:wrap;align-items:center;margin:14px 0 0;padding:12px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-s);color:var(--ink-2);font:400 12.5px var(--font-data);line-height:1.6}
 .plan-summary b{color:var(--plan)}
+.plan-summary .src-note{color:#8b98a3;font-size:11.5px;white-space:normal;line-height:1.5}
+.plan-summary .src-note::before{content:"⌗ ";color:var(--plan)}
 .people-risk label{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;color:var(--ink-3);font-size:12.5px;font-weight:600}
 .people-risk select{border:1px solid var(--line-strong);border-radius:6px;padding:6px 8px;background:var(--surface);color:var(--ink-2);font:400 12.5px var(--font-data)}
 .people-risk span{color:var(--warn);font-size:12.5px}
@@ -217,11 +219,34 @@
 .tmap-water i.wt-reservoir{background:#38b6ff}.tmap-water i.wt-lake{background:#2fa8d5}.tmap-water i.wt-river{background:#5ccfe6}.tmap-water i.wt-pond{background:#7fdcae}.tmap-water i.wt-water{background:#8ab6d6}
 .tmap-water.preferred{border-color:#ffd166;box-shadow:0 0 0 2px #ffd16644,0 4px 14px #08182066}
 .tmap-water.tmap-active,.tmap-water.tmap-hover{transform:scale(1.08);box-shadow:0 0 0 3px #7fd4ff66,0 4px 14px #08182066}
-.tmap-drone{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--accent);color:#fff;font:500 12.5px/1 var(--font-data);border:2px solid #ffffffcc;box-shadow:0 3px 10px #10243f88;cursor:pointer;position:relative;transition:transform 150ms ease-out,box-shadow 150ms ease-out}
-.tmap-drone i{position:absolute;inset:-7px;border-radius:50%;border:1.5px dashed #ffffff55}
-.tmap-drone.selected{background:var(--fire)}
-.tmap-drone.tmap-active,.tmap-drone.tmap-hover{transform:scale(1.12);box-shadow:0 0 0 4px #ffffff55,0 3px 10px #10243f88}
-.tmap-drone.tmap-pulse{animation:tmapPulse 1s ease-out 2}
+/* 无人机标记（FE-20，样式范式参考 firepatrol-agents：四旋翼 + SOC 电量环 + 旋翼旋转） */
+.tmap-drone{width:40px;height:40px;position:relative;cursor:pointer;transition:transform 150ms ease-out}
+.tmap-drone .tmap-quad{width:40px;height:40px;display:block;overflow:visible;filter:drop-shadow(0 3px 5px #05101acc);animation:tmapBob 3.4s ease-in-out infinite}
+.tmap-track{fill:none;stroke:#0c1926d9;stroke-width:2.6}
+.tmap-arc{fill:none;stroke:var(--sub,#4f8dff);stroke-width:2.8;stroke-linecap:round;transition:stroke-dasharray .6s ease}
+.tmap-props{fill:none;stroke:var(--sub,#4f8dff);stroke-width:1.5;stroke-dasharray:2.1 2.7;opacity:.8;transform-origin:20px 20px;animation:tmapSpin 1.5s linear infinite}
+.tmap-drone.working .tmap-props{animation-duration:.5s}
+.tmap-arms{stroke:#e6eef4;stroke-width:2;stroke-linecap:round;opacity:.92}
+.tmap-body{fill:var(--sub,#4f8dff);stroke:#ffffffe6;stroke-width:1.2}
+.tmap-drone b{position:absolute;left:50%;top:calc(100% - 2px);transform:translateX(-50%);font:600 10.5px/1.2 var(--font-data);color:#fff;background:#0d1b26d9;padding:1px 5px;border-radius:4px;white-space:nowrap;text-shadow:0 1px 2px #0009}
+.tmap-drone.soc-low .tmap-arc,.tmap-drone.soc-low .tmap-props{stroke:var(--fire)}
+.tmap-drone.soc-low b{color:#ffb49a}
+.tmap-drone.selected .tmap-body{fill:var(--fire)}
+.tmap-drone.selected .tmap-arc{stroke:var(--fire)}
+.tmap-drone.selected::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:1.5px solid #ffb08e;opacity:.75}
+.tmap-drone.working::before{content:"";position:absolute;inset:-5px;border-radius:50%;border:2px solid #7fd4ff;animation:tmapWorkPulse 1.6s ease-out infinite}
+.tmap-drone.tmap-active,.tmap-drone.tmap-hover{transform:scale(1.14)}
+.tmap-drone.tmap-active .tmap-body{stroke:#ffd166}
+.tmap-drone.tmap-pulse::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid #ffd166;animation:tmapPulse 1s ease-out 2}
+@keyframes tmapSpin{to{transform:rotate(360deg)}}
+@keyframes tmapBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.8px)}}
+@keyframes tmapWorkPulse{0%{transform:scale(.65);opacity:.95}100%{transform:scale(1.55);opacity:0}}
+/* SVG 回退分支：.map-node.drone 的迷你四旋翼（SOC 环取 currentColor，由内联 style 提供子群色） */
+.node-quad{width:22px;height:22px;display:block;overflow:visible;flex-shrink:0}
+.nq-track{fill:none;stroke:#1a243226;stroke-width:3.4}
+.nq-arc{fill:none;stroke:currentColor;stroke-width:3.4;stroke-linecap:round}
+.nq-arms{stroke:#33424d;stroke-width:2.4;stroke-linecap:round}
+.nq-body{fill:currentColor;stroke:#fff;stroke-width:1.2}
 .tmap-road{display:flex;flex-direction:column;align-items:center;background:#241b0fe6;color:#f5e3c8;border-radius:8px;padding:6px 10px;font:600 12.5px/1.3 var(--font-ui);border:1px solid #d9a45b55}
 .tmap-road em{font:400 11.5px/1 var(--font-data);font-style:normal;color:#d9b98c;white-space:nowrap}
 .tmap-exit{display:flex;flex-direction:column;align-items:center;background:#0d3324e6;color:#c9f5e2;border-radius:8px;padding:6px 10px;font:600 12.5px/1.3 var(--font-ui);border:1px solid #22c58b66}
@@ -238,9 +263,33 @@
 .tmap-badge.servicing{background:#0d3324e6;color:#c9f5e2;border-color:#22c58b55}
 .tmap-badge.charging{background:#1d2b50e6;color:#cfe0ff;border-color:#7fa4ff55}
 .tmap-badge.orbit{background:#132a4ae6;color:#cfe4ff;border-color:#7fa4ff44}
+/* 演训模拟（FE-18） */
+.scenario-block{margin-top:16px;padding:13px 14px;border:1px dashed var(--line-strong);border-radius:var(--radius-s);background:var(--surface-2)}
+.scenario-head{display:flex;align-items:baseline;gap:9px;margin-bottom:8px}
+.scenario-head b{font:700 13.5px var(--font-ui);color:var(--ink)}
+.scenario-head small{color:var(--ink-3);font-size:12px}
+.scenario-empty{color:var(--ink-3);font-size:12.5px;line-height:1.6}
+.scenario-facts{display:flex;gap:6px 16px;flex-wrap:wrap;color:var(--ink-3);font:400 12px var(--font-data);line-height:1.7}
+.scenario-facts b{color:var(--ink);font-weight:500}
+.scenario-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:11px}
+.scenario-actions .outline-btn{margin-top:0}
+.scenario-start{margin-top:0}
+/* Agent 协作时间线（AG-3） */
+.agent-timeline .agent-msg{display:grid;grid-template-columns:76px 96px 1fr 110px;align-items:center;gap:12px;border-bottom:1px solid #eceff2;padding:13px 6px}
+.agent-chip{font:500 11.5px var(--font-data);padding:4px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-line);white-space:nowrap;justify-self:start}
+.agent-chip.mt-FINDING{background:var(--fire-soft);color:var(--fire-deep);border-color:var(--fire-line)}
+.agent-chip.mt-PLAN_PROPOSAL{background:var(--plan-soft);color:var(--plan);border-color:#e2d9f0}
+.agent-chip.mt-JUDGMENT{background:var(--warn-soft);color:var(--warn);border-color:#f0dfc0}
+.agent-chip.mt-APPROVAL_REQ,.agent-chip.mt-APPROVAL_DECISION{background:var(--ok-soft);color:var(--ok);border-color:var(--ok-line)}
+.agent-msg-body{min-width:0}
+.agent-msg-body strong{font-size:12.5px;color:var(--ink-2)}
+.agent-msg-body p{margin:3px 0 0;font-size:13px;color:var(--ink);line-height:1.6;overflow-wrap:anywhere}
+.agent-source{font:400 11.5px var(--font-data);color:#8b98a3;text-align:right;white-space:nowrap}
+.agent-source.src-glm{color:var(--accent)}
+.agent-source.src-conservative-fallback{color:var(--warn)}
 .sim-clock{font:500 12px var(--font-data);color:var(--ink-2);background:var(--accent-soft);border:1px solid var(--accent-line);padding:8px 12px;border-radius:999px;white-space:nowrap}
 @keyframes tmapFirePulse{0%{box-shadow:0 0 0 0 #ffb199aa}70%{box-shadow:0 0 0 8px #ffb19900}100%{box-shadow:0 0 0 0 #ffb19900}}
-@keyframes tmapPulse{0%{box-shadow:0 0 0 0 #2563eb88}70%{box-shadow:0 0 0 16px #2563eb00}100%{box-shadow:0 0 0 0 #2563eb00}}
+@keyframes tmapPulse{0%{transform:scale(.85);opacity:1}100%{transform:scale(2);opacity:0}}
 
 /* ---------- 交互反馈 / 可达性 ---------- */
 .deploy-row,.water-row,.outline-btn,.primary,.legend-item{-webkit-tap-highlight-color:transparent}
@@ -267,7 +316,38 @@ select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 .skeleton-row{animation:none}
 .fire-zone-ring{animation:none}
-.tmap-fire i,.tmap-drone.tmap-pulse{animation:none}
+.tmap-fire i,.tmap-drone.tmap-pulse::after,.tmap-drone .tmap-quad,.tmap-drone .tmap-props{animation:none}
 .map-node.map-node-pulse{animation:none;box-shadow:0 0 0 3px #2563eb88}
 .map-node{transition:none}
 }
+
+/* ---------- 报告格式化卡 / GLM 徽标 / 指挥员问答（FE-22） ---------- */
+.report-conclusion{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--radius-s);background:var(--ok-soft);border:1px solid var(--ok-line);color:var(--ok)}
+.report-conclusion.bad{background:var(--fire-soft);border-color:var(--fire-line);color:var(--fire-deep)}
+.report-conclusion b{font:800 15px var(--font-ui)}
+.report-conclusion span{font:400 12px var(--font-data);opacity:.85;white-space:nowrap}
+.report-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.report-stat{padding:10px 12px;background:var(--surface-2);border-radius:var(--radius-s)}
+.report-stat b{display:block;font:700 16px var(--font-ui);color:var(--ink)}
+.report-stat span{font:400 11.5px var(--font-data);color:var(--ink-3)}
+.report-viewer details{margin-top:10px}
+.report-viewer summary{cursor:pointer;font:600 12.5px var(--font-ui);color:var(--ink-2);padding:4px 0}
+.report-events{margin:6px 0 0;max-height:220px;overflow:auto;display:flex;flex-direction:column;gap:4px;list-style:none;padding:0}
+.report-events li{display:flex;gap:8px;align-items:baseline;font:400 12px var(--font-data);color:var(--ink-2)}
+.report-events li b{color:var(--ink-3);font-weight:500;flex-shrink:0}
+.report-raw pre{margin:6px 0 0}
+.chat-panel{grid-column:1/-1}
+.llm-tag{font:500 11.5px/1.2 var(--font-data);padding:6px 10px;border-radius:999px;border:1px solid var(--line-strong);color:var(--ink-3);white-space:nowrap}
+.llm-tag.on{color:var(--ok);border-color:var(--ok-line);background:var(--ok-soft)}
+.chat-history{display:flex;flex-direction:column;gap:8px;margin-top:12px;max-height:230px;overflow-y:auto;padding-right:4px}
+.chat-empty{padding:14px;text-align:center;color:var(--ink-3);font-size:12.5px;line-height:1.7;background:var(--surface-2);border-radius:var(--radius-s)}
+.chat-bubble{display:flex;gap:9px;align-items:flex-start}
+.chat-who{flex-shrink:0;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:700 11px/1 var(--font-ui);color:#fff;background:var(--accent)}
+.chat-bubble.agent .chat-who{background:var(--plan)}
+.chat-bubble p{margin:0;padding:9px 12px;border-radius:var(--radius-s);background:var(--surface-2);color:var(--ink-2);font-size:12.5px;line-height:1.65;overflow-wrap:anywhere;white-space:pre-wrap}
+.chat-bubble.human p{background:var(--accent-soft);color:var(--ink)}
+.chat-bubble.typing p{color:var(--ink-3);font-style:italic}
+.chat-input-row{display:flex;gap:8px;margin-top:12px}
+.chat-input-row input{flex:1;border:1px solid var(--line-strong);border-radius:var(--radius-s);padding:10px 12px;font:400 12.5px var(--font-data);color:var(--ink-2);background:var(--surface);outline:none}
+.chat-input-row input:focus{border-color:var(--accent)}
+.chat-send{margin-top:0}

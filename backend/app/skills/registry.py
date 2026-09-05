@@ -13,6 +13,19 @@ class BaseSkill:
 class FirePerceptionSkill(BaseSkill):
     name = "fire_perception"
     def run(self, context):
+        scenario = context.get("scenario")
+        if scenario:
+            # 演训模拟（FE-18）：跳过影像识别，由场景参数直接合成观测
+            area = float(scenario.get("fire_area_m2") or 800)
+            return {"observation": {
+                "fire_area_m2": area,
+                "smoke_area_m2": round(area * 2.33, 1),
+                "growth_rate": float(scenario.get("growth_rate") or 0.42),
+                "confidence": 0.9,
+                "fire_center": context.get("fire_center") or {"latitude": 32.0688, "longitude": 118.8432},
+                "detector": "scenario-synthetic",
+                "source": "演训模拟随机火情",
+            }}
         result = self.registry.execute("detect_fire", {"image_path": context.get("image_path"), "image_name": context.get("image_name", "default"), "strict_real": context.get("strict_real", False)})
         detector_data = result.get("data") if isinstance(result.get("data"), dict) else {}
         if not result.get("ok") or detector_data.get("status") == "error":
@@ -166,6 +179,10 @@ class CandidateGenerationSkill(BaseSkill):
         from ..pipeline import deterministic_v1_dispatch, load_demo_state, normalize_fleet, normalize_inventory
 
         state = load_demo_state(context.get("scene_id", "forest-demo-01"))
+        scenario = context.get("scenario")
+        if scenario and scenario.get("fire_origin"):
+            # 演训模拟（FE-18）：随机火点覆盖框架原点，出动距离随之变化
+            state["scene"]["fire_origin"] = dict(scenario["fire_origin"])
         if context.get("fleet"):
             state["fleet"] = normalize_fleet(context["fleet"])
         if context.get("inventory"):

@@ -11,10 +11,10 @@ from .base import BaseTool, ToolError, FunctionTool
 
 ROOT = Path(__file__).resolve().parents[3]
 
+# rules 层迁移（AG-4）：冻结数值实现已迁至 rules/engine.py，此处 re-export 兼容
+from ..rules.engine import read_json, v1_config, positive, calculate_distance, resolve_wind_band, resolve_slope_factor, calculate_flp_load, select_water_source, swap_battery, build_fire_grid, simulate_dispatch_candidate, score_candidate_plan, _agent_kappa
 
-def read_json(path: str) -> Any:
-    with (ROOT / path).open(encoding="utf-8") as file:
-        return json.load(file)
+
 
 
 def scene_data(scene_id: str = "forest-demo-01") -> Dict[str, Any]:
@@ -22,12 +22,6 @@ def scene_data(scene_id: str = "forest-demo-01") -> Dict[str, Any]:
     if scene.get("scene_id") != scene_id:
         raise ToolError("scene_not_found", "未知演示场景", {"scene_id": scene_id})
     return scene
-
-
-def positive(value: float, name: str) -> float:
-    if value < 0:
-        raise ToolError("invalid_input", name + " 不能为负数")
-    return value
 
 
 def not_implemented(**_: Any) -> Dict[str, Any]:
@@ -181,10 +175,6 @@ def calculate_drone_count(resource_liters: float, capacity_liters: float = 80, a
     return {"required_drones": required, "available_count": available_count, "shortfall": max(0, required - available_count)}
 
 
-def calculate_distance(origin: Dict[str, float], target: Dict[str, float], speed_mps: float = 10, **_: Any) -> Dict[str, float]:
-    positive(speed_mps, "speed_mps")
-    distance = math.hypot(target["x"] - origin["x"], target["y"] - origin["y"])
-    return {"distance_m": round(distance, 2), "estimated_minutes": round(distance / speed_mps / 60, 2)}
 
 
 def plan_route(origin: Dict[str, float], target: Dict[str, float], risk: str = "medium", **_: Any) -> Dict[str, Any]:
@@ -244,30 +234,10 @@ def make_next_decision(next_area_m2: float, target_area_m2: float = 300, invento
 
 # ----------------------------- V1.1 wind band, grid FLP, simulation, charging -----------------------------
 
-@lru_cache(maxsize=1)
-def v1_config() -> Dict[str, Any]:
-    try:
-        return read_json("configs/simulation.json").get("v1", {})
-    except (OSError, json.JSONDecodeError):
-        return {}
 
 
-def resolve_wind_band(wind_speed: float = 0, **_: Any) -> Dict[str, Any]:
-    ws = positive(wind_speed, "wind_speed")
-    bands = v1_config().get("wind_bands") or [{"max_mps": 4.0, "k_wind": 1.0, "label": "0–4 m/s"}, {"max_mps": 6.0, "k_wind": 1.2, "label": "4–6 m/s"}, {"max_mps": 8.0, "k_wind": 1.5, "label": "6–8 m/s"}]
-    for band in bands:
-        if ws < band["max_mps"]:
-            return {"band": bands.index(band), "label": band["label"], "k_wind": band["k_wind"], "wind_speed": ws}
-    return {"band": len(bands), "label": ">8 m/s", "k_wind": v1_config().get("k_wind_over", 1.5), "wind_speed": ws}
 
 
-def resolve_slope_factor(slope_deg: float = 0, **_: Any) -> Dict[str, Any]:
-    value = positive(slope_deg, "slope_deg")
-    bands = v1_config().get("slope_bands") or [{"max_deg": 15.0, "k_slope": 1.0}, {"max_deg": 30.0, "k_slope": 1.15}, {"max_deg": 90.0, "k_slope": 1.3}]
-    for band in bands:
-        if value < band["max_deg"]:
-            return {"k_slope": band["k_slope"], "slope_deg": value}
-    return {"k_slope": bands[-1]["k_slope"], "slope_deg": value}
 
 def normalize_uav_record(record: Dict[str, Any], **_: Any) -> Dict[str, Any]:
     """Normalize legacy fleet fields while keeping legacy aliases in the response."""
@@ -332,30 +302,8 @@ def check_uav_feasibility(uav: Dict[str, Any], required_payload: float = 0, soc_
     return {"feasible": not reasons, "uav_id": d["uav_id"], "reasons": reasons}
 
 
-def select_water_source(sources: list = None, distance_m: float = 0, cycle_minutes: float = 0, base_fill_minutes: float = 4, soc_after_cycle: float = 100, route_safe: bool = True, **_: Any) -> Dict[str, Any]:
-    candidates = []
-    for source in sources or []:
-        safe = source.get("safe_access", source.get("safe", False))
-        capacity = source.get("capacity_remaining", source.get("capacity_liters", 0))
-        saving = base_fill_minutes - (source.get("fill_minutes", 8) + cycle_minutes)
-        if source.get("available", False) and safe and capacity >= 20 and route_safe and soc_after_cycle >= 25 and saving >= 5:
-            candidates.append((source.get("distance_m", 0), source))
-    selected = min(candidates, key=lambda x: x[0])[1] if candidates else None
-    return {"selected": bool(selected), "source": selected, "reason": "满足安全、容量、SOC及至少节省5分钟" if selected else "无合格就地水源，改用基地补给"}
 
 
-def calculate_flp_load(cells: list = None, intensity: float = 1, fuel_factor: float = 1.0, wind_factor: float = 1.0, slope_factor: float = 1.0, **_: Any) -> Dict[str, Any]:
-    # cells 兼容 k_fuel/k_wind/k_slope（build_fire_grid 记法）与 fuel_factor/wind_factor/slope_factor 两种键名，
-    # 冻结公式 B_i = 10 × I × K_fuel × K_wind × K_slope 的每个因子都必须生效。
-    if cells is None: cells = [{"intensity": intensity, "fuel_factor": fuel_factor, "wind_factor": wind_factor, "slope_factor": slope_factor}]
-    loads = [
-        10 * c.get("intensity", 1)
-        * c.get("fuel_factor", c.get("k_fuel", 1))
-        * c.get("wind_factor", c.get("k_wind", 1))
-        * c.get("slope_factor", c.get("k_slope", 1))
-        for c in cells
-    ]
-    return {"fire_load_flp": round(sum(loads), 4), "cell_loads_flp": [round(x, 4) for x in loads], "cell_count": len(loads)}
 
 
 def calculate_agent_effective_flp(agent_quantity: float, module: str = "water_20l", scene: str = "vegetation", drop_efficiency: float = 0.9, weather_efficiency: float = 1.0, **_: Any) -> Dict[str, Any]:
@@ -386,101 +334,8 @@ def calculate_resource_gap(required: float, available: float, resource: str = "a
     return {"resource": resource, "required": required, "available": available, "gap": gap, "resource_gap": gap > 0}
 
 
-def build_fire_grid(fire_area_m2: float, wind_speed: float = 0, slope_deg: float = 0, fuel_type: str = "general_forest", intensity: float = 2, **_: Any) -> Dict[str, Any]:
-    """按 100 m² 网格折算火情负荷 B_total = Σ 10×I×K_fuel×K_wind×K_slope。"""
-    positive(fire_area_m2, "fire_area_m2")
-    config = v1_config()
-    cell_area = float(config.get("grid_cell_m2", 100))
-    cell_count = max(1, math.ceil(fire_area_m2 / cell_area))
-    band = resolve_wind_band(wind_speed)
-    slope = resolve_slope_factor(slope_deg)
-    fuel_factors = config.get("fuel_factors") or {"sparse_grass": 0.8, "general_forest": 1.0, "dense_fuel": 1.3}
-    k_fuel = float(fuel_factors.get(fuel_type, 1.0))
-    cells = [{"cell_id": index, "intensity": intensity, "k_fuel": k_fuel, "k_wind": band["k_wind"], "k_slope": slope["k_slope"]} for index in range(cell_count)]
-    loads = calculate_flp_load(cells)["cell_loads_flp"]
-    return {
-        "cell_area_m2": cell_area, "cell_count": cell_count, "cells": cells,
-        "cell_loads_flp": loads, "fire_load_flp": round(sum(loads), 2),
-        "intensity": intensity, "k_fuel": k_fuel, "k_wind": band["k_wind"], "k_slope": slope["k_slope"],
-        "wind_band": band, "fuel_type": fuel_type,
-    }
 
 
-def simulate_dispatch_candidate(selected: List[Dict[str, Any]] = None, fire_load_flp: float = 0, growth_flp_per_hour: float = 0, module: str = "water_20l", fire_type: str = "vegetation", origin: Dict[str, float] = None, inventory: Dict[str, Any] = None, wind_speed: float = 0, round_minutes: float = 5, max_rounds: int = 24, **_: Any) -> Dict[str, Any]:
-    """对单个候选组合做 5 分钟离散仿真：喷洒、补给、换电、返航 SOC 硬约束。
-
-    返回控制时间、剩余 FLP、物资与换电消耗，供多目标评分 J 使用。
-    """
-    config = v1_config()
-    spray = (config.get("spray") or {}).get(module) or {"quantity": 20.0 if module == "water_20l" else 6.0, "rate_per_minute": 4.0 if module == "water_20l" else 1.5, "minutes": 5 if module == "water_20l" else 4}
-    quantity = float(spray["quantity"]); spray_minutes = float(spray["minutes"])
-    refill_minutes = float((config.get("refill_minutes") or {}).get("base", 4))
-    swap_minutes = float((config.get("charging") or {}).get("battery_swap_minutes", 5))
-    swap_soc = float((config.get("charging") or {}).get("battery_swap_soc", 95))
-    return_soc = float(config.get("return_soc_percent", 25))
-    kappa, compatible = _agent_kappa(module, fire_type)
-    band = resolve_wind_band(wind_speed)
-    weather = (config.get("weather_efficiency") or {}).get(f"band{band['band']}", 1.0)
-    eta = (config.get("drop_efficiency") or {}).get("clear", 0.9) * weather
-    stock = dict(inventory or {})
-    if module == "water_20l":
-        loads_left = min(float(stock.get("water_liters", 0)) // quantity, float(stock.get("water_modules_w20", 0)))
-    else:
-        loads_left = float(stock.get("co2_modules_c6", 0))
-    packs_left = float(stock.get("battery_packs", 0))
-    origin = origin or {"x": 0, "y": 0}
-    growth_per_round = growth_flp_per_hour * round_minutes / 60
-    drones = []
-    for uav in selected or []:
-        pos = uav.get("position") or origin
-        distance = math.hypot(pos.get("x", 0) - origin.get("x", 0), pos.get("y", 0) - origin.get("y", 0))
-        outbound = distance / max(float(uav.get("speed_mps", 8)), 0.1) / 60
-        drones.append({"uav_id": uav.get("uav_id", "?"), "soc": float(uav.get("soc", 0)), "agent": min(quantity, float(uav.get("agent_remaining", quantity))), "energy_rate": float(uav.get("energy_rate_percent_per_hour", 270)), "payload_capacity_kg": float(uav.get("payload_capacity_kg", 25)), "outbound_minutes": outbound, "sortie_soc_cost": 0.0, "state": "ready", "sorties": 0, "swaps": 0, "refills": 0})
-    load = max(0.0, float(fire_load_flp))
-    rounds_used = 0; suppression_total = 0.0; material_used = 0.0; extra_minutes = 0.0
-    stalled_reason = None
-    per_uav = {drone["uav_id"]: drone for drone in drones}
-    max_rounds = max(1, int(max_rounds))
-    while load > 0 and rounds_used < max_rounds:
-        rounds_used += 1
-        suppression = 0.0
-        for drone in drones:
-            if drone["state"] != "ready" or load <= 0:
-                continue
-            load_ratio = min(quantity / max(drone["payload_capacity_kg"], 1), 1.0)
-            cost = drone["energy_rate"] * (1 + 0.45 * load_ratio) * (2 * drone["outbound_minutes"] + spray_minutes) / 60
-            drone["sortie_soc_cost"] = round(cost, 2)
-            if drone["agent"] < quantity:
-                if loads_left >= 1:
-                    loads_left -= 1; drone["agent"] = quantity; drone["refills"] += 1; extra_minutes += refill_minutes
-                else:
-                    drone["state"] = "out_of_agent"; stalled_reason = stalled_reason or "agent_insufficient"; continue
-            if drone["soc"] - cost < return_soc:
-                if packs_left >= 1:
-                    packs_left -= 1; drone["soc"] = swap_soc; drone["swaps"] += 1; extra_minutes += swap_minutes
-                else:
-                    drone["state"] = "out_of_energy"; stalled_reason = stalled_reason or "soc_below_return"; continue
-            drone["soc"] = round(drone["soc"] - cost, 2)
-            drone["agent"] = round(drone["agent"] - quantity, 2)
-            drone["sorties"] += 1
-            material_used += quantity
-            suppression += quantity * kappa * eta
-        suppression_total += suppression
-        load = max(0.0, load + growth_per_round - suppression)
-        if load > 0 and all(drone["state"] != "ready" for drone in drones):
-            break
-    flight_overhead = 2 * max((drone["outbound_minutes"] for drone in drones), default=0.0)
-    control_minutes = rounds_used * round_minutes + flight_overhead + extra_minutes if rounds_used else 0.0
-    controlled = load <= 0
-    return {
-        "controlled": controlled, "control_minutes": round(control_minutes, 1) if controlled else None,
-        "rounds_used": rounds_used, "residual_flp": round(load, 2), "suppression_flp": round(suppression_total, 2),
-        "growth_unchecked": not controlled and suppression <= growth_per_round,
-        "material_used": round(material_used, 2), "module": module, "kappa": kappa, "eta": round(eta, 3),
-        "swaps": sum(d["swaps"] for d in drones), "refills": sum(d["refills"] for d in drones),
-        "stalled_reason": stalled_reason, "compatible": compatible,
-        "per_uav": [{key: drone[key] for key in ("uav_id", "soc", "sortie_soc_cost", "sorties", "swaps", "refills", "state")} for drone in drones],
-    }
 
 
 def score_dispatch_plan(time_norm: float = 0, residual_norm: float = 0, energy_norm: float = 0, material_norm: float = 0, change_norm: float = 0, **_: Any) -> Dict[str, Any]:
@@ -488,18 +343,6 @@ def score_dispatch_plan(time_norm: float = 0, residual_norm: float = 0, energy_n
     return {"score": round(score, 6), "lower_is_better": True}
 
 
-def score_candidate_plan(control_minutes: Optional[float], residual_flp: float, fire_load_flp: float, energy_total: float, uav_count: int, material_used: float, changes: int, **_: Any) -> Dict[str, Any]:
-    """按 J = 0.40T + 0.30B + 0.15E + 0.10M + 0.05N 归一化评分，J 越小越优。"""
-    config = v1_config()
-    weights = config.get("scoring_weights") or {"time": 0.4, "residual": 0.3, "energy": 0.15, "material": 0.1, "change": 0.05}
-    refs = config.get("scoring_refs") or {"time_ref_minutes": 120, "energy_ref_per_uav": 100, "material_ref_liters": 80, "change_ref_rounds": 4}
-    time_norm = min(max((control_minutes or refs["time_ref_minutes"] * 2) / refs["time_ref_minutes"], 0), 1) if control_minutes else 1.0
-    residual_norm = min(max(residual_flp / max(fire_load_flp, 1), 0), 1)
-    energy_norm = min(max(energy_total / max(uav_count * refs["energy_ref_per_uav"], 1), 0), 1)
-    material_norm = min(max(material_used / refs["material_ref_liters"], 0), 1)
-    change_norm = min(max(changes / refs["change_ref_rounds"], 0), 1)
-    score = weights["time"] * time_norm + weights["residual"] * residual_norm + weights["energy"] * energy_norm + weights["material"] * material_norm + weights["change"] * change_norm
-    return {"score": round(score, 4), "lower_is_better": True, "parts": {"time": round(time_norm, 3), "residual": round(residual_norm, 3), "energy": round(energy_norm, 3), "material": round(material_norm, 3), "change": round(change_norm, 3)}}
 
 
 def charge_battery(soc: float, minutes: float, mode: str = "base", **_: Any) -> Dict[str, Any]:
@@ -509,9 +352,6 @@ def charge_battery(soc: float, minutes: float, mode: str = "base", **_: Any) -> 
     return {"mode": mode, "soc_per_hour": rate, "minutes": minutes, "soc_after": round(min(100.0, soc + rate * minutes / 60), 2)}
 
 
-def swap_battery(**_: Any) -> Dict[str, Any]:
-    config = v1_config().get("charging") or {}
-    return {"minutes": float(config.get("battery_swap_minutes", 5)), "soc_after": float(config.get("battery_swap_soc", 95)), "requires_battery_pack": True, "note": "同型号电池换电，库存-1，旧包进入 charging"}
 
 
 def plan_evacuation_route(start: List[int] = None, exit_cell: List[int] = None, blocked: List[List[int]] = None, grid_cols: int = 12, grid_rows: int = 12, cell_meters: float = 20, walk_speed_mps: float = 1.2, **_: Any) -> Dict[str, Any]:
@@ -533,12 +373,6 @@ def plan_evacuation_route(start: List[int] = None, exit_cell: List[int] = None, 
     return {"found": False, "reason": "风险网格封死了全部出口路径", "path": [], "estimated_minutes": None}
 
 
-def _agent_kappa(module: str, fire_type: str = "vegetation") -> Tuple[float, bool]:
-    # κ 表只分植被/电气两类；油类、化学品火与电气火同用 CO₂ 兼容行（pipeline 的模块选择同此口径）。
-    fire_type = {"oil": "electrical", "chemical": "electrical"}.get(fire_type, fire_type)
-    kappa_table = v1_config().get("kappa") or {"vegetation": {"water_20l": 1.0, "co2_6kg": 0.25}, "electrical": {"water_20l": 0.0, "co2_6kg": 1.5}}
-    kappa = float((kappa_table.get(fire_type) or {}).get(module, 0.0))
-    return kappa, kappa > 0
 
 
 def vlm_explain_fire(observation: Dict[str, Any] = None, environment: Dict[str, Any] = None, people_status: str = "unknown", **_: Any) -> Dict[str, Any]:

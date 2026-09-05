@@ -18,7 +18,7 @@ def test_environment_demo_has_uniform_contract():
     data = EnvironmentTool().run()
     assert data["mode"] == "demo"
     assert data["source"] == "demo-data"
-    assert all(key in data for key in ("wind_speed", "wind_direction", "altitude", "water_sources", "road_context", "landcover", "raw"))
+    assert all(key in data for key in ("wind_speed", "wind_direction", "altitude", "water_sources", "road_context", "landcover", "raw", "collected_at"))
 
 
 def test_environment_invalid_coordinates_fallback():
@@ -301,6 +301,17 @@ def test_tools_endpoint_lists_full_registry():
     assert "simulate_dispatch_candidate" in tools and "detect_fire" in tools
 
 
+    slim = client.get("/api/analyzes?limit=5&slim=1").json()["items"]
+    assert 1 <= len(slim) <= 5
+    newest = slim[0]
+    assert newest["analysis_id"] == created.json()["analysis_id"], "limit 截取的必须是最新任务"
+    assert "result" not in newest and "stages" not in newest, "slim 摘要不得携带重负载字段"
+    assert {"analysis_id", "status", "created_at", "input"} <= set(newest)
+
+    full = client.get("/api/analyzes").json()["items"]
+    assert "result" in full[0], "缺省请求保持完整信封（向后兼容）"
+
+
 def test_upload_carries_fire_type_and_constraints():
     """上传通道必须能带 fire_type/constraints（审计 §一.6）：否则演示从界面永远走不到电气火分支。"""
     client = TestClient(app)
@@ -392,6 +403,58 @@ def test_demo_water_source_carries_display_gps():
     demo_water = envelope["water_sources"][0]
     assert demo_water["latitude"] == scene["water_sources"][0]["latitude"]
     assert demo_water["longitude"] == scene["water_sources"][0]["longitude"]
+
+
+def test_rules_migration_consistency():
+    """AG-4 分层迁移：旧 import 路径与 rules.engine 是同一实现对象，冻结算例数值不变。"""
+    import backend.app.pipeline as pipeline_mod
+    import backend.app.tools.core as core_mod
+    from backend.app.rules import engine as rules_engine
+
+    for name in ("build_fire_grid", "resolve_wind_band", "select_water_source",
+                 "simulate_dispatch_candidate", "score_candidate_plan", "_agent_kappa"):
+        assert getattr(core_mod, name) is getattr(rules_engine, name), name
+    for name in ("assess_fire", "deterministic_v1_dispatch", "simulate_monitor", "load_demo_state"):
+        assert getattr(pipeline_mod, name) is getattr(rules_engine, name), name
+
+    state = pipeline_mod.load_demo_state("forest-demo-01")
+    fire = rules_engine.assess_fire(state)
+    assert fire["fire_load_flp"] == 810 and fire["fire_grid"]["cell_count"] == 18
+
+
+def test_scenario_analysis_drives_synthetic_fire():
+    """演训模拟（FE-18）：scenario 驱动火情评估/调度/场景锚点，跳过影像识别。"""
+    scenario = {"fire_origin": {"x": 320, "y": -300}, "fire_area_m2": 2400, "growth_rate": 0.3}
+    client = TestClient(app)
+    payload = client.post("/api/analyze", json={
+        "scene_id": "forest-demo-01", "environment_mode": "offline",
+        "people_status": "confirmed", "scenario": scenario,
+    })
+    assert payload.status_code == 200, payload.text
+    body = payload.json()
+    result = body["result"]
+    fire = result["fire_assessment"]
+    assert fire["fire_area_m2"] == 2400
+    assert abs(fire["growth_rate"] - 0.3) < 1e-9
+    assert result["scene"]["fire_origin"] == {"x": 320, "y": -300}
+    assert set(result["scene"]["fire_origin_gps"]) == {"latitude", "longitude"}
+    dispatch = result["dispatch_plan"]
+    assert dispatch["selected_uavs"], "scenario 调度必须产出机群名单"
+    assert any(task["drone_id"].startswith("E") for task in dispatch["tasks"])
+
+
+def test_scenario_analysis_clamps_out_of_range_values():
+    client = TestClient(app)
+    payload = client.post("/api/analyze", json={
+        "scene_id": "forest-demo-01", "environment_mode": "offline",
+        "scenario": {"fire_origin": {"x": 99999, "y": -99999}, "fire_area_m2": 999999, "growth_rate": 9.9},
+    })
+    assert payload.status_code == 200, payload.text
+    result = payload.json()["result"]
+    assert result["fire_assessment"]["fire_area_m2"] == 12000
+    assert abs(result["fire_assessment"]["growth_rate"] - 1.5) < 1e-9
+    origin = result["scene"]["fire_origin"]
+    assert origin["x"] == 700 and origin["y"] == -1000
 
 
 def test_dispatch_and_monitor_share_scene_origin_frame():

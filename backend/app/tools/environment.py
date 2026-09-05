@@ -1,4 +1,5 @@
 import threading
+from datetime import datetime
 from typing import Any, Dict, Optional
 
 from ..pipeline import load_demo_state
@@ -123,6 +124,7 @@ class EnvironmentTool(BaseTool):
         scene = state["scene"]
         data = {
             "scene_id": scene_id, "name": scene["name"], "mode": "demo", "status": "ok", "source": "demo-data",
+            "collected_at": datetime.now().isoformat(timespec="seconds"),
             "wind_speed": scene["wind_speed"], "wind_direction": scene["wind_direction"],
             "altitude": scene["altitude"], "terrain": scene["terrain"],
             "water_sources": scene["water_sources"], "nearest_water": scene["water_sources"][0] if scene["water_sources"] else None,
@@ -157,6 +159,7 @@ class EnvironmentTool(BaseTool):
         status = raw.get("status") or mode
         return {
             "scene_id": scene_id, "mode": mode, "status": status, "source": source,
+            "collected_at": datetime.now().isoformat(timespec="seconds"),
             "wind_speed": weather.get("wind_speed_m_s"),
             "wind_direction": weather.get("wind_to_direction"),
             "wind_direction_deg": weather.get("wind_to_deg"),

@@ -105,6 +105,7 @@ class AnalysisInput(BaseModel):
     fire_type: str = "vegetation"
     people_status: PeopleStatus = PeopleStatus.UNKNOWN
     constraints: Optional[Dict[str, Any]] = None
+    scenario: Optional[Dict[str, Any]] = None
 
 
 class MonitorInput(BaseModel):

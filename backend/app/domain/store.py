@@ -25,6 +25,10 @@ class AnalysisStore:
             "CREATE TABLE IF NOT EXISTS tasks ("
             "analysis_id TEXT PRIMARY KEY, envelope TEXT NOT NULL, fleet TEXT, inventory TEXT, updated_at TEXT)"
         )
+        self._db.execute(
+            "CREATE TABLE IF NOT EXISTS agent_messages ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, analysis_id TEXT NOT NULL, seq INTEGER NOT NULL, payload TEXT NOT NULL)"
+        )
         self._db.commit()
         self._load_all()
 
@@ -128,6 +132,28 @@ class AnalysisStore:
             item.updated_at = changes["updated_at"]
             self._persist(analysis_id)
             return item.model_copy(deep=True)
+
+    def add_message(self, analysis_id: str, message: Dict[str, Any]) -> Dict[str, Any]:
+        """Agent 协作消息（黑板流）：SQLite 写穿，seq 按任务内单调递增。"""
+        with self._lock:
+            row = self._db.execute(
+                "SELECT COALESCE(MAX(seq), 0) FROM agent_messages WHERE analysis_id = ?", (analysis_id,)
+            ).fetchone()
+            seq = int(row[0]) + 1
+            payload = {**message, "seq": seq}
+            self._db.execute(
+                "INSERT INTO agent_messages (analysis_id, seq, payload) VALUES (?, ?, ?)",
+                (analysis_id, seq, json.dumps(payload, ensure_ascii=False, default=str)),
+            )
+            self._db.commit()
+            return payload
+
+    def get_messages(self, analysis_id: str, after_seq: int = 0) -> List[Dict[str, Any]]:
+        rows = self._db.execute(
+            "SELECT payload FROM agent_messages WHERE analysis_id = ? AND seq > ? ORDER BY seq",
+            (analysis_id, after_seq),
+        )
+        return [json.loads(row[0]) for row in rows]
 
     def add_event(self, analysis_id: str, stage: str, message: str, source: str = "system") -> AnalysisEnvelope:
         with self._lock:
