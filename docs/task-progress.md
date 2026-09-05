@@ -66,6 +66,7 @@
 - [x] 完成后可查询报告，保留输入、审批、轮次、事件、消耗和结论。
 - [x] 2026-09-04 自动化门禁全绿：`pytest -q` 46 passed、`python -m py_compile`、`cd frontend && npm run build`；六场景由 tests/test_scenarios.py API 层覆盖 + e2e/round1-9.py Playwright 浏览器层覆盖（十轮 62 项断言）。
 - [ ] 浏览器端六场景人工验收（演示录制前执行一次）。
+- [x] 2026-09-05 六场景浏览器验收已自动化：`e2e/acceptance_six.py` 六场景全过（S1 无人物流 / S2 有人疏散指引+地图出口 / S3 约束调整→方案 v2 + manual_adjust / S4 返航·基地充电相位 / S5 资源缺口不给时间窗 / S6 驳回释放资源锁），截图归档 `e2e/artifacts/j1/`；风速升档路径维持 tests/test_scenarios.py API 级覆盖。**人工复核签字后关闭 J-1**。
 
 ## 后续接入
 
