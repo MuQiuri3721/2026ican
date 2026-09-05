@@ -114,9 +114,30 @@
 .map-view.screen .terrain-data b,.map-view.screen .slope-badge b{color:var(--scr-ink)}
 .map-view.screen .slope-badge i{border-left-color:var(--scr-line)}
 
-/* 事件流（为多 Agent 消息流预留同一容器：logs 驱动，类型芯片 + 计数） */
+/* 协作流 / 事件流双模式面板（协作 = 六角色黑板消息，事件 = 任务日志） */
 .stream-panel{display:flex;flex-direction:column;gap:7px;padding:13px 14px;border:1px solid var(--scr-line);border-radius:10px;background:var(--scr-panel);font:400 12.5px var(--font-data);color:var(--scr-muted);min-height:150px;flex:1}
-.stream-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.stream-tabs{display:flex;gap:4px;margin-left:auto}
+.stream-tab{border:1px solid var(--scr-line2);background:transparent;color:var(--scr-muted);font:500 10.5px/1.2 var(--font-data);padding:3px 9px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:all var(--speed) ease}
+.stream-tab:hover{border-color:#4a6b5c}
+.stream-tab.on{color:#ffd9a0;border-color:#a28437;background:#241d10}
+.stream-row.stream-agent-row{align-items:flex-start}
+.stream-agent-body{min-width:0;flex:1}
+.stream-agent-head{display:flex;align-items:center;gap:6px;min-width:0}
+.stream-agent-head .agent-chip{flex-shrink:0;font-size:10.5px;padding:2px 7px}
+.stream-agent-head small{margin-left:auto;flex-shrink:0;font-size:10.5px;color:#75907f;white-space:nowrap}
+.stream-agent-head small.src-glm{color:#7fb3ff}
+.stream-agent-head small.src-rules{color:#5fbd92}
+.stream-content{margin:3px 0 0;color:var(--scr-muted);font-size:12px;line-height:1.55;overflow-wrap:anywhere}
+.stream-content i{display:block;font-style:normal;color:#5c7a6d;font-size:10.5px;margin-bottom:1px}
+/* 深色屏上的协作芯片（浅色 .agent-chip 基础样式的暗底适配） */
+.map-view.screen .agent-chip{background:#1a2636;border-color:#2c4258;color:#9cc2ff}
+.map-view.screen .agent-chip.mt-FINDING{background:#241610;border-color:#59301f;color:#ff9c72}
+.map-view.screen .agent-chip.mt-PLAN_PROPOSAL{background:#1f1a2e;border-color:#3d3358;color:#c9b8f2}
+.map-view.screen .agent-chip.mt-JUDGMENT{background:#26200f;border-color:#5c4d1f;color:#e2b95d}
+.map-view.screen .agent-chip.mt-APPROVAL_REQ,.map-view.screen .agent-chip.mt-APPROVAL_DECISION{background:#0f231a;border-color:#1f4a36;color:#7fd9ae}
+.map-view.screen .stream-agent-head small.src-glm{color:#7fb3ff}
+.map-view.screen .stream-agent-head small.src-rules{color:#5fbd92}
+.stream-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .stream-head b{font:700 13.5px var(--font-ui);color:var(--scr-ink)}
 .stream-head small{color:#5c7a6d;font-size:11.5px;white-space:nowrap}
 .stream-rows{display:flex;flex-direction:column;gap:0;overflow-y:auto;min-height:0}
