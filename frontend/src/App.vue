@@ -1487,8 +1487,10 @@ function generateScenario() {
     longitude: +(ZIXIAHU_BASE_GPS.longitude + (fireOrigin.x - base.x) / metersPerLng).toFixed(6),
   }
   peopleStatus.value = people
-  const failureRound = Math.random() < 0.35 ? 2 + Math.floor(Math.random() * 3) : null
-  const windShift = Math.random() < 0.35 ? { round: 2 + Math.floor(Math.random() * 3), speed: Math.min(8.5, +(result.value.environment.wind_speed + 2.5).toFixed(1)) } : null
+  // 演练互斥（FE-34/35）：风变重规划可能生成无灭火机方案，与失能演练语义冲突，二选一
+  const drillRoll = Math.random()
+  const failureRound = drillRoll < 0.35 ? 2 + Math.floor(Math.random() * 3) : null
+  const windShift = failureRound ? null : (Math.random() < 0.4 ? { round: 2 + Math.floor(Math.random() * 3), speed: Math.min(8.5, +(result.value.environment.wind_speed + 2.5).toFixed(1)) } : null)
   scenario.value = { fireOrigin, fireGps, areaM2, growthRate, people, failureRound, windShift }
   const peopleLabel = people === 'confirmed' ? '在场' : people === 'absent' ? '不在场' : '情况不明'
   addLog(`随机火情已生成 · 面积 ${areaM2}m² · 人员${peopleLabel} · 演训模拟就绪`, { stage: 'scenario', source: 'local' })

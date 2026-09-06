@@ -70,7 +70,7 @@ def test_uav_failure_backfill_swaps_roster_inplace():
     fault = next(m for m in messages if m["msg_type"] == "UAV_FAULT")
     assert (fault.get("data") or {}).get("round") == 2
 
-    roster_after = set(client.get(f"/api/tasks/{task_id}/plan").json()["plan"]["selected_uavs"])
+    roster_after = set((client.get(f"/api/analyze/{task_id}").json().get("result") or {}).get("dispatch_plan", {}).get("selected_uavs", []))
     faulted = (fault.get("data") or {}).get("faulted")
     backfill_msg = next(m for m in messages if m["msg_type"] == "BACKFILL")
     choice = (backfill_msg.get("data") or {}).get("choice")
