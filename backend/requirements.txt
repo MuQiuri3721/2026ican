@@ -9,3 +9,4 @@ pyproj
 shapely
 pystac-client
 planetary-computer
+edge-tts>=6.1.0  # 疏散广播神经音色（FE-36），失败回落浏览器 TTS

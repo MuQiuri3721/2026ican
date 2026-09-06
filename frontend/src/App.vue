@@ -336,7 +336,23 @@ watch(() => analysisResult.value && analysisResult.value.agent && analysisResult
   spokenEvacFor.value = analysisId.value
   speakText(`人员区域请注意:现场发现火情,请立即沿疏散路线向出口撤离,全程约 ${eva.estimated_minutes} 分钟,共 ${eva.steps} 段路线,避开 ${eva.risk_cells} 个风险格,救援无人机将在上空引导。`)
 })
+const TTS_VOICE = 'zh-CN-XiaoxiaoNeural' // Edge TTS 神经音色（晓晓）；失败回落浏览器 TTS
+let edgeAudio = null
 function speakText(text) {
+  // 优先 Edge TTS 神经音色（FE-36）：后端合成 mp3；外网波动/未安装时回落浏览器 speechSynthesis
+  fetch(`/api/tts?text=${encodeURIComponent(text.slice(0, 300))}&voice=${TTS_VOICE}`)
+    .then((response) => {
+      if (!response.ok) throw new Error(`tts ${response.status}`)
+      return response.blob()
+    })
+    .then((blob) => {
+      if (edgeAudio) { edgeAudio.pause(); edgeAudio = null }
+      edgeAudio = new Audio(URL.createObjectURL(blob))
+      edgeAudio.play().catch(() => speakBrowserTts(text))
+    })
+    .catch(() => speakBrowserTts(text))
+}
+function speakBrowserTts(text) {
   try {
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = 'zh-CN'
@@ -347,7 +363,10 @@ function speakText(text) {
 }
 function toggleVoice() {
   voiceOn.value = !voiceOn.value
-  if (!voiceOn.value) { try { window.speechSynthesis.cancel() } catch (error) { /* 浏览器不支持时静默 */ } }
+  if (!voiceOn.value) {
+    try { window.speechSynthesis.cancel() } catch (error) { /* 浏览器不支持时静默 */ }
+    if (edgeAudio) { edgeAudio.pause(); edgeAudio = null }
+  }
   addLog(`疏散语音广播${voiceOn.value ? '开启' : '已静音'}`)
 }
 

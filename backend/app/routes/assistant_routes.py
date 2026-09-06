@@ -29,6 +29,42 @@ class ChatQuestion(BaseModel):
     question: str
 
 
+@router.get("/api/tts")
+async def tts_endpoint(text: str = "", voice: str = "zh-CN-XiaoxiaoNeural"):
+    """疏散广播语音（FE-36）：Edge TTS 神经音色合成 mp3，磁盘缓存按 (voice, text) 哈希去重。
+
+    失败返回 503，前端回落浏览器 speechSynthesis——广播不因外网波动中断。
+    """
+    import hashlib
+    from pathlib import Path
+    from fastapi.responses import Response
+    text = (text or "").strip()[:300]
+    if not text:
+        raise HTTPException(status_code=400, detail="text 不能为空")
+    allowed = {"zh-CN-XiaoxiaoNeural", "zh-CN-XiaoyiNeural", "zh-CN-YunjianNeural",
+               "zh-CN-YunxiNeural", "zh-CN-YunxiaNeural", "zh-CN-YunyangNeural"}
+    if voice not in allowed:
+        voice = "zh-CN-XiaoxiaoNeural"
+    cache_dir = Path(__file__).resolve().parents[2] / "data" / "tts_cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_file = cache_dir / f"{voice}-{hashlib.sha1(text.encode('utf-8')).hexdigest()[:16]}.mp3"
+    if cache_file.exists() and cache_file.stat().st_size > 0:
+        return Response(content=cache_file.read_bytes(), media_type="audio/mpeg")
+    try:
+        import edge_tts
+        communicate = edge_tts.Communicate(text, voice)
+        audio = bytearray()
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                audio.extend(chunk["data"])
+        if not audio:
+            raise ValueError("空音频")
+        cache_file.write_bytes(bytes(audio))
+        return Response(content=bytes(audio), media_type="audio/mpeg")
+    except Exception as error:  # noqa: BLE001 —— 外网波动时前端回落浏览器 TTS
+        raise HTTPException(status_code=503, detail=f"TTS 合成不可用：{error}") from error
+
+
 @router.get("/api/knowledge")
 async def knowledge_endpoint(query: str = "", top_k: int = 3):
     """经验知识库检索（FE-27）：带 query 返回最相关片段，不带返回索引统计。"""
