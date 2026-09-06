@@ -9,10 +9,10 @@ const props = defineProps({
 
 const W = 760
 const H = 170
-const PAD_L = 40
-const PAD_R = 16
-const PAD_T = 14
-const PAD_B = 24
+const PAD_L = 46
+const PAD_R = 46
+const PAD_T = 22
+const PAD_B = 26
 
 const series = computed(() => {
   const values = []
