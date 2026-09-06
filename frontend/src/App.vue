@@ -1591,6 +1591,29 @@ onMounted(() => {
 
       <section v-else-if="activeTab === 'map'" class="detail-view map-view map-view-full screen"><div class="map-toolbar"><div class="map-toolbar-heading"><h2>林区态势</h2><PhaseStepper :stage="screenStage.stage" :done="screenStage.done" :dead="screenStage.dead" :replans="replanCount" /></div><div class="map-toolbar-tools"><span class="view-toggle"><button :class="['legend-item', { on: mapMode === '2d' }]" :aria-pressed="mapMode === '2d'" @click.stop="toggleMapMode('2d')">🗺 平面</button><button :class="['legend-item', { on: mapMode === '3d' }]" :aria-pressed="mapMode === '3d'" @click.stop="toggleMapMode('3d')">🏔 三维</button></span><div class="map-legend" role="group" aria-label="图层开关"><button v-for="(label, key) in LAYER_LABELS" :key="key" :class="['legend-item', { off: !layerVisibility[key] }]" :aria-pressed="layerVisibility[key]" @click.stop="toggleLayer(key)"><i :class="'legend-' + key"></i>{{ label }}</button></div><button :class="['legend-item', { off: !voiceOn }]" :aria-pressed="voiceOn" :title="voiceOn ? '疏散语音广播已开启（点击静音）' : '疏散语音广播已静音（点击开启）'" @click.stop="toggleVoice"><i class="legend-evac"></i>语音广播</button><span class="status-tag orange"><MapPinned :size="14" /> {{ environmentCoordinates.longitude.toFixed(6) }}°E · {{ environmentCoordinates.latitude.toFixed(6) }}°N</span></div></div>
       <div class="screen-kpis"><div v-for="kpi in screenKpis" :key="kpi.label" :class="['skpi', 'tone-' + kpi.tone]"><b>{{ kpi.value }}<small>{{ kpi.unit }}</small></b><span>{{ kpi.label }}<em>{{ kpi.sub }}</em></span></div></div>
+      <div class="map-taskbar" role="toolbar" aria-label="任务控制">
+        <template v-if="!analysisResult && !scenario">
+          <button class="scr-btn" :disabled="analyzing" @click="generateScenario"><span>🎲</span> 生成随机火情</button>
+          <span class="scr-hint">一键生成紫金山随机火情并开始多智能体推演，或到「指挥中枢」上传影像研判</span>
+        </template>
+        <template v-else-if="scenario && !analysisResult">
+          <span class="scr-hint">火情已生成 · 面积 {{ scenario.areaM2 }}m² · 增长率 {{ scenario.growthRate }}/h · 人员{{ scenario.people === 'confirmed' ? '在场' : scenario.people === 'absent' ? '不在场' : '情况不明' }}</span>
+          <button class="scr-btn" @click="generateScenario">🎲 重摇火情</button>
+          <button class="scr-btn scr-primary" :disabled="scenarioBusy || analyzing" @click="startScenarioSimulation">{{ scenarioBusy ? '研判中…' : '▶ 开始模拟' }}</button>
+        </template>
+        <template v-else-if="analysisEnvelope && analysisEnvelope.status === 'awaiting_confirmation'">
+          <span class="scr-hint">方案 {{ planVersionLabel }} 已生成 · {{ (result.dispatch_plan.selected_uavs || []).length }} 架出动 · {{ result.dispatch_plan.can_control ? '可控' : '超出能力，建议增援' }}</span>
+          <button class="scr-btn scr-primary" :disabled="approvalBusy" @click="submitApproval('approve')">✅ 批准主方案</button>
+          <button class="scr-btn" :disabled="approvalBusy" @click="submitApproval('terminate')">终止任务</button>
+        </template>
+        <template v-else-if="mission && mission.active">
+          <span class="scr-hint scr-live"><i class="live-dot"></i> 自动推演中 · 第 {{ Math.min(Math.floor(missionNow / 5) + 1, activeRounds.length + 1) }} 轮 · 每轮 5 仿真分钟 · 结果见下方演化曲线与协作流</span>
+        </template>
+        <template v-else>
+          <span class="scr-hint">任务已结束（{{ displayStatus }}）· 可重新开始一局</span>
+          <button class="scr-btn" @click="generateScenario">🎲 生成随机火情</button>
+        </template>
+      </div>
       <div class="map-screen-body"><div class="map-main-col"><div class="tactical-map-wrap" @click="dismissMarker">
         <Terrain3D v-if="mapMode === '3d'" :grid="terrainGrid" :fire-gps="fire3dGps" :fire-radius-m="fire3dRadius" :fire-active="fire3dActive" :drones="drones" :mission="mission" :fire-origin="(analysisResult && analysisResult.scene ? analysisResult.scene.fire_origin : null)" :stations="stations3d" :evac-path="evac3dPath" :people-status="peopleStatus" />
         <TacticalMap v-else-if="amapReady && mapMode === '2d'" ref="tacticalMapRef" :result="result" :environment="environment" :drones="drones" :water-list="waterSourcesList" :contours="contourData" :layer-visibility="layerVisibility" :selected-uavs="(analysisResult?.dispatch_plan?.selected_uavs || [])" :mission="mission" :scenario-preview="scenarioPreview" :focus-pulse="focusPulse" :hovered-drone-id="hoveredDroneId" :hovered-water-id="hoveredWaterId" :active-marker-id="activeMarker?.id || ''" :default-center="environmentCoordinates" @select-marker="selectMarker" @coords="cursorCoords = $event" @ready="addLog('高德卫星底图加载完成')" @fallback="onAmapFallback" />

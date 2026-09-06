@@ -242,6 +242,55 @@ def test_monitor_flags_emergency_units_below_15_percent():
     assert "E1" in result["emergency_units"]
 
 
+def test_monitor_sustained_suppression_extinguishes_fire():
+    """灭火有效性（换电接入后）：可控火情在多轮推演中必须被持续压制并扑灭。
+
+    回归背景：此前状态机只有充电（45 min/轮），首轮喷洒后机群全部趴窝充电，
+    FLP 逐轮只涨不降。规则 §7 的换电（5 min→95%）接入后，机群应保持喷洒节奏。
+    """
+    from backend.app.pipeline import simulate_monitor
+    fleet = [{"uav_id": "E1", "subgroup": "suppression", "role": "firefighting", "status": "available",
+              "position": {"x": 100, "y": 0}, "soc": 90, "battery": 90,
+              "payload_capacity_kg": 25, "payload_module": "water_20l", "payload": 20,
+              "agent_remaining": 20, "agent_unit": "L", "speed_mps": 8,
+              "energy_rate_percent_per_hour": 270, "signal": 100, "health": 100},
+             {"uav_id": "E2", "subgroup": "suppression", "role": "firefighting", "status": "available",
+              "position": {"x": 110, "y": 0}, "soc": 90, "battery": 90,
+              "payload_capacity_kg": 25, "payload_module": "water_20l", "payload": 20,
+              "agent_remaining": 20, "agent_unit": "L", "speed_mps": 8,
+              "energy_rate_percent_per_hour": 270, "signal": 100, "health": 100}]
+    analysis = {
+        "fire_assessment": {"fire_area_m2": 6000, "growth_rate": 0.1},
+        "environment": {"wind_speed": 4.0},
+        "dispatch_plan": {"material_module": "water_20l", "fire_load_flp": 60, "growth_flp_per_hour": 24,
+                          "selected_uavs": ["E1", "E2"],
+                          "battery_plan": [{"uav_id": "E1", "outbound_minutes": 0.5},
+                                           {"uav_id": "E2", "outbound_minutes": 0.5}]},
+        "fleet": fleet,
+        "inventory": {"water_liters": 400, "water_modules_w20": 20, "co2_modules_c6": 2, "battery_packs": 8,
+                      "support_boxes_sup10": 0, "forward_supply_points": [], "water_sources": [],
+                      "dry_powder_kg": 0, "nearby_water_available": False},
+    }
+    fleet_snapshot, stock = None, None
+    loads, decreased = [], False
+    action = "continue"
+    for _round in range(20):
+        result = simulate_monitor(analysis, elapsed_minutes=5, extinguishing_liters=100,
+                                  fleet_snapshot=fleet_snapshot, inventory=stock)
+        before = result["fire_load_before_flp"]
+        after = result["next_fire_load_flp"]
+        decreased = decreased or after < before
+        analysis["dispatch_plan"]["fire_load_flp"] = after
+        fleet_snapshot, stock = result["next_fleet"], result["next_inventory"]
+        loads.append(after)
+        action = result["action"]
+        if action == "finish":
+            break
+    assert action == "finish", f"20 轮内必须扑灭（FLP 轨迹 {loads}）"
+    assert decreased, "换电续喷后必须出现真实压制（至少一轮 FLP 净下降）"
+    assert loads[-1] == 0
+
+
 def test_returning_uav_progresses_across_monitor_rounds():
     """跨轮续跑：第 1 轮结束时仍在返航的机，第 2 轮必须继续 servicing→charging，
     而不是因为没有进度条永远停在 returning 掉电到 0。"""

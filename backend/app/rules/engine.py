@@ -572,23 +572,41 @@ def simulate_monitor(
                         progress["phase_minutes"] = 4.0
                         drone["status"] = "servicing"
             elif status == "servicing":
-                if float(drone.get("agent_remaining", 0)) < capacity:
-                    if module == "water_20l":
-                        can_refill = stock.get("water_liters", 0) >= capacity and stock.get("water_modules_w20", 0) >= 1
+                # 换电计时中（规则 V1 §7：标准换电 5 min、换后 95%、库存−1）：计时满归队
+                progress = state_progress.get(uid)
+                if progress is not None and progress.get("swap_left", 0) > 0:
+                    progress["swap_left"] -= 1
+                    if progress["swap_left"] <= 0:
+                        progress["swap_left"] = 0
+                        drone["status"] = "available"
+                else:
+                    if float(drone.get("agent_remaining", 0)) < capacity:
+                        if module == "water_20l":
+                            can_refill = stock.get("water_liters", 0) >= capacity and stock.get("water_modules_w20", 0) >= 1
+                            if can_refill:
+                                stock["water_liters"] = round(stock["water_liters"] - capacity, 2)
+                                stock["water_modules_w20"] = max(0, stock["water_modules_w20"] - 1)
+                        else:
+                            can_refill = stock.get("co2_modules_c6", 0) >= 1
+                            if can_refill:
+                                stock["co2_modules_c6"] = max(0, stock["co2_modules_c6"] - 1)
                         if can_refill:
-                            stock["water_liters"] = round(stock["water_liters"] - capacity, 2)
-                            stock["water_modules_w20"] = max(0, stock["water_modules_w20"] - 1)
+                            drone["agent_remaining"] = capacity
+                        else:
+                            stalled_agent = True
+                            drone["status"] = "charging"
+                            continue
+                    # 电池周转（规则 V1 §7）：优先换电（5 min → 95%），无备用电池才走慢速充电——
+                    # 此前只实现充电（45 min/轮），灭火周期被拉长到火力断续、火情只涨不灭
+                    if drone["soc"] < 95.0 and stock.get("battery_packs", 0) >= 1:
+                        stock["battery_packs"] = max(0.0, round(stock["battery_packs"] - 1, 2))
+                        drone["soc"] = 95.0
+                        if progress is not None:
+                            progress["swap_left"] = 5
+                        else:
+                            drone["status"] = "available"
                     else:
-                        can_refill = stock.get("co2_modules_c6", 0) >= 1
-                        if can_refill:
-                            stock["co2_modules_c6"] = max(0, stock["co2_modules_c6"] - 1)
-                    if can_refill:
-                        drone["agent_remaining"] = capacity
-                    else:
-                        stalled_agent = True
                         drone["status"] = "charging"
-                        continue
-                drone["status"] = "charging"
             elif status == "charging":
                 drone["soc"] = round(min(100.0, drone["soc"] + 100.0 / 60), 2)
                 if drone["soc"] >= 100.0:

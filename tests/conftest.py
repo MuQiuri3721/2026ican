@@ -10,9 +10,18 @@ Store 是"启动加载 + 写穿"模型：uvicorn 常驻进程与 pytest 进程�
 """
 import pytest
 
+from backend.app.agentkit import llm as agentkit_llm
 from backend.app.domain.store import analysis_store
 
 _ACTIVE = {"executing", "approved", "replanning"}
+
+
+@pytest.fixture(scope="function", autouse=True)
+def _force_llm_offline(monkeypatch):
+    """契约测试全局离线（FE-31）：仓库根 .env 带真实 Key 时，judge/问答会随机调用真 GLM——
+    研判输出非确定（有时 replan），把 next_action 断言变成掷硬币。需要真 Key 的用例自行 setenv。"""
+    monkeypatch.delenv("FIREOPS_LLM_API_KEY", raising=False)
+    monkeypatch.setattr(agentkit_llm, "_FAILURES", 0)
 
 
 @pytest.fixture(scope="function", autouse=True)
