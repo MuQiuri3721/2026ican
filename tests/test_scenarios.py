@@ -44,6 +44,46 @@ def _terminate(client: TestClient, task_id: str) -> None:
     assert response.status_code == 200, response.text
 
 
+def test_uav_failure_backfill_swaps_roster_inplace():
+    """FE-34：场景剧本单机失能 → 规则算两档候选、大脑选人（离线走确定性降级）→ 方案内换机。
+
+    口径：补位不过审批门；失能机置 fault；补位机当轮进入 selected_uavs；
+    协作流必须有 UAV_FAULT 与 BACKFILL 两条消息（含轮次幂等标记）。
+    """
+    client = _client()
+    task = _create_task(client, people_status="absent", scenario={
+        "fire_origin": {"x": 200, "y": 200}, "fire_area_m2": 900,
+        "growth_rate": 0.2, "uav_failure_round": 2,
+    })
+    task_id = task["analysis_id"]
+    _approve(client, task_id)
+    first = client.post(f"/api/tasks/{task_id}/rounds", json={"round": 1, "elapsed_minutes": 5, "extinguishing_liters": 100})
+    assert first.status_code == 200, first.text
+    plan_before = client.get(f"/api/tasks/{task_id}/plan").json()["plan"]
+    second = client.post(f"/api/tasks/{task_id}/rounds", json={"round": 2, "elapsed_minutes": 5, "extinguishing_liters": 100})
+    assert second.status_code == 200, second.text
+
+    messages = client.get(f"/api/tasks/{task_id}/agent-messages").json()["items"]
+    types = [m["msg_type"] for m in messages]
+    assert "UAV_FAULT" in types, f"缺少失能消息：{types}"
+    assert "BACKFILL" in types, f"缺少补位消息：{types}"
+    fault = next(m for m in messages if m["msg_type"] == "UAV_FAULT")
+    assert (fault.get("data") or {}).get("round") == 2
+
+    roster_after = set(client.get(f"/api/tasks/{task_id}/plan").json()["plan"]["selected_uavs"])
+    faulted = (fault.get("data") or {}).get("faulted")
+    backfill_msg = next(m for m in messages if m["msg_type"] == "BACKFILL")
+    choice = (backfill_msg.get("data") or {}).get("choice")
+    if choice and choice != "none":
+        assert choice in roster_after and faulted not in roster_after, "补位机必须换入名单且失能机移出"
+    # 幂等：同轮重复上报不得二次注入
+    again = client.post(f"/api/tasks/{task_id}/rounds", json={"round": 3, "elapsed_minutes": 5, "extinguishing_liters": 100})
+    assert again.status_code == 200
+    messages_again = client.get(f"/api/tasks/{task_id}/agent-messages").json()["items"]
+    assert sum(1 for m in messages_again if m["msg_type"] == "UAV_FAULT") == 1, "失能注入必须幂等"
+    _terminate(client, task_id)
+
+
 def test_scenario_1_absent_baseline_dispatch_and_round():
     client = _client()
     task = _create_task(client, people_status="absent")

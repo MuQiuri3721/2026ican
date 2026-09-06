@@ -297,6 +297,7 @@
 .scenario-empty{color:var(--ink-3);font-size:12.5px;line-height:1.6}
 .scenario-facts{display:flex;gap:6px 16px;flex-wrap:wrap;color:var(--ink-3);font:400 12px var(--font-data);line-height:1.7}
 .scenario-facts b{color:var(--ink);font-weight:500}
+.scenario-drill{color:var(--warn)!important;font-weight:600}
 .scenario-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:11px}
 .scenario-actions .outline-btn{margin-top:0}
 .scenario-start{margin-top:0}

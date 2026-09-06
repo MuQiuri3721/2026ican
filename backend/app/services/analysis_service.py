@@ -49,11 +49,18 @@ def _normalize_scenario(raw: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any
         growth = float(raw.get("growth_rate", 0.42))
     except (TypeError, ValueError) as exc:
         raise ValueError("scenario.fire_origin/fire_area_m2/growth_rate 数值非法") from exc
-    return {
+    failure_round = raw.get("uav_failure_round")
+    normalized = {
         "fire_origin": {"x": min(max(x, -500.0), 700.0), "y": min(max(y, -1000.0), 800.0)},
         "fire_area_m2": min(max(area, 200.0), 12000.0),
         "growth_rate": min(max(growth, 0.05), 1.5),
     }
+    if failure_round is not None:
+        try:
+            normalized["uav_failure_round"] = min(max(int(failure_round), 1), 20)
+        except (TypeError, ValueError):
+            pass
+    return normalized
 
 
 class AnalysisService:
@@ -319,6 +326,12 @@ class AnalysisService:
         analysis_store.update(analysis_id, result=observed)
         previous_wind = (current.result or {}).get("environment", {}).get("wind_speed")
         previous_flp = float((current.result or {}).get("dispatch_plan", {}).get("fire_load_flp", request.fire_load_flp or 0))
+        # ---- 单机失能 → 方案内补位（FE-34）：轮次开始时按场景剧本注入失能。
+        # 候选两档由规则算好、大脑只选人；方案内换机不过审批门，补位机当轮即出动。
+        try:
+            self._maybe_fail_and_backfill(analysis_id, current, request.round)
+        except Exception:
+            pass  # 演练注入失败不阻塞正常推演
         result = self.monitor_and_update(analysis_id, MonitorInput(elapsed_minutes=request.elapsed_minutes, extinguishing_liters=request.extinguishing_liters, fleet_snapshot=analysis_store.fleet(analysis_id), inventory=analysis_store.inventory(analysis_id)))
         monitor_data = result.get("result", {}).get("monitor", {})
         action = result.get("action")
@@ -358,7 +371,10 @@ class AnalysisService:
                 "flp_rising_streak": _rising_streak(item.rounds, monitor_data.get("next_fire_load_flp")),
             }
             judgment = SIMULATOR.judge(analysis_id, snapshot)
-            if judgment.get("decision") == "replan" and judgment.get("source") == "glm" and "llm_judgment_replan" not in triggers:
+            # GLM replan 建议最低从第 2 轮起生效：首轮单样本噪声大，直接打断刚起步的推演
+            # （失能演练、持续压制演示都会被截断）；建议本身仍落协作流可审计。
+            if (judgment.get("decision") == "replan" and judgment.get("source") == "glm"
+                    and request.round >= 2 and "llm_judgment_replan" not in triggers):
                 triggers.append("llm_judgment_replan")
         except Exception:
             pass
@@ -392,6 +408,42 @@ class AnalysisService:
             round_data["next_action"] = "awaiting_confirmation"
         self._persist_dispatch_report(analysis_id)
         return round_data
+
+    def _maybe_fail_and_backfill(self, analysis_id: str, item, round_number: int) -> None:
+        """场景剧本的单机失能注入 + 补位决策（FE-34）：幂等（同轮只注入一次）。"""
+        scenario = getattr(item.input, "scenario", None) or {}
+        fail_round = scenario.get("uav_failure_round") if isinstance(scenario, dict) else None
+        if not fail_round or int(fail_round) != round_number:
+            return
+        existing = analysis_store.get_messages(analysis_id)
+        for message in existing:
+            if message.get("msg_type") == "UAV_FAULT" and (message.get("data") or {}).get("round") == round_number:
+                return
+        from ..agents import backfill as backfill_mod
+        result = item.result or {}
+        dispatch = dict(result.get("dispatch_plan") or {})
+        selected = [u for u in dispatch.get("selected_uavs", []) if str(u).startswith("E")]
+        fleet = analysis_store.fleet(analysis_id)
+        by_id = {d.get("uav_id"): d for d in fleet}
+        flying = [u for u in selected if (by_id.get(u) or {}).get("status") in {"flying", "working"}]
+        pool = flying or [u for u in selected if (by_id.get(u) or {}).get("status") != "fault"]
+        if not pool:
+            return
+        import random
+        victim_id = random.Random(f"fail-{analysis_id}").choice(pool)
+        by_id[victim_id]["status"] = "fault"
+        candidates = backfill_mod.build_candidates(fleet, set(selected), 20.0)
+        decision = backfill_mod.decide(candidates, {"faulted": [victim_id], "fire_load_flp": dispatch.get("fire_load_flp")})
+        backfill_mod.announce(analysis_id, victim_id, decision, candidates, round_number)
+        choice = decision.get("choice")
+        if choice and choice != "none" and choice in by_id:
+            by_id[choice]["status"] = "assigned"
+            dispatch["selected_uavs"] = [choice if u == victim_id else u for u in dispatch.get("selected_uavs", [])]
+            dispatch["tasks"] = [dict(t, drone_id=choice) if t.get("drone_id") == victim_id else dict(t)
+                                 for t in dispatch.get("tasks", [])]
+            result["dispatch_plan"] = dispatch
+            analysis_store.update(analysis_id, result=result)
+        analysis_store.update_resources(analysis_id, fleet=fleet)
 
     def report(self, analysis_id: str) -> Dict[str, Any]:
         item = analysis_store.get(analysis_id)
