@@ -10,6 +10,18 @@
 .plan-summary .src-note::before{content:"⌗ ";color:var(--plan)}
 /* 留白优化（FE-31 自查）：hero 内容少于同行的上传面板时不再被网格拉伸出大片空白 */
 .hero-panel{align-self:start}
+/* 排版优化（FE-33）：上传面板跨两行，KPI 卡 2×2 填入 hero 下方，消除左列空洞 */
+.dashboard .upload-panel{grid-column:2;grid-row:1/span 2}
+.dashboard .hero-panel{grid-column:1}
+.dashboard .metrics-grid{grid-column:1;grid-row:2;grid-template-columns:repeat(2,1fr)}
+@media(max-width:1000px){
+  .dashboard .upload-panel{grid-column:auto;grid-row:auto}
+}
+/* 现场环境 6 项：5 列会产生孤行，3 列两行更整齐 */
+.environment-grid{grid-template-columns:repeat(3,1fr)}
+@media(max-width:700px){.environment-grid{grid-template-columns:repeat(2,1fr)}}
+/* 空态提示在弹性面板内垂直居中，不留头重脚轻空白 */
+.stream-empty,.evo-empty{display:grid;place-items:center;min-height:100%}
 /* 视图切换（平面/三维）在工具栏拥挤时不折行 */
 .view-toggle{display:inline-flex;flex-wrap:nowrap;gap:2px}
 .view-toggle .legend-item{white-space:nowrap;padding:5px 8px}
