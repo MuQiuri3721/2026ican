@@ -31,13 +31,32 @@ def api(method, path, payload=None):
         return json.loads(r.read().decode())
 
 
+def pre_clean_store():
+    """开跑前清场：终止所有非终态任务并释放锁——演示后遗留的 executing 任务
+    会让场景 1 的批准 409、推演钟永不出现（本次复跑实测踩中）。"""
+    try:
+        items = api("GET", "/api/analyzes?limit=100&slim=1")
+        items = items if isinstance(items, list) else items.get("items", [])
+        for t in items:
+            if t.get("status") in {"executing", "approved", "replanning", "awaiting_confirmation"}:
+                api("POST", f"/api/tasks/{t['analysis_id']}/approval", {"action": "terminate", "reason": "acceptance pre-clean"})
+        print(f"[J1-pre] 清场完成，终止 {len([t for t in items if t.get('status') not in {'completed','terminated','failed'}])} 个遗留任务")
+    except Exception as error:  # noqa: BLE001 —— 清场失败不阻断（后续场景自带清理）
+        print(f"[J1-pre] 清场跳过：{error}")
+
+
 def reroll_until_people(page, want, tries=12):
-    """演训模拟的人员状态随机——重摇直到目标（在场/不在场/情况不明）。首次生成后按钮文案会变。"""
+    """演训模拟的人员状态随机——重摇直到目标（在场/不在场/情况不明）。首次生成后按钮文案会变。
+    两级坑：①"不在场"包含子串"在场"，裸子串匹配必错；②scenario-facts 渲染为
+    「人员 不在场」（中间有空格），「人员{want}」整词同样匹配不上。用正则取值精确比对。"""
+    import re
     generate = page.get_by_role("button", name="生成随机火情").or_(page.get_by_role("button", name="重新生成火情"))
     for _ in range(tries):
         generate.first.click()
         page.locator(".scenario-facts").wait_for(timeout=8000)
-        if want in page.locator(".scenario-facts").inner_text():
+        facts = page.locator(".scenario-facts").inner_text()
+        matched = re.search(r"人员\s*(在场|不在场|情况不明)", facts)
+        if matched and matched.group(1) == want:
             return True
     return False
 
@@ -151,7 +170,20 @@ def scenario_5_insufficient_gap():
         page.locator(".plan-summary").wait_for(timeout=150000)
         summary = page.locator(".plan-summary").inner_text()
         ok &= record(5, "资源缺口展示", "缺口：" in summary and "无" not in summary.split("缺口：")[1][:6], summary[:110].replace("\n", " "))
-        ok &= record(5, "不可控不给时间窗", "时间区间：—" in summary)
+        # BE-12b：压制增强后 fire.jpg 从「不可控」变为「可控但耗时很长（就地取水计入补给能力）」。
+        # 断言改为契约语义一致性：缺口必须展示；时间窗与 can_control 严格互斥一致
+        state = page.evaluate("""(async () => {
+            const list = await (await fetch('/api/analyzes?limit=1&slim=1')).json();
+            const tid = (Array.isArray(list) ? list : list.items)[0].analysis_id;
+            const env = await (await fetch('/api/analyze/' + tid)).json();
+            const dp = env.result.dispatch_plan || {};
+            return { can: !!dp.can_control, win: (dp.estimated_control_time || {}).window_minutes || null,
+                     gaps: (dp.resource_gap || []).map(g => g.resource) };
+        })()""")
+        has_window = bool(state["win"]) and len(state["win"]) == 2
+        no_window_label = "时间区间：—" in summary
+        ok &= record(5, "窗口与可控性一致", has_window == state["can"] and no_window_label == (not state["can"]),
+                     f"can_control={state['can']} window={state['win']} gaps={state['gaps']}")
         time.sleep(0.5)
         s.screenshot("j1/S5_insufficient_gap")
     finally:
@@ -188,14 +220,25 @@ def scenario_6_reject_releases_locks():
 def main() -> int:
     J1_DIR.mkdir(parents=True, exist_ok=True)
     print("=== J-1 浏览器六场景验收（自动化执行 + 截图留证） ===")
-    outcomes = [
-        scenario_1_absent_logistics(),
-        scenario_2_confirmed_guidance(),
-        scenario_3_adjust_new_version(),
-        scenario_4_soc_return_and_swap(),
-        scenario_5_insufficient_gap(),
-        scenario_6_reject_releases_locks(),
+    pre_clean_store()
+    scenarios = [
+        scenario_1_absent_logistics,
+        scenario_2_confirmed_guidance,
+        scenario_3_adjust_new_version,
+        scenario_4_soc_return_and_swap,
+        scenario_5_insufficient_gap,
+        scenario_6_reject_releases_locks,
     ]
+    # 单场景异常不中止整套：一处的偶发超时不应掩盖其余场景的验收结论
+    outcomes = []
+    for index, scenario in enumerate(scenarios, start=1):
+        try:
+            outcomes.append(scenario())
+        except Exception as error:  # noqa: BLE001
+            import traceback
+            traceback.print_exc()
+            record(index, "场景执行异常", False, f"{type(error).__name__}: {str(error)[:160]}")
+            outcomes.append(False)
     passed = sum(outcomes)
     print(f"=== J-1 汇总：{passed}/6 场景通过，截图归档 {J1_DIR} ===")
     (J1_DIR / "结果.md").write_text(

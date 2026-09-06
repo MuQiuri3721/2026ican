@@ -216,7 +216,16 @@ def _post(messages: List[Dict[str, Any]]) -> Optional[str]:
         text = (response.json().get("choices") or [{}])[0].get("message", {}).get("content")
         text = (text or "").strip()
         if not text:
-            # 交付包 P07：HTTP 200 空响应按可重试失败处理，不计成功
+            # 交付包 P07：HTTP 200 空响应按可重试失败处理，不计成功。
+            # BE-12b：留痕——推理型模型可能把 max_tokens 全花在 reasoning 上（content 为空），
+            # 不记 finish_reason 就无法区分限流/截断/内容漂移
+            finish = ""
+            try:
+                choice = (response.json().get("choices") or [{}])[0]
+                finish = str(choice.get("finish_reason"))
+            except Exception:  # noqa: BLE001
+                pass
+            print(f"[vlm] HTTP 200 空 content · finish={finish} model={_MODEL}")
             with _LOCK:
                 _FAILURES += 1
                 _LAST_FAIL = time.monotonic()
@@ -224,7 +233,9 @@ def _post(messages: List[Dict[str, Any]]) -> Optional[str]:
         with _LOCK:
             _FAILURES = 0
         return text
-    except Exception:
+    except Exception as error:
+        # BE-12b：吞异常必须留痕（限流/断网/代理故障各有不同签名），否则回退静默无从排查
+        print(f"[vlm] 调用失败: {type(error).__name__}: {str(error)[:160]}")
         with _LOCK:
             _FAILURES += 1
             _LAST_FAIL = time.monotonic()
