@@ -84,6 +84,32 @@ def test_uav_failure_backfill_swaps_roster_inplace():
     _terminate(client, task_id)
 
 
+def test_wind_shift_drill_triggers_replan_new_version():
+    """FE-35：剧本风变（第 2 轮观测风速 7.5 m/s 跳档）→ wind_band_changed →
+    自动生成新方案版本并回到待确认（重规划仍走审批门）。"""
+    client = _client()
+    task = _create_task(client, people_status="absent", scenario={
+        "fire_origin": {"x": 200, "y": 200}, "fire_area_m2": 900,
+        "growth_rate": 0.2, "wind_shift": {"round": 2, "speed": 8.5},
+    })
+    task_id = task["analysis_id"]
+    _approve(client, task_id)
+    first = client.post(f"/api/tasks/{task_id}/rounds", json={"round": 1, "elapsed_minutes": 5, "extinguishing_liters": 100})
+    assert first.status_code == 200
+    assert first.json().get("next_action") != "awaiting_confirmation", "第 1 轮不应触发风变"
+    second = client.post(f"/api/tasks/{task_id}/rounds", json={"round": 2, "elapsed_minutes": 5, "extinguishing_liters": 100})
+    assert second.status_code == 200, second.text
+    assert second.json().get("next_action") == "awaiting_confirmation", second.json().get("replan_triggers")
+    assert "wind_band_changed" in (second.json().get("replan_triggers") or [])
+    envelope = client.get(f"/api/analyze/{task_id}").json()
+    assert len(envelope.get("plan_versions") or []) >= 2, "风变后必须生成新方案版本"
+    wind_after = (envelope.get("result") or {}).get("environment", {}).get("wind_speed")
+    assert wind_after == 8.5, "观测风速必须持久化"
+    messages = client.get(f"/api/tasks/{task_id}/agent-messages").json()["items"]
+    assert any("跨档变化" in (m.get("content") or "") for m in messages), "缺少观测风变消息"
+    _terminate(client, task_id)
+
+
 def test_scenario_1_absent_baseline_dispatch_and_round():
     client = _client()
     task = _create_task(client, people_status="absent")

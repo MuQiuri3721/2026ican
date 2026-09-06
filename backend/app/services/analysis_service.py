@@ -9,6 +9,7 @@ from pathlib import Path
 from ..domain.schemas import AnalysisInput, MonitorInput, TaskEvent, FeedbackRoundInput, ReplanRequest
 from ..domain.store import analysis_store
 from ..agents import APPROVER, COMMANDER, RECON, SIMULATOR, SUPPORT, SUPPRESSION
+from ..agents.blackboard import post_message
 from ..pipeline import run_demo_analysis, simulate_monitor
 from ..skills.orchestrator import SkillExecutionError, SkillOrchestrator
 from ..tools.core import analyze_with_vlm, resolve_wind_band
@@ -58,6 +59,15 @@ def _normalize_scenario(raw: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any
     if failure_round is not None:
         try:
             normalized["uav_failure_round"] = min(max(int(failure_round), 1), 20)
+        except (TypeError, ValueError):
+            pass
+    shift = raw.get("wind_shift")
+    if isinstance(shift, dict):
+        try:
+            normalized["wind_shift"] = {
+                "round": min(max(int(shift.get("round")), 1), 20),
+                "speed": min(max(float(shift.get("speed")), 0.5), 15.0),
+            }
         except (TypeError, ValueError):
             pass
     return normalized
@@ -323,7 +333,17 @@ class AnalysisService:
             observed["environment"]["wind_speed"] = request.wind_speed
         if request.people_status is not None:
             observed["dispatch_plan"] = dict(observed.get("dispatch_plan", {}), people_branch=request.people_status.value)
+        # ---- 风变演练（FE-35）：剧本轮次注入观测风速升档（一次性），monitor 比对风档
+        # 触发 wind_band_changed → 重规划 → 新方案版本走审批门。
+        scenario_now = getattr(current.input, "scenario", None) or {}
+        shift = scenario_now.get("wind_shift") if isinstance(scenario_now, dict) else None
+        if shift and request.round == int(shift.get("round", -1)):
+            observed["environment"] = dict(observed.get("environment", {}), wind_speed=float(shift["speed"]))
+            post_message(analysis_id, "INFO", "recon", "commander",
+                         f"🌪 观测到风速 {shift['speed']} m/s，较方案基准发生跨档变化，已回传指挥中心复核风档。",
+                         {"wind_speed": float(shift["speed"]), "round": request.round}, source="rules")
         analysis_store.update(analysis_id, result=observed)
+        pass  # shift 注入完成后无需额外处理
         previous_wind = (current.result or {}).get("environment", {}).get("wind_speed")
         previous_flp = float((current.result or {}).get("dispatch_plan", {}).get("fire_load_flp", request.fire_load_flp or 0))
         # ---- 单机失能 → 方案内补位（FE-34）：轮次开始时按场景剧本注入失能。
@@ -335,6 +355,7 @@ class AnalysisService:
         result = self.monitor_and_update(analysis_id, MonitorInput(elapsed_minutes=request.elapsed_minutes, extinguishing_liters=request.extinguishing_liters, fleet_snapshot=analysis_store.fleet(analysis_id), inventory=analysis_store.inventory(analysis_id)))
         monitor_data = result.get("result", {}).get("monitor", {})
         action = result.get("action")
+
         # 关键事件判定：风速按档位（0–4/4–6/6–8 m/s）而非数值比较。
         triggers = list(monitor_data.get("replan_triggers", []))
         if request.fire_load_flp is not None and previous_flp > 0 and request.fire_load_flp > previous_flp * 1.2 and "fire_load_increase_over_20_percent" not in triggers:
