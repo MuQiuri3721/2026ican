@@ -8,6 +8,23 @@
 .plan-summary b{color:var(--plan)}
 .plan-summary .src-note{color:#8b98a3;font-size:11.5px;white-space:normal;line-height:1.5}
 .plan-summary .src-note::before{content:"⌗ ";color:var(--plan)}
+/* 留白优化（FE-31 自查）：hero 内容少于同行的上传面板时不再被网格拉伸出大片空白 */
+.hero-panel{align-self:start}
+/* 视图切换（平面/三维）在工具栏拥挤时不折行 */
+.view-toggle{display:inline-flex;flex-wrap:nowrap;gap:2px}
+.view-toggle .legend-item{white-space:nowrap;padding:5px 8px}
+/* VLM 视觉解释（E-2）：来源随行标注，观察类事实与冲突分行，数字不出现在此块 */
+.vlm-note{margin:12px 0 0;padding:12px 14px;background:var(--surface-2);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--radius-s)}
+.vlm-note-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.vlm-note-head b{font:700 13px var(--font-ui);color:var(--ink)}
+.vlm-note-head .src-note{font:400 11.5px var(--font-data);color:var(--ink-3);overflow-wrap:anywhere}
+.vlm-note p{margin:7px 0 0;font-size:12.5px;line-height:1.65;color:var(--ink-2)}
+.vlm-note p.muted{color:var(--ink-3)}
+.vlm-note-facts{display:flex;gap:6px 10px;flex-wrap:wrap;margin:9px 0 0;font:400 12px var(--font-data);color:var(--ink-2)}
+.vlm-note-facts span::before{content:"· ";color:var(--ink-3)}
+.vlm-note-facts span.vlm-flag{color:var(--fire-deep);font-weight:600}
+.vlm-note-facts span.vlm-flag::before{content:"⚠ ";color:var(--fire)}
+.vlm-note-issues{margin:8px 0 0;padding:0 0 0 18px;font-size:12px;line-height:1.6;color:var(--warn)}
 .people-risk label{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;color:var(--ink-3);font-size:12.5px;font-weight:600}
 .people-risk select{border:1px solid var(--line-strong);border-radius:6px;padding:6px 8px;background:var(--surface);color:var(--ink-2);font:400 12.5px var(--font-data)}
 .people-risk span{color:var(--warn);font-size:12.5px}

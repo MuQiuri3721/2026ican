@@ -53,6 +53,18 @@ function elevAt(lat, lng) {
 
 function smoothProgress(p) { return p * p * (3 - 2 * p) }
 
+// 递归释放几何体/材质/纹理（rebuild 频繁重建地形与精灵，不释放会持续泄漏 GPU 内存）
+function disposeObject(root) {
+  root.traverse((obj) => {
+    if (obj.geometry) obj.geometry.dispose()
+    const materials = Array.isArray(obj.material) ? obj.material : (obj.material ? [obj.material] : [])
+    for (const mat of materials) {
+      if (mat.map) mat.map.dispose()
+      mat.dispose()
+    }
+  })
+}
+
 function phaseAt(phases, tMinutes) {
   let acc = 0
   for (const phase of phases) {
@@ -288,6 +300,7 @@ function syncDrones(three, dynamic, grid) {
   }
   for (const [id, entry] of index) {
     if (!seen.has(id)) {
+      disposeObject(entry.group)
       dynamic.remove(entry.group)
       index.delete(id)
     }
@@ -397,6 +410,8 @@ function rebuildInner() {
   const grid = props.grid
   if (!entry || !grid) return
   const { world, dynamic } = entry
+  disposeObject(world)
+  disposeObject(dynamic)
   world.clear()
   dynamic.clear()
   grid.scene_w = (grid.lon1 - grid.lon0) * metersPerLng(grid.lat0)
@@ -408,11 +423,14 @@ function rebuildInner() {
   entry.sky.scale.setScalar(Math.max(1, grid.scene_w / 6500))
   entry.camera.far = grid.scene_w * 4
   entry.camera.updateProjectionMatrix()
-  // 取景对准火点（无火时看场景中心）：从山体反方向俯瞰，保证灭火行动始终在画面内
-  const fireW = props.fireGps ? toWorld(props.fireGps.latitude, props.fireGps.longitude) : null
-  const focus = fireW || { x: 0, z: 0 }
-  entry.controls.target.set(focus.x, 260, focus.z)
-  entry.camera.position.set(focus.x - grid.scene_w * 0.42, grid.scene_w * 0.62, focus.z + grid.scene_w * 0.52)
+  // 取景对准火点（无火时看场景中心）：仅首次放置，之后尊重用户拖拽的视角
+  if (!entry.cameraPlaced) {
+    entry.cameraPlaced = true
+    const fireW = props.fireGps ? toWorld(props.fireGps.latitude, props.fireGps.longitude) : null
+    const focus = fireW || { x: 0, z: 0 }
+    entry.controls.target.set(focus.x, 260, focus.z)
+    entry.camera.position.set(focus.x - grid.scene_w * 0.42, grid.scene_w * 0.62, focus.z + grid.scene_w * 0.52)
+  }
   buildTerrain(three, grid, world)
   for (const station of props.stations) {
     const w = toWorld(station.gps.latitude, station.gps.longitude)
