@@ -242,6 +242,45 @@ def test_monitor_flags_emergency_units_below_15_percent():
     assert "E1" in result["emergency_units"]
 
 
+def test_monitor_onsite_water_refill_after_base_depletion():
+    """FE-38 就地取水（规则 §5.3）：基地水剂枯竭后，E 机 servicing 转入水源灌装
+    （8 min），灌满归队继续压制；水源容量被实扣。离线确定性，无 GLM 参与。
+    """
+    from backend.app.pipeline import simulate_monitor
+    fleet = [{"uav_id": "E1", "subgroup": "suppression", "role": "firefighting", "status": "servicing",
+              "position": {"x": 100, "y": 0}, "soc": 60, "battery": 60,
+              "payload_capacity_kg": 25, "payload_module": "water_20l", "payload": 0,
+              "agent_remaining": 0, "agent_unit": "L", "speed_mps": 8,
+              "energy_rate_percent_per_hour": 270, "signal": 100, "health": 100}]
+    inventory = {"water_liters": 0, "water_modules_w20": 0, "co2_modules_c6": 2, "battery_packs": 8,
+                 "support_boxes_sup10": 0, "forward_supply_points": [],
+                 "water_sources": [{"id": "ws-1", "name": "东侧溪流", "available": True, "safe": True,
+                                    "capacity_liters": 500, "distance_m": 600}],
+                 "dry_powder_kg": 0, "nearby_water_available": True}
+    analysis = {
+        "fire_assessment": {"fire_area_m2": 6000, "growth_rate": 0.1},
+        "environment": {"wind_speed": 4.0},
+        "dispatch_plan": {"material_module": "water_20l", "fire_load_flp": 60, "growth_flp_per_hour": 24,
+                          "selected_uavs": ["E1"], "battery_plan": [{"uav_id": "E1", "outbound_minutes": 0.5}]},
+        "fleet": fleet, "inventory": inventory,
+    }
+    fleet_snapshot, stock = fleet, inventory
+    refilled = False
+    for _round in range(4):
+        result = simulate_monitor(analysis, elapsed_minutes=5, extinguishing_liters=0,
+                                  fleet_snapshot=fleet_snapshot, inventory=stock)
+        drone = next(d for d in result["next_fleet"] if d["uav_id"] == "E1")
+        if drone["agent_remaining"] >= 20:
+            refilled = True
+        fleet_snapshot, stock = result["next_fleet"], result["next_inventory"]
+        if refilled:
+            break
+    assert refilled, "基地枯竭后必须经水源灌装归队"
+    source = stock["water_sources"][0]
+    assert source["capacity_liters"] < 500, "水源容量必须被实扣"
+    assert drone["agent_remaining"] == 20
+
+
 def test_monitor_sustained_suppression_extinguishes_fire():
     """灭火有效性（换电接入后）：可控火情在多轮推演中必须被持续压制并扑灭。
 

@@ -4,6 +4,8 @@
 """
 import asyncio
 import json
+import re
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
@@ -53,7 +55,10 @@ def health(request: Request):
 def project_status():
     # 新注册表（skills/registry.py）无 fire_analysis 聚合 Skill，Tool 数直接取感知 Skill 的 ToolRegistry。
     perception_registry = skill_registry.get("fire_perception").registry
-    return {"framework": "ready", "demo_pipeline": "ready", "agent_layer": "ready", "yolo": "pending", "vlm": "pending", "geo_data": "environment-service", "environment": {"modes": ["auto", "real", "offline", "demo"], "cache": "ttl-lru", "network": "optional"}, "tools": len(perception_registry.list()), "skills": len(skill_registry.list()), "last_checked": datetime.now().isoformat(timespec="seconds")}
+    # 接入状态按环境变量如实上报（api-contract §10/§9）：配置了端点/Key 即"已配置"，未配置为"待接入"。
+    yolo_status = "configured" if os.environ.get("FIRE_YOLO_ENDPOINT") else "pending"
+    vlm_status = "configured" if (os.environ.get("FIRE_VLM_ENDPOINT") or os.environ.get("FIRE_VLM_API_KEY")) else "pending"
+    return {"framework": "ready", "demo_pipeline": "ready", "agent_layer": "ready", "yolo": yolo_status, "vlm": vlm_status, "geo_data": "environment-service", "environment": {"modes": ["auto", "real", "offline", "demo"], "cache": "ttl-lru", "network": "optional"}, "tools": len(perception_registry.list()), "skills": len(skill_registry.list()), "last_checked": datetime.now().isoformat(timespec="seconds")}
 
 
 @router.get("/api/tools")
@@ -142,13 +147,19 @@ def download_task_report(task_id: str):
 
 
 @router.get("/api/tasks/{task_id}/events/stream")
-async def stream_task_events(task_id: str, once: bool = Query(False)):
+async def stream_task_events(task_id: str, once: bool = Query(False), request: Request = None):
     """SSE 事件流：先推全量快照，再增量推送新事件；终态后发送 done 并结束（客户端自动重连可续）。
 
     `once=1` 时只推送当前快照即结束，供测试与一次性拉取使用。
+    断线续传（FE-37）：浏览器 EventSource 重连自动携带 Last-Event-ID；复合游标
+    `e{事件下标}-a{消息seq}` 同时携带两条流的读取位置，服务端据此跳过已投递部分。
     """
     if analysis_store.get(task_id) is None:
         raise HTTPException(status_code=404, detail="任务不存在")
+    last_id = (request.headers.get("last-event-id") if request else "") or ""
+    resume_match = re.match(r"e(\d+)-a(\d+)", last_id)
+    resume_event = int(resume_match.group(1)) if resume_match else 0
+    resume_agent = int(resume_match.group(2)) if resume_match and resume_match.group(2) else 0
 
     async def event_stream():
         yield "retry: 3000\n\n"
@@ -156,12 +167,13 @@ async def stream_task_events(task_id: str, once: bool = Query(False)):
         if item is None:
             return
         events = item.events
-        for event in reversed(events):
-            yield f"data: {json.dumps(event.model_dump(), ensure_ascii=False)}\n\n"
-        msg_seq = 0
-        for message in analysis_store.get_messages(task_id):
+        start = max(0, min(resume_event, len(events)))
+        for index in range(start, len(events)):
+            yield f"id: e{index + 1}-a{resume_agent}\ndata: {json.dumps(events[index].model_dump(), ensure_ascii=False)}\n\n"
+        msg_seq = resume_agent
+        for message in analysis_store.get_messages(task_id, after_seq=msg_seq):
             msg_seq = message["seq"]
-            yield "event: agent_message\ndata: " + json.dumps(message, ensure_ascii=False) + "\n\n"
+            yield f"id: e{len(events)}-a{msg_seq}\nevent: agent_message\ndata: " + json.dumps(message, ensure_ascii=False) + "\n\n"
         if once:
             yield f"event: done\ndata: {json.dumps({'status': item.status}, ensure_ascii=False)}\n\n"
             return
@@ -178,15 +190,15 @@ async def stream_task_events(task_id: str, once: bool = Query(False)):
                 sent = total
             fresh = total - sent
             if fresh:
-                for event in reversed(events[:fresh]):
-                    yield f"data: {json.dumps(event.model_dump(), ensure_ascii=False)}\n\n"
+                for offset, event in enumerate(reversed(events[:fresh])):
+                    yield f"id: e{sent + fresh - offset}-a{msg_seq}\ndata: {json.dumps(event.model_dump(), ensure_ascii=False)}\n\n"
                 sent = total
                 idle_ticks = 0
             fresh_messages = analysis_store.get_messages(task_id, after_seq=msg_seq)
             if fresh_messages:
                 for message in fresh_messages:
                     msg_seq = message["seq"]
-                    yield "event: agent_message\ndata: " + json.dumps(message, ensure_ascii=False) + "\n\n"
+                    yield f"id: e{sent}-a{msg_seq}\nevent: agent_message\ndata: " + json.dumps(message, ensure_ascii=False) + "\n\n"
                 idle_ticks = 0
             else:
                 idle_ticks += 1

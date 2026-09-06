@@ -470,6 +470,14 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
     }
 
 
+def _pick_water_source(stock: Dict[str, Any], quantity: float) -> Optional[Dict[str, Any]]:
+    """规则 V1 §5.3：从库存水源中挑一处可用且安全、剩余容量足够的水源（就近优先）。"""
+    sources = [s for s in (stock.get("water_sources") or [])
+               if s.get("available") and s.get("safe", True) and float(s.get("capacity_liters", 0)) >= quantity]
+    sources.sort(key=lambda s: float(s.get("distance_m", 1e9)))
+    return sources[0] if sources else None
+
+
 def simulate_monitor(
     analysis: Dict[str, Any],
     elapsed_minutes: float,
@@ -580,6 +588,13 @@ def simulate_monitor(
                         progress["swap_left"] = 0
                         drone["status"] = "available"
                 else:
+                    # 就地取水计时中（规则 V1 §5.3：水源装水 8 min，直接灌装不耗模块）
+                    if progress is not None and progress.get("source_refill_left", 0) > 0:
+                        progress["source_refill_left"] -= 1
+                        if progress["source_refill_left"] <= 0:
+                            progress["source_refill_left"] = 0
+                            drone["status"] = "available"
+                        continue
                     if float(drone.get("agent_remaining", 0)) < capacity:
                         if module == "water_20l":
                             can_refill = stock.get("water_liters", 0) >= capacity and stock.get("water_modules_w20", 0) >= 1
@@ -592,7 +607,16 @@ def simulate_monitor(
                                 stock["co2_modules_c6"] = max(0, stock["co2_modules_c6"] - 1)
                         if can_refill:
                             drone["agent_remaining"] = capacity
-                        else:
+                        elif module == "water_20l":
+                            # 基地不足 → 就地取水（规则 V1 §5.3）：扣水源容量，装水 8 min 后归队
+                            source = _pick_water_source(stock, capacity)
+                            if source is not None:
+                                source["capacity_liters"] = round(float(source.get("capacity_liters", 0)) - capacity, 2)
+                                drone["agent_remaining"] = capacity
+                                if progress is not None:
+                                    progress["source_refill_left"] = 8
+                                continue
+                        if not can_refill:
                             stalled_agent = True
                             drone["status"] = "charging"
                             continue
