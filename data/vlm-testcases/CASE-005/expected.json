@@ -1,0 +1,29 @@
+{
+  "case_id": "CASE-005",
+  "verified": {
+    "date": "2026-09-06",
+    "method": "人工看图核验（视觉工具辅助）",
+    "basis": "2026-09-06人工核验：画面下方7-8名橙红救援服人员（戴盔、持工具）接近火线；树干间与右上角有明火；天空灰白烟浓；无消防车/道路/建筑/水面"
+  },
+  "checks_common": [
+    {
+      "desc": "人员可见→observed",
+      "field": "object_clues.people.state",
+      "op": "eq",
+      "value": "observed"
+    },
+    {
+      "desc": "人员证据非空（人数/位置/服装）",
+      "field": "object_clues.people.evidence",
+      "op": "nonempty"
+    },
+    {
+      "desc": "明火可见",
+      "field": "fire_observation.fire_presence",
+      "op": "eq",
+      "value": "flame_observed"
+    }
+  ],
+  "checks_extra": {},
+  "auto_checks": "结构/枚举/身份回显/禁止项扫描由02_run_cases.py自动执行，不在本文件重复"
+}

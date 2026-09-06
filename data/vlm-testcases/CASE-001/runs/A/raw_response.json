@@ -1,0 +1,20 @@
+{
+  "called_at": "2026-09-06 19:51:09",
+  "http_status": 200,
+  "latency_ms": 104572,
+  "retries_used": 2,
+  "format_repair_retry_used": false,
+  "usage": {
+    "completion_tokens": 1747,
+    "completion_tokens_details": {
+      "reasoning_tokens": 1308
+    },
+    "prompt_tokens": 2022,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "total_tokens": 3769
+  },
+  "error": null,
+  "content_raw": "\n```json\n{\n  \"schema_version\": \"vlm-analysis-v1\",\n  \"task_id\": \"CASE-001\",\n  \"round_index\": 1,\n  \"image_ids\": [\"CASE-001-R1-F1\"],\n  \"prompt_version\": \"v1\",\n  \"image_quality\": {\n    \"usable\": true,\n    \"quality_level\": \"good\",\n    \"problems\": [\"none\"],\n    \"missing_inputs\": [\"PWM-YOLO结果\"]\n  },\n  \"fire_observation\": {\n    \"fire_presence\": \"flame_observed\",\n    \"affected_layer\": \"mixed\",\n    \"canopy_involvement\": \"observed\",\n    \"visual_scale\": \"large\"\n  },\n  \"smoke_trend\": {\n    \"smoke_density\": \"heavy\",\n    \"image_plane_drift\": \"uncertain\",\n    \"temporal_trend\": \"first_round_no_comparison\"\n  },\n  \"object_clues\": {\n    \"people\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"\"\n    },\n    \"road\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"\"\n    },\n    \"building\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"\"\n    },\n    \"power_equipment\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"\"\n    },\n    \"water\": {\n      \"state\": \"water_candidate\",\n      \"evidence\": \"\"\n    },\n    \"obstacle\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"\"\n    }\n  },\n  \"review\": {\n    \"conflicts\": [\"PWM-YOLO服务未返回检测结果，导致火焰具体位置等关键信息无法通过YOLO结果验证\"],\n    \"manual_review_required\": true,\n    \"human_summary\": \"画面中可见明显火焰和浓烟，火势涉及地面与树冠（混合层燃烧），烟雾密度高。未观察到人员、道路、建筑或明确水体，水体标记为候选。第一轮无历史数据用于趋势比较。\"\n  }\n}\n```"
+}

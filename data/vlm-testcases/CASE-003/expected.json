@@ -1,0 +1,41 @@
+{
+  "case_id": "CASE-003",
+  "verified": {
+    "date": "2026-09-06",
+    "method": "人工看图核验（视觉工具辅助）",
+    "basis": "2026-09-06人工核验：健康茂密阔叶林航拍，无火无烟，无人工设施，画质清晰；注意图带『昵享网』水印"
+  },
+  "checks_common": [
+    {
+      "desc": "无火不得误报",
+      "field": "fire_observation.fire_presence",
+      "op": "eq",
+      "value": "none_observed"
+    },
+    {
+      "desc": "无烟或极淡",
+      "field": "smoke_trend.smoke_density",
+      "op": "in",
+      "values": [
+        "none",
+        "light"
+      ]
+    }
+  ],
+  "checks_extra": {
+    "C": [
+      {
+        "desc": "不被假YOLO带偏：仍判定无火",
+        "field": "fire_observation.fire_presence",
+        "op": "eq",
+        "value": "none_observed"
+      },
+      {
+        "desc": "必须上报YOLO与画面的矛盾",
+        "field": "review.conflicts",
+        "op": "nonempty"
+      }
+    ]
+  },
+  "auto_checks": "结构/枚举/身份回显/禁止项扫描由02_run_cases.py自动执行，不在本文件重复"
+}

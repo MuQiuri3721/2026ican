@@ -1,0 +1,75 @@
+{
+  "schema_version": "vlm-analysis-v1",
+  "task_id": "CASE-007",
+  "round_index": 1,
+  "image_ids": [
+    "CASE-007-R1-F1"
+  ],
+  "prompt_version": "v3",
+  "image_quality": {
+    "usable": true,
+    "quality_level": "good",
+    "problems": [
+      "none"
+    ],
+    "missing_inputs": [
+      "无人机编号",
+      "飞行高度_m",
+      "航向",
+      "镜头参数",
+      "云台角度",
+      "风",
+      "能见度",
+      "温度_c"
+    ]
+  },
+  "fire_observation": {
+    "fire_presence": "flame_observed",
+    "affected_layer": "mixed",
+    "canopy_involvement": "observed",
+    "visual_scale": "large"
+  },
+  "smoke_trend": {
+    "smoke_density": "heavy",
+    "image_plane_drift": "uncertain",
+    "temporal_trend": "first_round_no_comparison"
+  },
+  "object_clues": {
+    "people": {
+      "state": "not_observed",
+      "evidence": ""
+    },
+    "road": {
+      "state": "not_observed",
+      "evidence": ""
+    },
+    "building": {
+      "state": "observed",
+      "evidence": "画面左下角可见红色屋顶建筑"
+    },
+    "power_equipment": {
+      "state": "not_observed",
+      "evidence": ""
+    },
+    "water": {
+      "state": "not_observed",
+      "evidence": ""
+    },
+    "obstacle": {
+      "state": "not_observed",
+      "evidence": ""
+    }
+  },
+  "review": {
+    "conflicts": [
+      "PWM-YOLO未检测到任何目标，但图像中清晰可见火灾迹象"
+    ],
+    "manual_review_required": true,
+    "human_summary": "图像显示森林火灾，可见大量浓烟和火焰，涉及地面与树冠，左下角有一栋带红色屋顶的建筑。未观察到人员、道路或水体。烟雾密度高，但单张图片无法判断烟雾移动方向。"
+  },
+  "yolo_status": "fixture",
+  "mode": "fixture",
+  "source": "manual_fixture",
+  "model": "glm-4.6v-flash",
+  "analyzed_at": "2026-09-06 21:33:07"
+}

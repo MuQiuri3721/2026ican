@@ -1,0 +1,25 @@
+{
+  "case_id": "CASE-009",
+  "scenario": "电力线索+劣质图双测试：火点临近疑似电线杆（横担+多根线缆），画面偏模糊+顶部有遮挡物",
+  "task_id": "CASE-009",
+  "task_name": "demo林场-01分区",
+  "round_index": 1,
+  "prompt_version": "v3",
+  "model": "glm-4.6v-flash",
+  "temperature": 0.1,
+  "max_tokens": 2048,
+  "frames": [
+    {
+      "frame_id": "CASE-009-R1-F1",
+      "file": "T09.jpg",
+      "order": 1,
+      "time_offset_s": 0,
+      "sha256_16": "b5ee7d97a4b21328",
+      "size_kb": 321
+    }
+  ],
+  "source": null,
+  "license": null,
+  "source_note": "来源未记录（仅队内测试使用，图片不上传公开仓库）",
+  "updated": "2026-09-06 21:14:06"
+}

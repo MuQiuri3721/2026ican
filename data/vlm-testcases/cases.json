@@ -1,0 +1,809 @@
+{
+  "_说明": "12组测试案例总表（方案7.2）。checks是人工预期检查项，由02_run_cases.py自动判卷；运行器还会自动附加结构/枚举/禁止项/身份回显检查。status由运行器回写。",
+  "_判卷符号说明": "op取值：eq=等于；ne=不等于；in=在候选内；nonempty=非空；empty=为空；contains_any=数组含任一候选；usable_or_missing=usable=false或missing_inputs非空（劣质图专用）",
+  "_核验依据": "前6组基于2026-09-06人工看图核验（视觉工具辅助逐张确认）；后6组第2天核验后补齐。",
+  "cases": [
+    {
+      "case_id": "CASE-001",
+      "scenario": "明显明火+浓烟：地表火带蔓延，另有一棵树整株燃烧（树冠卷入迹象）",
+      "task_id": "CASE-001",
+      "task_name": "demo林场-01分区",
+      "round_index": 1,
+      "images": [
+        "T01.jpg"
+      ],
+      "source": null,
+      "license": null,
+      "source_note": "来源未记录（仅队内测试使用，图片不上传公开仓库）",
+      "status": "tested_fail",
+      "verification": "2026-09-06人工核验：多点火焰沿地表蔓延+一棵树自底至顶燃烧，浓烟，画面中无人员/道路/建筑/电力设备/水面，画质清晰",
+      "tiers": [
+        {
+          "tier": "A",
+          "yolo": "missing"
+        },
+        {
+          "tier": "C",
+          "yolo": "fixture",
+          "detections": [
+            {
+              "class": "flame",
+              "confidence": 0.88,
+              "bbox_norm": [
+                0.4,
+                0.35,
+                0.75,
+                0.8
+              ]
+            },
+            {
+              "class": "flame",
+              "confidence": 0.74,
+              "bbox_norm": [
+                0.3,
+                0.55,
+                0.45,
+                0.75
+              ]
+            },
+            {
+              "class": "smoke",
+              "confidence": 0.79,
+              "bbox_norm": [
+                0.05,
+                0.05,
+                0.8,
+                0.45
+              ]
+            }
+          ]
+        }
+      ],
+      "checks_common": [
+        {
+          "desc": "能认出明火",
+          "field": "fire_observation.fire_presence",
+          "op": "eq",
+          "value": "flame_observed"
+        },
+        {
+          "desc": "有树冠卷入迹象（画面可见整树燃烧）",
+          "field": "fire_observation.canopy_involvement",
+          "op": "in",
+          "values": [
+            "observed",
+            "uncertain"
+          ]
+        },
+        {
+          "desc": "烟量中等或浓",
+          "field": "smoke_trend.smoke_density",
+          "op": "in",
+          "values": [
+            "medium",
+            "heavy"
+          ]
+        },
+        {
+          "desc": "画面无人员→not_observed",
+          "field": "object_clues.people.state",
+          "op": "eq",
+          "value": "not_observed"
+        },
+        {
+          "desc": "单轮图片→first_round_no_comparison",
+          "field": "smoke_trend.temporal_trend",
+          "op": "eq",
+          "value": "first_round_no_comparison"
+        }
+      ],
+      "checks_extra": {
+        "C": [
+          {
+            "desc": "fixture与画面一致→conflicts应为空",
+            "field": "review.conflicts",
+            "op": "empty"
+          }
+        ]
+      },
+      "last_run": "2026-09-06 22:00",
+      "last_run_version": "v3+v4回归"
+    },
+    {
+      "case_id": "CASE-002",
+      "scenario": "只见浓烟不见明火（防幻觉关键案例）：灰白浓烟弥漫，画面中无火苗",
+      "task_id": "CASE-002",
+      "task_name": "demo林场-01分区",
+      "round_index": 1,
+      "images": [
+        "T02.jpg"
+      ],
+      "source": null,
+      "license": null,
+      "source_note": "来源未记录（仅队内测试使用，图片不上传公开仓库）",
+      "status": "tested_fail",
+      "verification": "2026-09-06人工核验：画面仅浓烟（灰白为主，局部深灰），未见任何火苗/火光，无人员/道路/建筑/电力设备/水面，画质清晰",
+      "tiers": [
+        {
+          "tier": "A",
+          "yolo": "missing"
+        },
+        {
+          "tier": "B",
+          "yolo": "fixture_empty"
+        },
+        {
+          "tier": "C",
+          "yolo": "fixture",
+          "detections": [
+            {
+              "class": "smoke",
+              "confidence": 0.72,
+              "bbox_norm": [
+                0.15,
+                0.05,
+                0.9,
+                0.55
+              ]
+            }
+          ]
+        }
+      ],
+      "checks_common": [
+        {
+          "desc": "只看到烟→smoke_only（禁止凭烟报flame_observed）",
+          "field": "fire_observation.fire_presence",
+          "op": "in",
+          "values": [
+            "smoke_only",
+            "uncertain"
+          ]
+        },
+        {
+          "desc": "烟量中等或浓",
+          "field": "smoke_trend.smoke_density",
+          "op": "in",
+          "values": [
+            "medium",
+            "heavy"
+          ]
+        },
+        {
+          "desc": "画面无人员→not_observed",
+          "field": "object_clues.people.state",
+          "op": "eq",
+          "value": "not_observed"
+        },
+        {
+          "desc": "单轮图片→first_round_no_comparison",
+          "field": "smoke_trend.temporal_trend",
+          "op": "eq",
+          "value": "first_round_no_comparison"
+        }
+      ],
+      "checks_extra": {
+        "B": [
+          {
+            "desc": "空fixture不得阻断观察：仍应报烟",
+            "field": "fire_observation.fire_presence",
+            "op": "ne",
+            "value": "none_observed"
+          }
+        ]
+      },
+      "last_run": "2026-09-06 22:00",
+      "last_run_version": "v3"
+    },
+    {
+      "case_id": "CASE-003",
+      "scenario": "无火纯森林（防误报）：茂密阔叶林航拍，画面无火无烟。C档故意给『假火焰框』测矛盾上报",
+      "task_id": "CASE-003",
+      "task_name": "demo林场-01分区",
+      "round_index": 1,
+      "images": [
+        "T03.jpg"
+      ],
+      "source": null,
+      "license": null,
+      "source_note": "来源未记录（仅队内测试使用；图含『昵享网』水印，不入公开仓库）",
+      "status": "tested_fail",
+      "verification": "2026-09-06人工核验：健康茂密阔叶林航拍，无火无烟，无人工设施，画质清晰；注意图带『昵享网』水印",
+      "tiers": [
+        {
+          "tier": "A",
+          "yolo": "missing"
+        },
+        {
+          "tier": "B",
+          "yolo": "fixture_empty"
+        },
+        {
+          "tier": "C",
+          "yolo": "fixture_wrong",
+          "detections": [
+            {
+              "class": "flame",
+              "confidence": 0.81,
+              "bbox_norm": [
+                0.4,
+                0.3,
+                0.65,
+                0.7
+              ]
+            }
+          ],
+          "wrong_on_purpose": true
+        }
+      ],
+      "checks_common": [
+        {
+          "desc": "无火不得误报",
+          "field": "fire_observation.fire_presence",
+          "op": "eq",
+          "value": "none_observed"
+        },
+        {
+          "desc": "无烟或极淡",
+          "field": "smoke_trend.smoke_density",
+          "op": "in",
+          "values": [
+            "none",
+            "light"
+          ]
+        }
+      ],
+      "checks_extra": {
+        "C": [
+          {
+            "desc": "不被假YOLO带偏：仍判定无火",
+            "field": "fire_observation.fire_presence",
+            "op": "eq",
+            "value": "none_observed"
+          },
+          {
+            "desc": "必须上报YOLO与画面的矛盾",
+            "field": "review.conflicts",
+            "op": "nonempty"
+          }
+        ]
+      },
+      "last_run": "2026-09-06 22:00",
+      "last_run_version": "v3"
+    },
+    {
+      "case_id": "CASE-004",
+      "scenario": "劣质图：夜间过暗+前景树枝遮挡+模糊，但火光带仍可辨认",
+      "task_id": "CASE-004",
+      "task_name": "demo林场-01分区",
+      "round_index": 1,
+      "images": [
+        "T04.jpg"
+      ],
+      "source": null,
+      "license": null,
+      "source_note": "来源未记录（仅队内测试使用，图片不上传公开仓库）",
+      "status": "tested_fail",
+      "verification": "2026-09-06人工核验：夜间图整体近黑、前景树枝剪影遮挡、火光边缘模糊；中下部橙红火光带+被映红的烟清晰可辨；无人员/道路/建筑/水面（右上角疑似细电线不确定）",
+      "tiers": [
+        {
+          "tier": "A",
+          "yolo": "missing"
+        }
+      ],
+      "checks_common": [
+        {
+          "desc": "劣质图：usable=false 或 missing_inputs非空",
+          "field": "SPECIAL",
+          "op": "usable_or_missing"
+        },
+        {
+          "desc": "质量问题须如实列出（过暗/模糊/遮挡/低分辨率至少一项）",
+          "field": "image_quality.problems",
+          "op": "contains_any",
+          "values": [
+            "too_dark",
+            "blurry",
+            "obstruction",
+            "low_resolution"
+          ]
+        },
+        {
+          "desc": "火光仍可辨认→flame_observed",
+          "field": "fire_observation.fire_presence",
+          "op": "eq",
+          "value": "flame_observed"
+        }
+      ],
+      "checks_extra": {},
+      "last_run": "2026-09-06 22:00",
+      "last_run_version": "v3"
+    },
+    {
+      "case_id": "CASE-005",
+      "scenario": "火场有人员：7~8名橙红色救援服人员在山坡接近火线扑救，火线沿山坡蔓延",
+      "task_id": "CASE-005",
+      "task_name": "demo林场-01分区",
+      "round_index": 1,
+      "images": [
+        "T05.jpg"
+      ],
+      "source": null,
+      "license": null,
+      "source_note": "来源未记录（仅队内测试使用，图片不上传公开仓库）",
+      "status": "tested_pass",
+      "verification": "2026-09-06人工核验：画面下方7-8名橙红救援服人员（戴盔、持工具）接近火线；树干间与右上角有明火；天空灰白烟浓；无消防车/道路/建筑/水面",
+      "tiers": [
+        {
+          "tier": "A",
+          "yolo": "missing"
+        },
+        {
+          "tier": "C",
+          "yolo": "fixture",
+          "detections": [
+            {
+              "class": "flame",
+              "confidence": 0.83,
+              "bbox_norm": [
+                0.1,
+                0.4,
+                0.9,
+                0.75
+              ]
+            },
+            {
+              "class": "smoke",
+              "confidence": 0.8,
+              "bbox_norm": [
+                0.3,
+                0.05,
+                0.95,
+                0.6
+              ]
+            }
+          ]
+        }
+      ],
+      "checks_common": [
+        {
+          "desc": "人员可见→observed",
+          "field": "object_clues.people.state",
+          "op": "eq",
+          "value": "observed"
+        },
+        {
+          "desc": "人员证据非空（人数/位置/服装）",
+          "field": "object_clues.people.evidence",
+          "op": "nonempty"
+        },
+        {
+          "desc": "明火可见",
+          "field": "fire_observation.fire_presence",
+          "op": "eq",
+          "value": "flame_observed"
+        }
+      ],
+      "checks_extra": {},
+      "last_run": "2026-09-06 22:00",
+      "last_run_version": "v3"
+    },
+    {
+      "case_id": "CASE-006",
+      "scenario": "无人员火场：左侧明火+中等偏浓烟，画面仔细检查无人，分辨率偏低",
+      "task_id": "CASE-006",
+      "task_name": "demo林场-01分区",
+      "round_index": 1,
+      "images": [
+        "T06.jpg"
+      ],
+      "source": null,
+      "license": null,
+      "source_note": "来源未记录（仅队内测试使用；图隐约有水印痕迹）",
+      "status": "tested_pass",
+      "verification": "2026-09-06人工核验：左侧及中下部明显明火（约占左半），烟灰白+深灰中等偏浓；仔细检查无人员；无道路/建筑/电力/水面；分辨率偏低有压缩痕迹",
+      "tiers": [
+        {
+          "tier": "A",
+          "yolo": "missing"
+        }
+      ],
+      "checks_common": [
+        {
+          "desc": "明火可见",
+          "field": "fire_observation.fire_presence",
+          "op": "eq",
+          "value": "flame_observed"
+        },
+        {
+          "desc": "未见人员→not_observed（禁止absent）",
+          "field": "object_clues.people.state",
+          "op": "eq",
+          "value": "not_observed"
+        }
+      ],
+      "checks_extra": {},
+      "last_run": "2026-09-06 22:00",
+      "last_run_version": "v3"
+    },
+    {
+      "case_id": "CASE-007",
+      "scenario": "保护目标线索：右侧远处火线+浓烟遮蔽上半部，左下角可见红屋顶建筑一角",
+      "task_id": "CASE-007",
+      "task_name": "demo林场-01分区",
+      "round_index": 1,
+      "images": [
+        "T07.jpg"
+      ],
+      "source": null,
+      "license": null,
+      "source_note": "来源未记录（仅队内测试使用，图片不上传公开仓库）",
+      "status": "tested_fail",
+      "verification": "2026-09-06人工核验：右侧远处橙色火线沿地平线横向蔓延，棕黑/灰黄浓烟占画面上半部；左下角红屋顶建筑一角（部分被树木遮挡）；未见人员/道路/电力设备/水面；清晰度尚可，上半部受烟遮挡",
+      "tiers": [
+        {
+          "tier": "A",
+          "yolo": "missing"
+        },
+        {
+          "tier": "B",
+          "yolo": "fixture_empty"
+        }
+      ],
+      "checks_common": [
+        {
+          "desc": "能认出远处火线明火",
+          "field": "fire_observation.fire_presence",
+          "op": "eq",
+          "value": "flame_observed"
+        },
+        {
+          "desc": "烟量中等或浓",
+          "field": "smoke_trend.smoke_density",
+          "op": "in",
+          "values": [
+            "medium",
+            "heavy"
+          ]
+        },
+        {
+          "desc": "红屋顶建筑可见→observed",
+          "field": "object_clues.building.state",
+          "op": "eq",
+          "value": "observed"
+        },
+        {
+          "desc": "建筑证据非空（位置/颜色）",
+          "field": "object_clues.building.evidence",
+          "op": "nonempty"
+        },
+        {
+          "desc": "画面无人员→not_observed",
+          "field": "object_clues.people.state",
+          "op": "eq",
+          "value": "not_observed"
+        },
+        {
+          "desc": "单轮图片→first_round_no_comparison",
+          "field": "smoke_trend.temporal_trend",
+          "op": "eq",
+          "value": "first_round_no_comparison"
+        }
+      ],
+      "checks_extra": {
+        "B": [
+          {
+            "desc": "空fixture不得阻断观察：仍应报明火",
+            "field": "fire_observation.fire_presence",
+            "op": "ne",
+            "value": "none_observed"
+          }
+        ]
+      },
+      "last_run_version": "v3",
+      "last_run": "2026-09-06 22:00"
+    },
+    {
+      "case_id": "CASE-008",
+      "scenario": "水源线索：林间带状明火+灰黑浓烟，火场位于湍急河流对岸（water_candidate案例）",
+      "task_id": "CASE-008",
+      "task_name": "demo林场-01分区",
+      "round_index": 1,
+      "images": [
+        "T08.jpg"
+      ],
+      "source": null,
+      "license": null,
+      "source_note": "来源未记录（仅队内测试使用，图片不上传公开仓库）",
+      "status": "tested_fail",
+      "verification": "2026-09-06人工核验：画面中部偏左至偏右林间横向带状明火（部分沿树干向上蔓延）+灰黑浓烟；下半部为宽阔湍急河流（青绿色，浪花岩石可见），火场在河对岸、火焰倒映水面；未见人员/道路/建筑/电力设备；画质清晰（色彩饱和度偏高，疑为合成/渲染图，仅作测试输入）",
+      "tiers": [
+        {
+          "tier": "A",
+          "yolo": "missing"
+        },
+        {
+          "tier": "B",
+          "yolo": "fixture_empty"
+        }
+      ],
+      "checks_common": [
+        {
+          "desc": "明火可见",
+          "field": "fire_observation.fire_presence",
+          "op": "eq",
+          "value": "flame_observed"
+        },
+        {
+          "desc": "烟量中等或浓",
+          "field": "smoke_trend.smoke_density",
+          "op": "in",
+          "values": [
+            "medium",
+            "heavy"
+          ]
+        },
+        {
+          "desc": "河流可见→water_candidate（禁止输出可取水判断）",
+          "field": "object_clues.water.state",
+          "op": "eq",
+          "value": "water_candidate"
+        },
+        {
+          "desc": "水体证据非空（位置/形态）",
+          "field": "object_clues.water.evidence",
+          "op": "nonempty"
+        },
+        {
+          "desc": "画面无人员→not_observed",
+          "field": "object_clues.people.state",
+          "op": "eq",
+          "value": "not_observed"
+        },
+        {
+          "desc": "单轮图片→first_round_no_comparison",
+          "field": "smoke_trend.temporal_trend",
+          "op": "eq",
+          "value": "first_round_no_comparison"
+        }
+      ],
+      "checks_extra": {
+        "B": [
+          {
+            "desc": "空fixture不得阻断观察：仍应报明火",
+            "field": "fire_observation.fire_presence",
+            "op": "ne",
+            "value": "none_observed"
+          }
+        ]
+      },
+      "last_run_version": "v3",
+      "last_run": "2026-09-06 22:00"
+    },
+    {
+      "case_id": "CASE-009",
+      "scenario": "电力线索+劣质图双测试：火点临近疑似电线杆（横担+多根线缆），画面偏模糊+顶部有遮挡物",
+      "task_id": "CASE-009",
+      "task_name": "demo林场-01分区",
+      "round_index": 1,
+      "images": [
+        "T09.jpg"
+      ],
+      "source": null,
+      "license": null,
+      "source_note": "来源未记录（仅队内测试使用，图片不上传公开仓库）",
+      "status": "tested_fail",
+      "verification": "2026-09-06人工核验：画面中上部较大明火+灰白烟向左上扩散；火点旁疑似电线杆（横担+线缆向左下延伸），下方有砖砌结构（不确定是否建筑，电力与建筑仅疑似、不设硬性预期检查）；整体偏模糊轻微失焦、顶部有浅色遮挡物（疑似屋檐/桥边）、火点过曝；未见人员/道路/水面",
+      "tiers": [
+        {
+          "tier": "A",
+          "yolo": "missing"
+        }
+      ],
+      "checks_common": [
+        {
+          "desc": "火光仍可辨认→flame_observed",
+          "field": "fire_observation.fire_presence",
+          "op": "eq",
+          "value": "flame_observed"
+        },
+        {
+          "desc": "偏模糊+遮挡+过曝，画质不得评为good",
+          "field": "image_quality.quality_level",
+          "op": "ne",
+          "value": "good"
+        },
+        {
+          "desc": "质量问题须如实列出（模糊/遮挡/过曝至少一项）",
+          "field": "image_quality.problems",
+          "op": "contains_any",
+          "values": [
+            "blurry",
+            "obstruction",
+            "overexposed"
+          ]
+        },
+        {
+          "desc": "单轮图片→first_round_no_comparison",
+          "field": "smoke_trend.temporal_trend",
+          "op": "eq",
+          "value": "first_round_no_comparison"
+        }
+      ],
+      "checks_extra": {},
+      "last_run_version": "v3",
+      "last_run": "2026-09-06 22:00"
+    },
+    {
+      "case_id": "CASE-010",
+      "scenario": "帧间递增对比：帧1山坡林缘明火+灰白浓烟(T10A)→帧2山坡上方大面积条带状明火+浓黑烟(T10B)。视频截图，含台标/字幕叠加",
+      "task_id": "CASE-010",
+      "task_name": "demo林场-01分区",
+      "round_index": 1,
+      "images": [
+        "T10A.jpg",
+        "T10B.jpg"
+      ],
+      "source": null,
+      "license": null,
+      "source_note": "来源未记录（仅队内测试使用，图片不上传公开仓库）",
+      "status": "tested_fail",
+      "verification": "2026-09-06人工核验：T10A右下侧林缘明火沿山坡分布+大面积灰白烟；T10B中部偏右山坡上方大面积条带状明火（规模更大）+右侧浓黑烟；两帧均无人员/道路/建筑/电力设备/水面；人工判定帧2火势与烟量强于帧1（递增）；两帧均为带台标/字幕的视频截图",
+      "tiers": [
+        {
+          "tier": "A",
+          "yolo": "missing"
+        }
+      ],
+      "checks_common": [
+        {
+          "desc": "明火可见",
+          "field": "fire_observation.fire_presence",
+          "op": "eq",
+          "value": "flame_observed"
+        },
+        {
+          "desc": "烟量中等或浓",
+          "field": "smoke_trend.smoke_density",
+          "op": "in",
+          "values": [
+            "medium",
+            "heavy"
+          ]
+        },
+        {
+          "desc": "帧间递增或如实看不出（人工判定帧2更强，禁止答weakening）",
+          "field": "smoke_trend.temporal_trend",
+          "op": "in",
+          "values": [
+            "intensifying",
+            "unclear"
+          ]
+        },
+        {
+          "desc": "画面无人员→not_observed",
+          "field": "object_clues.people.state",
+          "op": "eq",
+          "value": "not_observed"
+        }
+      ],
+      "checks_extra": {},
+      "last_run_version": "v3(v4限流未完成)",
+      "last_run": "2026-09-06 22:00"
+    },
+    {
+      "case_id": "CASE-011",
+      "scenario": "替代递减组（原T11a/b缺图）：帧1浓烟弥漫无明火(T02)→帧2无火无烟健康林(T03)，模拟火情熄灭烟消散。注意：两帧为替代组合、非真实同场景连续帧（诚实标注）",
+      "task_id": "CASE-011",
+      "task_name": "demo林场-01分区",
+      "round_index": 1,
+      "images": [
+        "T02.jpg",
+        "T03.jpg"
+      ],
+      "source": null,
+      "license": null,
+      "source_note": "来源未记录（仅队内测试使用，图片不上传公开仓库；T02/T03为复用图，缺图替代组合）",
+      "status": "tested_fail",
+      "verification": "2026-09-06人工核验：T02仅灰白浓烟、无任何火苗；T03茂密阔叶林、无火无烟；按输入设定（同火场前后帧）人工判定帧2较帧1火情明显减弱（烟消散）；两帧实为缺图替代组合、非真实连续帧，此局限已如实记录",
+      "tiers": [
+        {
+          "tier": "A",
+          "yolo": "missing"
+        }
+      ],
+      "checks_common": [
+        {
+          "desc": "两帧均无明火，禁止报flame_observed（防幻觉核心）",
+          "field": "fire_observation.fire_presence",
+          "op": "in",
+          "values": [
+            "smoke_only",
+            "none_observed",
+            "uncertain"
+          ]
+        },
+        {
+          "desc": "递减或如实看不出（人工判定帧2明显减弱，禁止答intensifying）",
+          "field": "smoke_trend.temporal_trend",
+          "op": "in",
+          "values": [
+            "weakening",
+            "unclear"
+          ]
+        },
+        {
+          "desc": "画面无人员→not_observed",
+          "field": "object_clues.people.state",
+          "op": "eq",
+          "value": "not_observed"
+        }
+      ],
+      "checks_extra": {},
+      "last_run_version": "v4",
+      "last_run": "2026-09-06 22:00"
+    },
+    {
+      "case_id": "CASE-012",
+      "scenario": "帧间基本稳定对比：两帧均为左侧弧形火带（约1/3画面宽）+大片过火焦黑+浓烟；中部偏右有疑似扑火人员（远距航拍橙红点串，不确定，仅记录不设硬检查）",
+      "task_id": "CASE-012",
+      "task_name": "demo林场-01分区",
+      "round_index": 1,
+      "images": [
+        "T12A.jpg",
+        "T12B.jpg"
+      ],
+      "source": null,
+      "license": null,
+      "source_note": "来源未记录（仅队内测试使用，图片不上传公开仓库）",
+      "status": "tested_pass",
+      "verification": "2026-09-06人工核验：T12A左侧弧形橙红火带（约1/3画面宽）+灰白至灰黑浓烟+中上部/右侧焦黑过火痕；T12B左侧及左下多处弧形火线+零星小火点+浓厚灰白烟+中部偏右焦黑；两帧中部偏右均有疑似橙红服装人员（远距航拍无法确认，帧1旁疑似白色水带）；人工判定两帧火线位置与规模相近（基本稳定）",
+      "tiers": [
+        {
+          "tier": "A",
+          "yolo": "missing"
+        }
+      ],
+      "checks_common": [
+        {
+          "desc": "明火可见",
+          "field": "fire_observation.fire_presence",
+          "op": "eq",
+          "value": "flame_observed"
+        },
+        {
+          "desc": "烟量中等或浓",
+          "field": "smoke_trend.smoke_density",
+          "op": "in",
+          "values": [
+            "medium",
+            "heavy"
+          ]
+        },
+        {
+          "desc": "基本稳定或如实看不出（人工判定两帧相近）",
+          "field": "smoke_trend.temporal_trend",
+          "op": "in",
+          "values": [
+            "stable",
+            "unclear"
+          ]
+        },
+        {
+          "desc": "航拍林地无建筑→not_observed（防幻觉）",
+          "field": "object_clues.building.state",
+          "op": "eq",
+          "value": "not_observed"
+        },
+        {
+          "desc": "无水面→not_observed（防幻觉）",
+          "field": "object_clues.water.state",
+          "op": "eq",
+          "value": "not_observed"
+        }
+      ],
+      "checks_extra": {},
+      "last_run_version": "v4",
+      "last_run": "2026-09-06 22:00"
+    }
+  ]
+}

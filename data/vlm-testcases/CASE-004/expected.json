@@ -1,0 +1,34 @@
+{
+  "case_id": "CASE-004",
+  "verified": {
+    "date": "2026-09-06",
+    "method": "人工看图核验（视觉工具辅助）",
+    "basis": "2026-09-06人工核验：夜间图整体近黑、前景树枝剪影遮挡、火光边缘模糊；中下部橙红火光带+被映红的烟清晰可辨；无人员/道路/建筑/水面（右上角疑似细电线不确定）"
+  },
+  "checks_common": [
+    {
+      "desc": "劣质图：usable=false 或 missing_inputs非空",
+      "field": "SPECIAL",
+      "op": "usable_or_missing"
+    },
+    {
+      "desc": "质量问题须如实列出（过暗/模糊/遮挡/低分辨率至少一项）",
+      "field": "image_quality.problems",
+      "op": "contains_any",
+      "values": [
+        "too_dark",
+        "blurry",
+        "obstruction",
+        "low_resolution"
+      ]
+    },
+    {
+      "desc": "火光仍可辨认→flame_observed",
+      "field": "fire_observation.fire_presence",
+      "op": "eq",
+      "value": "flame_observed"
+    }
+  ],
+  "checks_extra": {},
+  "auto_checks": "结构/枚举/身份回显/禁止项扫描由02_run_cases.py自动执行，不在本文件重复"
+}

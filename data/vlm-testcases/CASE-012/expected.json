@@ -1,0 +1,48 @@
+{
+  "case_id": "CASE-012",
+  "verified": {
+    "date": "2026-09-06",
+    "method": "人工看图核验（视觉工具辅助）",
+    "basis": "2026-09-06人工核验：T12A左侧弧形橙红火带（约1/3画面宽）+灰白至灰黑浓烟+中上部/右侧焦黑过火痕；T12B左侧及左下多处弧形火线+零星小火点+浓厚灰白烟+中部偏右焦黑；两帧中部偏右均有疑似橙红服装人员（远距航拍无法确认，帧1旁疑似白色水带）；人工判定两帧火线位置与规模相近（基本稳定）"
+  },
+  "checks_common": [
+    {
+      "desc": "明火可见",
+      "field": "fire_observation.fire_presence",
+      "op": "eq",
+      "value": "flame_observed"
+    },
+    {
+      "desc": "烟量中等或浓",
+      "field": "smoke_trend.smoke_density",
+      "op": "in",
+      "values": [
+        "medium",
+        "heavy"
+      ]
+    },
+    {
+      "desc": "基本稳定或如实看不出（人工判定两帧相近）",
+      "field": "smoke_trend.temporal_trend",
+      "op": "in",
+      "values": [
+        "stable",
+        "unclear"
+      ]
+    },
+    {
+      "desc": "航拍林地无建筑→not_observed（防幻觉）",
+      "field": "object_clues.building.state",
+      "op": "eq",
+      "value": "not_observed"
+    },
+    {
+      "desc": "无水面→not_observed（防幻觉）",
+      "field": "object_clues.water.state",
+      "op": "eq",
+      "value": "not_observed"
+    }
+  ],
+  "checks_extra": {},
+  "auto_checks": "结构/枚举/身份回显/禁止项扫描由02_run_cases.py自动执行，不在本文件重复"
+}

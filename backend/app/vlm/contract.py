@@ -47,28 +47,25 @@ def _walk_forbidden(node: Any, path: str, violations: List[str]) -> Any:
     return node
 
 
-def _clamp_people(payload: Dict[str, Any], violations: List[str]) -> None:
-    for anchor in ("people", "scene_elements"):
-        node = payload.get(anchor)
-        if not isinstance(node, dict):
-            continue
-        people = node.get("people") if anchor == "scene_elements" else node
-        if isinstance(people, dict) and str(people.get("state", "")).lower() in PEOPLE_ABSENT_ALIASES:
-            people["state"] = "not_observed"
-            violations.append(f"people.state=absent 已钳位为 not_observed（{anchor}）")
+def _clamp_semantics(node: Any, violations: List[str]) -> None:
+    """全树语义钳位：people.state 禁 absent、water 禁判定可取水。
 
-
-def _clamp_water(node: Any, violations: List[str]) -> Any:
+    兼容顶层与交付实测的嵌套结构（object_clues.people / object_clues.water / scene_elements 等）。
+    """
     if isinstance(node, dict):
-        for field in ("state", "status", "usability"):
-            if str(node.get(field, "")).lower() in WATER_FORBIDDEN_STATES:
-                node[field] = WATER_ALLOWED
-                violations.append(f"water.{field} 已钳位为 water_candidate（可否取水由 GIS 与规则引擎判断）")
-        for key, value in list(node.items()):
-            node[key] = _clamp_water(value, violations)
+        for key, value in node.items():
+            if key == "people" and isinstance(value, dict) and str(value.get("state", "")).lower() in PEOPLE_ABSENT_ALIASES:
+                value["state"] = "not_observed"
+                violations.append("people.state=absent 已钳位为 not_observed（未看到人员不等于不在场）")
+            if key == "water" and isinstance(value, dict):
+                for field in ("state", "status", "usability"):
+                    if str(value.get(field, "")).lower() in WATER_FORBIDDEN_STATES:
+                        value[field] = WATER_ALLOWED
+                        violations.append(f"water.{field} 已钳位为 water_candidate（可否取水由 GIS 与规则引擎判断）")
+            _clamp_semantics(value, violations)
     elif isinstance(node, list):
-        return [_clamp_water(item, violations) for item in node]
-    return node
+        for item in node:
+            _clamp_semantics(item, violations)
 
 
 def validate_vlm_analysis(
@@ -98,10 +95,7 @@ def validate_vlm_analysis(
             return None, report
 
     cleaned = _walk_forbidden(payload, "", violations)
-    _clamp_people(cleaned, violations)
-    for anchor in ("water", "scene_elements", "objects"):
-        if anchor in cleaned:
-            cleaned[anchor] = _clamp_water(cleaned[anchor], violations)
+    _clamp_semantics(cleaned, violations)
 
     report["valid"] = True
     report["violations"] = violations

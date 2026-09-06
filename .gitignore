@@ -14,3 +14,7 @@ e2e/ps_check.json
 e2e/small.json
 data/tts_cache/
 backend/data/
+
+# VLM 交付测试图片（来源/版权未记录，仅队内使用；docs/vlm-delivery/README.md §安全与合规）
+data/vlm-testcases/_raw_images/
+data/vlm-testcases/CASE-*/images/

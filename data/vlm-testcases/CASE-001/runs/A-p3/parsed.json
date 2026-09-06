@@ -1,0 +1,75 @@
+{
+  "schema_version": "vlm-analysis-v1",
+  "task_id": "CASE-001",
+  "round_index": 1,
+  "image_ids": [
+    "CASE-001-R1-F1"
+  ],
+  "prompt_version": "v3",
+  "image_quality": {
+    "usable": true,
+    "quality_level": "good",
+    "problems": [
+      "none"
+    ],
+    "missing_inputs": [
+      "无人机编号",
+      "飞行高度_m",
+      "航向",
+      "镜头参数",
+      "云台角度",
+      "坡度",
+      "水源概况",
+      "风",
+      "能见度",
+      "温度_c"
+    ]
+  },
+  "fire_observation": {
+    "fire_presence": "flame_observed",
+    "affected_layer": "mixed",
+    "canopy_involvement": "observed",
+    "visual_scale": "large"
+  },
+  "smoke_trend": {
+    "smoke_density": "heavy",
+    "image_plane_drift": "uncertain",
+    "temporal_trend": "first_round_no_comparison"
+  },
+  "object_clues": {
+    "people": {
+      "state": "not_observed",
+      "evidence": ""
+    },
+    "road": {
+      "state": "not_observed",
+      "evidence": ""
+    },
+    "building": {
+      "state": "not_observed",
+      "evidence": ""
+    },
+    "power_equipment": {
+      "state": "not_observed",
+      "evidence": ""
+    },
+    "water": {
+      "state": "not_observed",
+      "evidence": ""
+    },
+    "obstacle": {
+      "state": "not_observed",
+      "evidence": ""
+    }
+  },
+  "review": {
+    "conflicts": [],
+    "manual_review_required": true,
+    "human_summary": "图片中可见森林火灾，有火焰和浓烟，火势涉及地面和树冠，烟雾密度高。未观察到人员、道路、建筑或水体。"
+  },
+  "yolo_status": "missing",
+  "mode": null,
+  "source": null,
+  "model": "glm-4.6v-flash",
+  "analyzed_at": "2026-09-06 20:38:15"
+}

@@ -1,0 +1,20 @@
+{
+  "called_at": "2026-09-06 21:00:12",
+  "http_status": 200,
+  "latency_ms": 19101,
+  "retries_used": 0,
+  "format_repair_retry_used": false,
+  "usage": {
+    "completion_tokens": 1169,
+    "completion_tokens_details": {
+      "reasoning_tokens": 743
+    },
+    "prompt_tokens": 1443,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "total_tokens": 2612
+  },
+  "error": null,
+  "content_raw": "\n{\n  \"schema_version\": \"vlm-analysis-v1\",\n  \"task_id\": \"CASE-006\",\n  \"round_index\": 1,\n  \"image_ids\": [\"CASE-006-R1-F1\"],\n  \"prompt_version\": \"v3\",\n  \"image_quality\": {\n    \"usable\": true,\n    \"quality_level\": \"good\",\n    \"problems\": [\"none\"],\n    \"missing_inputs\": [\"无人机编号\", \"飞行高度_m\", \"航向\", \"镜头参数\", \"云台角度\", \"风\", \"能见度\", \"温度_c\"]\n  },\n  \"fire_observation\": {\n    \"fire_presence\": \"flame_observed\",\n    \"affected_layer\": \"mixed\",\n    \"canopy_involvement\": \"observed\",\n    \"visual_scale\": \"large\"\n  },\n  \"smoke_trend\": {\n    \"smoke_density\": \"heavy\",\n    \"image_plane_drift\": \"uncertain\",\n    \"temporal_trend\": \"first_round_no_comparison\"\n  },\n  \"object_clues\": {\n    \"people\": {\"state\": \"not_observed\", \"evidence\": \"\"},\n    \"road\": {\"state\": \"not_observed\", \"evidence\": \"\"},\n    \"building\": {\"state\": \"not_observed\", \"evidence\": \"\"},\n    \"power_equipment\": {\"state\": \"not_observed\", \"evidence\": \"\"},\n    \"water\": {\"state\": \"not_observed\", \"evidence\": \"\"},\n    \"obstacle\": {\"state\": \"not_observed\", \"evidence\": \"\"}\n  },\n  \"review\": {\n    \"conflicts\": [\"PWM-YOLO服务未接入，无检测结果\"],\n    \"manual_review_required\": true,\n    \"human_summary\": \"画面中可见明显火焰，涉及地面和树干，伴有浓烟。树冠有火焰，火势看起来较大。未观察到人员、道路、建筑或水体。烟雾趋势无法判断，这是第一轮分析。\"\n  }\n}"
+}

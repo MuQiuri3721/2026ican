@@ -19,23 +19,22 @@ from backend.app.vlm.contract import SCHEMA_VERSION  # noqa: E402
 
 
 def _v1_payload(**overrides) -> dict:
+    """交付 v4 §二的嵌套结构（48 次实测的真实形状）。"""
     payload = {
         "schema_version": SCHEMA_VERSION,
         "task_id": "task-1",
         "round_index": 1,
+        "image_ids": ["F1"],
         "mode": "model",
         "source": "glm-4.6v-flash",
-        "usable": True,
-        "quality_level": "clear",
-        "problems": [],
-        "missing_inputs": [],
-        "fire_presence": "observed",
-        "smoke_density": "moderate",
-        "image_plane_drift": "left-up",
-        "temporal_trend": "intensifying",
-        "people": {"state": "not_observed"},
-        "scene_elements": {"water": {"state": "water_candidate"}},
-        "human_summary": "画面中可见明火与烟雾，未观察到人员。",
+        "image_quality": {"usable": True, "quality_level": "good", "problems": ["none"], "missing_inputs": []},
+        "fire_observation": {"fire_presence": "flame_observed", "affected_layer": "surface",
+                             "canopy_involvement": "not_observed", "visual_scale": "medium"},
+        "smoke_trend": {"smoke_density": "heavy", "image_plane_drift": "left-up",
+                        "temporal_trend": "intensifying"},
+        "object_clues": {"people": {"state": "not_observed", "evidence": ""}},
+        "review": {"conflicts": [], "manual_review_required": False,
+                   "human_summary": "画面中可见明火与烟雾，未观察到人员。"},
     }
     payload.update(overrides)
     return payload
@@ -47,7 +46,7 @@ def test_valid_payload_passes_unchanged():
     cleaned, report = validate_vlm_analysis(_v1_payload(), task_id="task-1", round_index=1)
     assert report["valid"] is True
     assert report["violations"] == []
-    assert cleaned["human_summary"].startswith("画面中可见明火")
+    assert cleaned["review"]["human_summary"].startswith("画面中可见明火")
 
 
 def test_wrong_schema_version_is_rejected_wholesale():
@@ -91,6 +90,60 @@ def test_water_confirmed_is_clamped_to_candidate():
     cleaned, report = validate_vlm_analysis(payload)
     assert cleaned["scene_elements"]["water"]["state"] == "water_candidate"
     assert any("water_candidate" in violation for violation in report["violations"])
+
+
+def test_object_clues_people_absent_is_clamped():
+    """交付实测结构（prompt-v4 §二）：对象线索挂在 object_clues 下，钳位必须同样生效。"""
+    payload = _v1_payload(object_clues={"people": {"state": "absent", "evidence": ""},
+                                        "water": {"state": "confirmed", "evidence": "河面"}})
+    cleaned, report = validate_vlm_analysis(payload)
+    assert cleaned["object_clues"]["people"]["state"] == "not_observed"
+    assert cleaned["object_clues"]["water"]["state"] == "water_candidate"
+    assert len(report["violations"]) == 2
+    assert cleaned["manual_review_required"] is True
+
+
+def test_fenced_output_is_parsed_after_fence_strip(vlm_env, tmp_path, monkeypatch):
+    """交付 P01：v1 下 12/12 次输出被 ``` 围栏包裹；解析必须取首 { 至末 } 剥围栏。"""
+    fenced = "```json\n" + json.dumps(_v1_payload(), ensure_ascii=False) + "\n```"
+
+    def fake_post(url, **kwargs):
+        return _FakeResponse(fenced)
+
+    monkeypatch.setattr(vlm_client.requests, "post", fake_post)
+    result = vlm_analyze_images([_write_png(tmp_path)], observation={}, environment={},
+                                task_id="task-1", round_index=1)
+    assert result is not None
+    assert result["schema_version"] == SCHEMA_VERSION
+
+
+def test_empty_http_200_counts_as_failure(vlm_env, tmp_path, monkeypatch):
+    """交付 P07：HTTP 200 空响应按可重试失败处理，不得重置失败计数。"""
+
+    def fake_post(url, **kwargs):
+        return _FakeResponse("")
+
+    monkeypatch.setattr(vlm_client.requests, "post", fake_post)
+    assert vlm_analyze_images([_write_png(tmp_path)], observation={}, environment={}) is None
+    assert vlm_client._FAILURES == 1
+
+
+def test_user_message_carries_task_info_and_multi_image_note(vlm_env, tmp_path, monkeypatch):
+    """交付 v1.1/v4：用户消息首行「任务信息」携带 task_id；多图轮次注入帧序列说明行。"""
+    capture = {}
+
+    def fake_post(url, **kwargs):
+        capture["json"] = kwargs.get("json")
+        return _FakeResponse(json.dumps(_v1_payload()))
+
+    monkeypatch.setattr(vlm_client.requests, "post", fake_post)
+    paths = [_write_png(tmp_path, "f1.jpg"), _write_png(tmp_path, "f2.jpg")]
+    vlm_analyze_images(paths, observation={}, environment={}, task_id="task-9", round_index=2)
+    text_parts = [part["text"] for part in capture["json"]["messages"][1]["content"] if part.get("type") == "text"]
+    assert "任务信息：task_id=task-9, round_index=2" in text_parts[0]
+    assert "帧序列" in text_parts[0]  # 多图 → 说明行存在
+    assert capture["json"]["max_tokens"] == 2048 and capture["json"]["temperature"] == 0.1
+    assert "vlm-analysis-v1 输出结构定义" in capture["json"]["messages"][0]["content"]
 
 
 # ---------- client.vlm_analyze_images ----------
@@ -149,6 +202,36 @@ def test_client_retries_once_on_invalid_json(tmp_path, vlm_env, monkeypatch):
     assert not responses  # 恰好用满一次修复重试
 
 
+def test_client_repairs_incomplete_payload_once(tmp_path, vlm_env, monkeypatch):
+    """交付 §7-1：解析成功但缺必填字段组（P01/P02 残留）→ 带缺失清单定向修复一次。"""
+    incomplete = {"schema_version": SCHEMA_VERSION, "task_id": "task-1", "round_index": 1,
+                  "fire_presence": "flame_observed"}
+    calls = []
+
+    def fake_post(url, **kwargs):
+        calls.append(kwargs.get("json"))
+        if len(calls) == 1:
+            return _FakeResponse(json.dumps(incomplete))
+        assert "image_quality" in kwargs["json"]["messages"][-1]["content"]  # 缺失清单已回传
+        return _FakeResponse(json.dumps(_v1_payload()))
+
+    monkeypatch.setattr(vlm_client.requests, "post", fake_post)
+    result = vlm_analyze_images([_write_png(tmp_path)], observation={}, environment={})
+    assert len(calls) == 2
+    assert "image_quality" in result and result["review"]["human_summary"]
+
+
+def test_client_keeps_partial_payload_if_repair_still_incomplete(tmp_path, vlm_env, monkeypatch):
+    """修复后仍缺字段：保留首次解析结果（身份/禁项由契约层裁决，稀疏载荷如实呈现）。"""
+
+    def fake_post(url, **kwargs):
+        return _FakeResponse(json.dumps({"schema_version": SCHEMA_VERSION, "task_id": "task-1", "round_index": 1}))
+
+    monkeypatch.setattr(vlm_client.requests, "post", fake_post)
+    result = vlm_analyze_images([_write_png(tmp_path)], observation={}, environment={})
+    assert result["schema_version"] == SCHEMA_VERSION
+
+
 def test_client_returns_none_after_second_invalid_json(tmp_path, vlm_env, monkeypatch):
     def fake_post(url, **kwargs):
         return _FakeResponse("仍然不是 JSON")
@@ -200,6 +283,40 @@ def test_client_degraded_after_two_failures_skips_network(tmp_path, vlm_env, mon
 
 # ---------- tools.analyze_with_vlm 三级来源 ----------
 
+def test_analyze_with_vlm_adapter_tier_applies_contract_and_flatten(monkeypatch):
+    """交付契约形态（vlm-analysis-v1）的适配器响应同样过守卫+展平（api-contract §10.1）。"""
+    nested = {
+        "schema_version": SCHEMA_VERSION,
+        "task_id": "task-adapter",
+        "round_index": 1,
+        "image_quality": {"usable": True, "quality_level": "good", "problems": ["none"], "missing_inputs": []},
+        "fire_observation": {"fire_presence": "smoke_only", "affected_layer": "surface",
+                             "canopy_involvement": "not_observed", "visual_scale": "medium"},
+        "smoke_trend": {"smoke_density": "light", "image_plane_drift": "uncertain",
+                        "temporal_trend": "first_round_no_comparison"},
+        "object_clues": {"people": {"state": "not_observed", "evidence": ""}},
+        "review": {"conflicts": [], "manual_review_required": False, "human_summary": "画面只有薄烟，无明火。"},
+    }
+
+    class FakeResp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return json.dumps(nested).encode()
+
+    monkeypatch.setenv("FIRE_VLM_ENDPOINT", "http://127.0.0.1:9/vlm")
+    monkeypatch.setattr("urllib.request.urlopen", lambda request, timeout=None: FakeResp())
+    result = analyze_with_vlm(observation={"detections": []}, people_status="unknown")
+    assert result["mode"] == "real" and result["source"] == "vlm-adapter"
+    assert result["fire_presence"] == "smoke_only"
+    assert result["usable"] is True
+    assert result["summary"] == "画面只有薄烟，无明火。"
+
+
 def test_analyze_with_vlm_falls_back_to_rule_explainer_without_config(monkeypatch):
     monkeypatch.delenv("FIRE_VLM_ENDPOINT", raising=False)
     monkeypatch.delenv("FIRE_VLM_API_KEY", raising=False)
@@ -221,10 +338,50 @@ def test_analyze_with_vlm_direct_path_returns_contract_payload(tmp_path, vlm_env
     )
     assert result["mode"] == "real"
     assert result["source"] == "vlm-glm-4.6v-flash"
-    assert result["prompt_version"] == "v1"
+    assert result["prompt_version"] == "v4"  # 交付包最终版（2026-09-06）
     assert result["schema_version"] == SCHEMA_VERSION
     # 下游合并沿用 summary 字段（human_summary 镜像）
     assert result["summary"] == "画面中可见明火与烟雾，未观察到人员。"
+
+
+def test_analyze_with_vlm_flattens_delivered_nested_groups(tmp_path, vlm_env, monkeypatch):
+    """交付 v4 真实输出为分组嵌套（prompt-v4 §二，48 次实测）；平台展开顶层别名供前端事实行沿用。"""
+    monkeypatch.delenv("FIRE_VLM_ENDPOINT", raising=False)
+    nested = {
+        "schema_version": SCHEMA_VERSION,
+        "task_id": "task-1",
+        "round_index": 1,
+        "image_ids": ["F1"],
+        "prompt_version": "v4",
+        "image_quality": {"usable": False, "quality_level": "poor", "problems": ["too_dark"], "missing_inputs": ["PWM-YOLO结果"]},
+        "fire_observation": {"fire_presence": "smoke_only", "affected_layer": "surface",
+                             "canopy_involvement": "not_observed", "visual_scale": "medium"},
+        "smoke_trend": {"smoke_density": "heavy", "image_plane_drift": "uncertain",
+                        "temporal_trend": "first_round_no_comparison"},
+        "object_clues": {"people": {"state": "not_observed", "evidence": ""},
+                         "water": {"state": "water_candidate", "evidence": ""}},
+        "review": {"conflicts": ["YOLO 标注火焰但画面不可见"], "manual_review_required": True,
+                   "human_summary": "画面只见烟雾，未见明火。"},
+    }
+
+    def fake_post(url, **kwargs):
+        return _FakeResponse(json.dumps(nested, ensure_ascii=False))
+
+    monkeypatch.setattr(vlm_client.requests, "post", fake_post)
+    result = analyze_with_vlm(
+        observation={"detections": []}, people_status="unknown",
+        image_paths=[_write_png(tmp_path)], task_id="task-1", round_index=1,
+    )
+    # 顶层别名展开（前端 vlmNoteFacts/vlmNoteIssues 读扁平键）
+    assert result["usable"] is False and result["quality_level"] == "poor"
+    assert result["fire_presence"] == "smoke_only"
+    assert result["smoke_density"] == "heavy" and result["temporal_trend"] == "first_round_no_comparison"
+    assert result["people"] == {"state": "not_observed", "evidence": ""}
+    assert result["conflicts"] == ["YOLO 标注火焰但画面不可见"]
+    assert result["summary"] == "画面只见烟雾，未见明火。"
+    # 嵌套原件保留可追溯
+    assert result["fire_observation"]["fire_presence"] == "smoke_only"
+    assert result["review"]["manual_review_required"] is True
 
 
 def test_analyze_with_vlm_call_failure_falls_back_with_code(tmp_path, monkeypatch):

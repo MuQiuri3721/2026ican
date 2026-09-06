@@ -1,0 +1,9 @@
+{
+  "note": "各档位的PWM-YOLO输入定义（人工fixture，非PWM-YOLO真实输出）",
+  "tiers": {
+    "A": {
+      "yolo_status": "missing",
+      "note": "PWM-YOLO服务未接入，本轮无检测结果"
+    }
+  }
+}

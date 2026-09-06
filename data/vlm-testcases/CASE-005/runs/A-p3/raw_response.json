@@ -1,0 +1,20 @@
+{
+  "called_at": "2026-09-06 20:59:32",
+  "http_status": 200,
+  "latency_ms": 21821,
+  "retries_used": 0,
+  "format_repair_retry_used": false,
+  "usage": {
+    "completion_tokens": 2021,
+    "completion_tokens_details": {
+      "reasoning_tokens": 1583
+    },
+    "prompt_tokens": 1635,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "total_tokens": 3656
+  },
+  "error": null,
+  "content_raw": "\n{\n  \"schema_version\": \"vlm-analysis-v1\",\n  \"task_id\": \"CASE-005\",\n  \"round_index\": 1,\n  \"image_ids\": [\"CASE-005-R1-F1\"],\n  \"prompt_version\": \"v3\",\n  \"image_quality\": {\n    \"usable\": true,\n    \"quality_level\": \"good\",\n    \"problems\": [\"none\"],\n    \"missing_inputs\": [\"PWM-YOLO结果\"]\n  },\n  \"fire_observation\": {\n    \"fire_presence\": \"flame_observed\",\n    \"affected_layer\": \"mixed\",\n    \"canopy_involvement\": \"observed\",\n    \"visual_scale\": \"large\"\n  },\n  \"smoke_trend\": {\n    \"smoke_density\": \"heavy\",\n    \"image_plane_drift\": \"uncertain\",\n    \"temporal_trend\": \"first_round_no_comparison\"\n  },\n  \"object_clues\": {\n    \"people\": {\n      \"state\": \"observed\",\n      \"evidence\": \"图片中可见多名穿着橙色消防服的人员\"\n    },\n    \"road\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"画面中未见明显道路\"\n    },\n    \"building\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"画面中未见建筑物\"\n    },\n    \"power_equipment\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"画面中未见电力设备\"\n    },\n    \"water\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"画面中未见水体\"\n    },\n    \"obstacle\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"画面中未见明显障碍物\"\n    }\n  },\n  \"review\": {\n    \"conflicts\": [],\n    \"manual_review_required\": true,\n    \"human_summary\": \"画面中可见森林火灾，有明火和浓重烟雾，火焰涉及地面与树冠，消防员在火场前，整体火势视觉规模较大。\"\n  }\n}"
+}

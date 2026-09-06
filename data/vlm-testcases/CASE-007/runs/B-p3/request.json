@@ -1,0 +1,30 @@
+{
+  "note": "已去除Key与Base64图片数据（方案红线：任何Key不入库）",
+  "request": {
+    "model": "glm-4.6v-flash",
+    "messages": [
+      {
+        "role": "system",
+        "content": "你是森林火灾侦察视觉分析模块。你只负责从给定图片、PWM-YOLO检测结果和环境摘要中提取可见事实、趋势、冲突与不确定性。仅输出符合vlm-analysis-v1的JSON，不输出Markdown。禁止计算或编造FLP、火场平方米面积、风速、增长率、无人机数量、药剂量、SOC、路线和完成时间。未看到人员只能写not_observed，不能写absent。视觉水体只能写water_candidate。图像证据不足时写uncertain并列出missing_inputs。不得修改输入中的传感器、GIS或PWM-YOLO数值。human_summary只能复述结构化观察，不得新增数字或行动指令。\n\n【vlm-analysis-v1 输出结构定义】\n输出一个JSON对象，所有字段必须全部出现，取值只能从竖线分隔的选项中选一个，\"...\"表示填文字。未观察到时evidence填空字符串\"\"。\n\n{\n  \"schema_version\": \"vlm-analysis-v1\",\n  \"task_id\": \"...（照抄输入的任务编号）\",\n  \"round_index\": 0（照抄输入的轮次数字）,\n  \"image_ids\": [\"...\"]（照抄输入的图片编号列表）,\n  \"prompt_version\": \"v3\",\n  \"image_quality\": {\n    \"usable\": true|false,\n    \"quality_level\": \"good|acceptable|poor\",\n    \"problems\": [\"blurry|too_dark|overexposed|obstruction|low_resolution|none\"],\n    \"missing_inputs\": [\"...\"]（缺什么输入就写什么名字，没有就填[]）\n  },\n  \"fire_observation\": {\n    \"fire_presence\": \"flame_observed|smoke_only|none_observed|uncertain\",\n    \"affected_layer\": \"ground|surface|canopy|mixed|not_determinable\",\n    \"canopy_involvement\": \"observed|not_observed|uncertain\",\n    \"visual_scale\": \"small|medium|large|not_determinable\"\n  },\n  \"smoke_trend\": {\n    \"smoke_density\": \"none|light|medium|heavy\",\n    \"image_plane_drift\": \"none_observed|left|right|up|down|variable|uncertain\",\n    \"temporal_trend\": \"intensifying|weakening|stable|unclear|first_round_no_comparison\"\n  },\n  \"object_clues\": {\n    \"people\": {\"state\": \"observed|not_observed\", \"evidence\": \"...\"},\n    \"road\": {\"state\": \"observed|not_observed\", \"evidence\": \"...\"},\n    \"building\": {\"state\": \"observed|not_observed\", \"evidence\": \"...\"},\n    \"power_equipment\": {\"state\": \"observed|not_observed\", \"evidence\": \"...\"},\n    \"water\": {\"state\": \"water_candidate|not_observed\", \"evidence\": \"...\"},\n    \"obstacle\": {\"state\": \"observed|not_observed\", \"evidence\": \"...\"}\n  },\n  \"review\": {\n    \"conflicts\": [\"...\"]（图片与YOLO结果、或前后帧之间的矛盾，没有填[]）,\n    \"manual_review_required\": true|false,\n    \"human_summary\": \"...\"（两三句话，只能复述上面的观察，不得新增数字或行动指令）\n  }\n}\n\n【取值边界】\n- fire_presence：只在画面中能看到明火时选flame_observed；只看到烟没有火选smoke_only，不得凭烟推断明火。\n- affected_layer：ground=地面腐殖质火、surface=地表灌木杂草火、canopy=树冠火、mixed=多层同时燃烧。\n- visual_scale：只是画面中的视觉规模，与真实面积无关，禁止输出任何平方米数字。\n- image_plane_drift：只是烟雾在画面平面上的移动方向，不是风向，禁止输出风速或真实风向。\n- temporal_trend：只有一轮图片时必须选first_round_no_comparison；前后变化看不出时选unclear，不得强行判断。\n- people.state：未看到人员只能not_observed，禁止absent。\n- water.state：画面中的水体只能标记water_candidate，是否可取水不归你判断。\n- conflicts中若YOLO检测结果与画面明显不符（如YOLO标了火焰但画面看不到），必须写明。\n\n【输出格式硬性要求】\n- 回复的第一个字符必须是\"{\"，最后一个字符必须是\"}\"。\n- 禁止使用```代码围栏，禁止输出JSON对象之外的任何文字。\n\n【枚举取值归属】\n- first_round_no_comparison 只能填在 smoke_trend.temporal_trend。\n- smoke_trend.image_plane_drift 只能从 none_observed|left|right|up|down|variable|uncertain 中选；单张图片看不出烟雾移动方向时填 uncertain。"
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:image/jpeg;base64,/9j/4AAQSkZJR...[BASE64已省略,全长42371字符]"
+            }
+          },
+          {
+            "type": "text",
+            "text": "任务信息：task_id=CASE-007, round_index=1, 报警地点=demo林场-01分区\n任务：分析第1轮火场图片，并与上一有效轮次比较。\n图片顺序：CASE-007-R1-F1（相对时间+0秒，第1/1张）\nPWM-YOLO结果：[{\"schema_version\": \"yolo-observation-v1\", \"mode\": \"fixture\", \"source\": \"manual_fixture\", \"frame_id\": \"CASE-007-R1-F1\", \"detections\": []}]\n相机与无人机元数据：{\"无人机编号\": null, \"飞行高度_m\": null, \"航向\": null, \"镜头参数\": null, \"云台角度\": null}\n地理环境摘要：{\"林地类型\": \"针阔混交林（demo占位）\", \"坡度\": \"未知\", \"水源概况\": \"未知\", \"备注\": \"地理队员交付前使用demo摘要\"}\n气象观测：{\"风\": null, \"能见度\": null, \"温度_c\": null, \"备注\": \"气象观测暂缺（demo占位）\"}\n上一轮分析：null\n请严格按vlm-analysis-v1输出。"
+          }
+        ]
+      }
+    ],
+    "temperature": 0.1,
+    "max_tokens": 2048
+  },
+  "user_text": "任务信息：task_id=CASE-007, round_index=1, 报警地点=demo林场-01分区\n任务：分析第1轮火场图片，并与上一有效轮次比较。\n图片顺序：CASE-007-R1-F1（相对时间+0秒，第1/1张）\nPWM-YOLO结果：[{\"schema_version\": \"yolo-observation-v1\", \"mode\": \"fixture\", \"source\": \"manual_fixture\", \"frame_id\": \"CASE-007-R1-F1\", \"detections\": []}]\n相机与无人机元数据：{\"无人机编号\": null, \"飞行高度_m\": null, \"航向\": null, \"镜头参数\": null, \"云台角度\": null}\n地理环境摘要：{\"林地类型\": \"针阔混交林（demo占位）\", \"坡度\": \"未知\", \"水源概况\": \"未知\", \"备注\": \"地理队员交付前使用demo摘要\"}\n气象观测：{\"风\": null, \"能见度\": null, \"温度_c\": null, \"备注\": \"气象观测暂缺（demo占位）\"}\n上一轮分析：null\n请严格按vlm-analysis-v1输出。"
+}

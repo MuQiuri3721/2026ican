@@ -1,0 +1,20 @@
+{
+  "called_at": "2026-09-06 21:17:54",
+  "http_status": 200,
+  "latency_ms": 170709,
+  "retries_used": 3,
+  "format_repair_retry_used": true,
+  "usage": {
+    "completion_tokens": 480,
+    "completion_tokens_details": {
+      "reasoning_tokens": 76
+    },
+    "prompt_tokens": 4628,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "total_tokens": 5108
+  },
+  "error": null,
+  "content_raw": "\n```json\n{\n  \"schema_version\": \"vlm-analysis-v1\",\n  \"task_id\": \"CASE-010\",\n  \"round_index\": 1,\n  \"image_ids\": [\"CASE-010-R1-F1\", \"CASE-010-R1-F2\"],\n  \"prompt_version\": \"v3\",\n  \"image_quality\": {\n    \"usable\": true,\n    \"quality_level\": \"acceptable\",\n    \"problems\": [\"none\"],\n    \"missing_inputs\": []\n  },\n  \"fire_observation\": {\n    \"fire_presence\": \"flame_observed\",\n    \"affected_layer\": \"mixed\",\n    \"canopy_involvement\": \"observed\",\n    \"visual_scale\": \"large\"\n  },\n  \"smoke_trend\": {\n    \"smoke_density\": \"heavy\",\n    \"image_plane_drift\": \"uncertain\",\n    \"temporal_trend\": \"intensifying\"\n  },\n  \"object_clues\": {\n    \"people\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"\"\n    },\n    \"road\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"\"\n    },\n    \"building\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"\"\n    },\n    \"power_equipment\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"\"\n    },\n    \"water\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"\"\n    },\n    \"obstacle\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"\"\n    }\n  },\n  \"review\": {\n    \"conflicts\": [],\n    \"manual_review_required\": false,\n    \"human_summary\": \"图像显示火势从烟雾弥漫转为出现明显火焰，表明火势正在加剧。火焰和浓烟表明火势涉及地面和树冠，视觉规模大。\"\n  }\n}\n```"
+}

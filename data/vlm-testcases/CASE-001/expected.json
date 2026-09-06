@@ -1,0 +1,56 @@
+{
+  "case_id": "CASE-001",
+  "verified": {
+    "date": "2026-09-06",
+    "method": "人工看图核验（视觉工具辅助）",
+    "basis": "2026-09-06人工核验：多点火焰沿地表蔓延+一棵树自底至顶燃烧，浓烟，画面中无人员/道路/建筑/电力设备/水面，画质清晰"
+  },
+  "checks_common": [
+    {
+      "desc": "能认出明火",
+      "field": "fire_observation.fire_presence",
+      "op": "eq",
+      "value": "flame_observed"
+    },
+    {
+      "desc": "有树冠卷入迹象（画面可见整树燃烧）",
+      "field": "fire_observation.canopy_involvement",
+      "op": "in",
+      "values": [
+        "observed",
+        "uncertain"
+      ]
+    },
+    {
+      "desc": "烟量中等或浓",
+      "field": "smoke_trend.smoke_density",
+      "op": "in",
+      "values": [
+        "medium",
+        "heavy"
+      ]
+    },
+    {
+      "desc": "画面无人员→not_observed",
+      "field": "object_clues.people.state",
+      "op": "eq",
+      "value": "not_observed"
+    },
+    {
+      "desc": "单轮图片→first_round_no_comparison",
+      "field": "smoke_trend.temporal_trend",
+      "op": "eq",
+      "value": "first_round_no_comparison"
+    }
+  ],
+  "checks_extra": {
+    "C": [
+      {
+        "desc": "fixture与画面一致→conflicts应为空",
+        "field": "review.conflicts",
+        "op": "empty"
+      }
+    ]
+  },
+  "auto_checks": "结构/枚举/身份回显/禁止项扫描由02_run_cases.py自动执行，不在本文件重复"
+}

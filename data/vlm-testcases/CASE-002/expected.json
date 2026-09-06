@@ -1,0 +1,51 @@
+{
+  "case_id": "CASE-002",
+  "verified": {
+    "date": "2026-09-06",
+    "method": "人工看图核验（视觉工具辅助）",
+    "basis": "2026-09-06人工核验：画面仅浓烟（灰白为主，局部深灰），未见任何火苗/火光，无人员/道路/建筑/电力设备/水面，画质清晰"
+  },
+  "checks_common": [
+    {
+      "desc": "只看到烟→smoke_only（禁止凭烟报flame_observed）",
+      "field": "fire_observation.fire_presence",
+      "op": "in",
+      "values": [
+        "smoke_only",
+        "uncertain"
+      ]
+    },
+    {
+      "desc": "烟量中等或浓",
+      "field": "smoke_trend.smoke_density",
+      "op": "in",
+      "values": [
+        "medium",
+        "heavy"
+      ]
+    },
+    {
+      "desc": "画面无人员→not_observed",
+      "field": "object_clues.people.state",
+      "op": "eq",
+      "value": "not_observed"
+    },
+    {
+      "desc": "单轮图片→first_round_no_comparison",
+      "field": "smoke_trend.temporal_trend",
+      "op": "eq",
+      "value": "first_round_no_comparison"
+    }
+  ],
+  "checks_extra": {
+    "B": [
+      {
+        "desc": "空fixture不得阻断观察：仍应报烟",
+        "field": "fire_observation.fire_presence",
+        "op": "ne",
+        "value": "none_observed"
+      }
+    ]
+  },
+  "auto_checks": "结构/枚举/身份回显/禁止项扫描由02_run_cases.py自动执行，不在本文件重复"
+}

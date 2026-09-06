@@ -1,0 +1,40 @@
+{
+  "case_id": "CASE-009",
+  "verified": {
+    "date": "2026-09-06",
+    "method": "人工看图核验（视觉工具辅助）",
+    "basis": "2026-09-06人工核验：画面中上部较大明火+灰白烟向左上扩散；火点旁疑似电线杆（横担+线缆向左下延伸），下方有砖砌结构（不确定是否建筑，电力与建筑仅疑似、不设硬性预期检查）；整体偏模糊轻微失焦、顶部有浅色遮挡物（疑似屋檐/桥边）、火点过曝；未见人员/道路/水面"
+  },
+  "checks_common": [
+    {
+      "desc": "火光仍可辨认→flame_observed",
+      "field": "fire_observation.fire_presence",
+      "op": "eq",
+      "value": "flame_observed"
+    },
+    {
+      "desc": "偏模糊+遮挡+过曝，画质不得评为good",
+      "field": "image_quality.quality_level",
+      "op": "ne",
+      "value": "good"
+    },
+    {
+      "desc": "质量问题须如实列出（模糊/遮挡/过曝至少一项）",
+      "field": "image_quality.problems",
+      "op": "contains_any",
+      "values": [
+        "blurry",
+        "obstruction",
+        "overexposed"
+      ]
+    },
+    {
+      "desc": "单轮图片→first_round_no_comparison",
+      "field": "smoke_trend.temporal_trend",
+      "op": "eq",
+      "value": "first_round_no_comparison"
+    }
+  ],
+  "checks_extra": {},
+  "auto_checks": "结构/枚举/身份回显/禁止项扫描由02_run_cases.py自动执行，不在本文件重复"
+}

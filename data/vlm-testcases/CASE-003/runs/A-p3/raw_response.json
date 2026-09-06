@@ -1,0 +1,20 @@
+{
+  "called_at": "2026-09-06 20:50:35",
+  "http_status": 200,
+  "latency_ms": 331917,
+  "retries_used": 4,
+  "format_repair_retry_used": false,
+  "usage": {
+    "completion_tokens": 1560,
+    "completion_tokens_details": {
+      "reasoning_tokens": 1117
+    },
+    "prompt_tokens": 2340,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "total_tokens": 3900
+  },
+  "error": null,
+  "content_raw": "\n{\n  \"schema_version\": \"vlm-analysis-v1\",\n  \"task_id\": \"CASE-003\",\n  \"round_index\": 1,\n  \"image_ids\": [\"CASE-003-R1-F1\"],\n  \"prompt_version\": \"v3\",\n  \"image_quality\": {\n    \"usable\": true,\n    \"quality_level\": \"good\",\n    \"problems\": [\"none\"],\n    \"missing_inputs\": [\"相机与无人机元数据\", \"地理环境摘要\", \"气象观测\"]\n  },\n  \"fire_observation\": {\n    \"fire_presence\": \"none_observed\",\n    \"affected_layer\": \"not_determinable\",\n    \"canopy_involvement\": \"not_observed\",\n    \"visual_scale\": \"not_determinable\"\n  },\n  \"smoke_trend\": {\n    \"smoke_density\": \"none\",\n    \"image_plane_drift\": \"uncertain\",\n    \"temporal_trend\": \"first_round_no_comparison\"\n  },\n  \"object_clues\": {\n    \"people\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"\"\n    },\n    \"road\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"\"\n    },\n    \"building\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"\"\n    },\n    \"power_equipment\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"\"\n    },\n    \"water\": {\n      \"state\": \"water_candidate\",\n      \"evidence\": \"\"\n    },\n    \"obstacle\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"\"\n    }\n  },\n  \"review\": {\n    \"conflicts\": [],\n    \"manual_review_required\": false,\n    \"human_summary\": \"图片显示一片茂密健康的绿色森林，未观察到火焰、烟雾或火场迹象。未观察到人员、道路、建筑、电力设备或明显障碍物。视觉水体标记为候选。图像质量良好，但缺少相机、地理和气象数据。\"\n  }\n}"
+}

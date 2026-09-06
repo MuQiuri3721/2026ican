@@ -1,0 +1,25 @@
+{
+  "case_id": "CASE-003",
+  "scenario": "无火纯森林（防误报）：茂密阔叶林航拍，画面无火无烟。C档故意给『假火焰框』测矛盾上报",
+  "task_id": "CASE-003",
+  "task_name": "demo林场-01分区",
+  "round_index": 1,
+  "prompt_version": "v3",
+  "model": "glm-4.6v-flash",
+  "temperature": 0.1,
+  "max_tokens": 2048,
+  "frames": [
+    {
+      "frame_id": "CASE-003-R1-F1",
+      "file": "T03.jpg",
+      "order": 1,
+      "time_offset_s": 0,
+      "sha256_16": "f88f8d39198a4859",
+      "size_kb": 369
+    }
+  ],
+  "source": null,
+  "license": null,
+  "source_note": "来源未记录（仅队内测试使用；图含『昵享网』水印，不入公开仓库）",
+  "updated": "2026-09-06 20:45:03"
+}

@@ -493,14 +493,14 @@ Query：`once`（可选，`1` = 仅推送当前事件快照后结束，供一次
 
 ## 10. VLM 解释适配协议（FIRE_VLM_ENDPOINT / FIRE_VLM_API_KEY）
 
-平台侧实现：`backend/app/tools/core.py::analyze_with_vlm`（直连客户端 `backend/app/vlm/`）。VLM 只做观察与解释，**不得输出/覆盖 FLP、SOC、药剂需求、无人机数量、时间等规则数字**（红线同 §9，由契约守卫强制执行）。冻结提示词、测试集与交付流程见 [VLM队员执行手册](VLM队员执行手册.md)。
+平台侧实现：`backend/app/tools/core.py::analyze_with_vlm`（直连客户端 `backend/app/vlm/`）。VLM 只做观察与解释，**不得输出/覆盖 FLP、SOC、药剂需求、无人机数量、时间等规则数字**（红线同 §9，由契约守卫强制执行）。冻结提示词、测试集与交付流程见 [VLM队员执行手册](VLM队员执行手册.md)；**E-2 交付已于 2026-09-06 到达并入库**：交付文档 [docs/vlm-delivery/](vlm-delivery/README.md)（最终提示词 v4、48 次调用实测报告）、12 组案例证据 `data/vlm-testcases/`、可复跑脚本 `scripts/`（Key 环境变量名交付侧为 `ZHIPU_API_KEY`，平台侧统一填 `FIRE_VLM_API_KEY`）。
 
 ### 10.1 来源三级（按优先级）
 
 | 级 | 启用条件 | 实现 | 标注 |
 |---|---|---|---|
-| ① 外部适配器 | 环境变量 `FIRE_VLM_ENDPOINT` | `POST <endpoint>`，JSON `{"observation", "environment", "people_status"}`，超时 5 秒，响应 JSON object | `source="vlm-adapter"`、`mode="real"` |
-| ② 直连 glm-4.6v-flash | 环境变量 `FIRE_VLM_API_KEY`（可选 `FIRE_VLM_MODEL`、`FIRE_VLM_BASE_URL`、`FIRE_VLM_TIMEOUT`）且有可读图片 | `backend/app/vlm/client.py` 标准 API 直连，冻结提示词 V1（`PROMPT_VERSION="v1"`），temperature 0，图片 ≤4 张（超出保首 3 + 最新 1），非法 JSON 允许一次格式修复重试 | `source="vlm-glm-4.6v-flash"`、`mode="real"`、`prompt_version` |
+| ① 外部适配器 | 环境变量 `FIRE_VLM_ENDPOINT` | `POST <endpoint>`，JSON `{"observation", "environment", "people_status"}`，超时 5 秒，响应 JSON object；响应若为 vlm-analysis-v1 形态（`schema_version` 匹配）同样过禁项守卫+展平顶层别名+`summary` 镜像，`task_id`/`round_index` 以平台口径加盖（适配器无法感知平台任务号）；自定义格式适配器原样透传 | `source="vlm-adapter"`、`mode="real"` |
+| ② 直连 glm-4.6v-flash | 环境变量 `FIRE_VLM_API_KEY`（可选 `FIRE_VLM_MODEL`、`FIRE_VLM_BASE_URL`、`FIRE_VLM_TIMEOUT`）且有可读图片 | `backend/app/vlm/client.py` 标准 API 直连，交付最终提示词 v4（`PROMPT_VERSION="v4"`，含 vlm-analysis-v1 结构定义/取值边界/格式硬性要求/枚举归属/多图趋势规则；v1 留档），temperature 0.1 / max_tokens 2048（推理型输出），图片 ≤4 张（超出保首 3 + 最新 1），多图轮次用户消息注入帧序列说明行，非法 JSON 允许一次格式修复重试，HTTP 200 空响应按失败计（连续失败 ≥2 次降级快失败） | `source="vlm-glm-4.6v-flash"`、`mode="real"`、`prompt_version` |
 | ③ 规则回退 | 未配置或上级失败 | `vlm_explain_fire`（只复述规则观测数字） | `mode="fallback"`、`source="rule-explainer-fallback"`，失败附 `adapter_fallback.code` |
 
 - `adapter_fallback.code` 取值：`vlm_endpoint_unavailable`（①失败）/ `vlm_image_unreadable`（②图片缺失或不可读）/ `vlm_call_failed`（②网络或两次 JSON 非法）/ `vlm_contract_invalid`（②输出非 vlm-analysis-v1）。
@@ -509,14 +509,14 @@ Query：`once`（可选，`1` = 仅推送当前事件快照后结束，供一次
 
 ### 10.2 vlm-analysis-v1 输出契约与守卫
 
-直连级（②）输出必须 `schema_version="vlm-analysis-v1"`，且 `task_id`/`round_index` 回显一致，否则整包作废走回退。字段组（手册 §4.2）：身份来源（schema_version/task_id/round_index/mode/source）、图片质量（usable/quality_level/problems/missing_inputs）、火情观察（fire_presence/affected_layer/canopy_involvement/visual_scale）、烟雾趋势（smoke_density/image_plane_drift/temporal_trend）、对象线索（people/road/building/power_equipment/water/obstacle）、复核信息（conflicts/manual_review_required/human_summary）。
+直连级（②）输出必须 `schema_version="vlm-analysis-v1"`，且 `task_id`/`round_index` 回显一致，否则整包作废走回退。字段组（交付包 prompt-v4 §二，与 48 次实测一致）：身份（`schema_version`/`task_id`/`round_index`/`image_ids`/`prompt_version`）、图片质量 `image_quality`（usable/quality_level/problems/missing_inputs）、火情观察 `fire_observation`（fire_presence/affected_layer/canopy_involvement/visual_scale）、烟雾趋势 `smoke_trend`（smoke_density/image_plane_drift/temporal_trend）、对象线索 `object_clues`（people/road/building/power_equipment/water/obstacle，各含 state+evidence）、复核 `review`（conflicts/manual_review_required/human_summary）。`mode`/`source`/`yolo_status`/`model`/`analyzed_at` 由运行器（平台）注入，模型不输出。交付实测已知短板：**water 漏检 0/2、画质自评乐观 0/2**（P04/P05）——两字段仅作前端展示与线索，水源决策走 GIS/规则引擎，图片可用性由采集端控制。
 
 `backend/app/vlm/contract.py` 守卫（剥除/钳位 + `contract_guard.violations` 标注，置 `manual_review_required=true`，不阻断）：
 
 - 禁项键任意层级剥除：`flp`、`fire_cells`、`*area_m2`、`growth_rate`、`wind_speed`、`wind_direction`、`drone_count`、`hover_altitude`、`soc`、`w20`、`co2`、`dosage`、`control_time`、`flight_route` 等（完整表见代码 `FORBIDDEN_KEYS`）。
-- `people.state="absent"` → 钳位 `not_observed`；水体 `confirmed/usable/...` → 钳位 `water_candidate`。
+- `people.state="absent"` → 钳位 `not_observed`；水体 `confirmed/usable/...` → 钳位 `water_candidate`。两者均为全树钳位（兼容顶层、`object_clues.*`、`scene_elements.*` 等任意嵌套）。
 
-平台额外加盖：`source`（三级口径）、`mode`、`prompt_version`、`task_id`/`round_index` 回显、`summary`（= `human_summary` 镜像，供下游合并与前端展示）。
+平台额外加盖：`source`（三级口径）、`mode`、`prompt_version`、`task_id`/`round_index` 回显、`summary`（= `human_summary` 镜像，供下游合并与前端展示）；并把分组嵌套字段展开为顶层别名（`usable`/`fire_presence`/`smoke_density`/`people`/`conflicts` 等，嵌套原件保留），前端事实行与下游消费者统一读扁平口径。
 
 ### 10.3 接入状态口径
 

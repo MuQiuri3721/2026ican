@@ -1,0 +1,42 @@
+{
+  "case_id": "CASE-010",
+  "verified": {
+    "date": "2026-09-06",
+    "method": "人工看图核验（视觉工具辅助）",
+    "basis": "2026-09-06人工核验：T10A右下侧林缘明火沿山坡分布+大面积灰白烟；T10B中部偏右山坡上方大面积条带状明火（规模更大）+右侧浓黑烟；两帧均无人员/道路/建筑/电力设备/水面；人工判定帧2火势与烟量强于帧1（递增）；两帧均为带台标/字幕的视频截图"
+  },
+  "checks_common": [
+    {
+      "desc": "明火可见",
+      "field": "fire_observation.fire_presence",
+      "op": "eq",
+      "value": "flame_observed"
+    },
+    {
+      "desc": "烟量中等或浓",
+      "field": "smoke_trend.smoke_density",
+      "op": "in",
+      "values": [
+        "medium",
+        "heavy"
+      ]
+    },
+    {
+      "desc": "帧间递增或如实看不出（人工判定帧2更强，禁止答weakening）",
+      "field": "smoke_trend.temporal_trend",
+      "op": "in",
+      "values": [
+        "intensifying",
+        "unclear"
+      ]
+    },
+    {
+      "desc": "画面无人员→not_observed",
+      "field": "object_clues.people.state",
+      "op": "eq",
+      "value": "not_observed"
+    }
+  ],
+  "checks_extra": {},
+  "auto_checks": "结构/枚举/身份回显/禁止项扫描由02_run_cases.py自动执行，不在本文件重复"
+}

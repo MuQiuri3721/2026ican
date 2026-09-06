@@ -1,0 +1,25 @@
+{
+  "case_id": "CASE-005",
+  "scenario": "火场有人员：7~8名橙红色救援服人员在山坡接近火线扑救，火线沿山坡蔓延",
+  "task_id": "CASE-005",
+  "task_name": "demo林场-01分区",
+  "round_index": 1,
+  "prompt_version": "v3",
+  "model": "glm-4.6v-flash",
+  "temperature": 0.1,
+  "max_tokens": 2048,
+  "frames": [
+    {
+      "frame_id": "CASE-005-R1-F1",
+      "file": "T05.jpg",
+      "order": 1,
+      "time_offset_s": 0,
+      "sha256_16": "64dd82d1e1a033e5",
+      "size_kb": 148
+    }
+  ],
+  "source": null,
+  "license": null,
+  "source_note": "来源未记录（仅队内测试使用，图片不上传公开仓库）",
+  "updated": "2026-09-06 20:59:10"
+}

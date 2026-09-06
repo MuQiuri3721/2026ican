@@ -1,0 +1,20 @@
+{
+  "called_at": "2026-09-06 21:21:22",
+  "http_status": 200,
+  "latency_ms": 165904,
+  "retries_used": 3,
+  "format_repair_retry_used": false,
+  "usage": {
+    "completion_tokens": 1267,
+    "completion_tokens_details": {
+      "reasoning_tokens": 858
+    },
+    "prompt_tokens": 4985,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "total_tokens": 6252
+  },
+  "error": null,
+  "content_raw": "\n{\n  \"schema_version\": \"vlm-analysis-v1\",\n  \"task_id\": \"CASE-012\",\n  \"round_index\": 1,\n  \"image_ids\": [\"CASE-012-R1-F1\", \"CASE-012-R1-F2\"],\n  \"prompt_version\": \"v3\",\n  \"image_quality\": {\n    \"usable\": true,\n    \"quality_level\": \"good\",\n    \"problems\": [\"none\"],\n    \"missing_inputs\": []\n  },\n  \"fire_observation\": {\n    \"fire_presence\": \"flame_observed\",\n    \"affected_layer\": \"mixed\",\n    \"canopy_involvement\": \"observed\",\n    \"visual_scale\": \"large\"\n  },\n  \"smoke_trend\": {\n    \"smoke_density\": \"heavy\",\n    \"image_plane_drift\": \"uncertain\",\n    \"temporal_trend\": \"first_round_no_comparison\"\n  },\n  \"object_clues\": {\n    \"people\": {\n      \"state\": \"observed\",\n      \"evidence\": \"右侧可见红色着装人员\"\n    },\n    \"road\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"\"\n    },\n    \"building\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"\"\n    },\n    \"power_equipment\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"\"\n    },\n    \"water\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"\"\n    },\n    \"obstacle\": {\n      \"state\": \"not_observed\",\n      \"evidence\": \"\"\n    }\n  },\n  \"review\": {\n    \"conflicts\": [],\n    \"manual_review_required\": true,\n    \"human_summary\": \"观察到森林火灾有明火和浓烟，火焰在地面和树冠间蔓延，右侧有消防人员，烟雾密度高，火势视觉规模大。\"\n  }\n}"
+}

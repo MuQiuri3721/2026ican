@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[3]
 from ..rules.engine import read_json, v1_config, positive, calculate_distance, resolve_wind_band, resolve_slope_factor, calculate_flp_load, select_water_source, swap_battery, build_fire_grid, simulate_dispatch_candidate, score_candidate_plan, _agent_kappa
 
 # VLM 视觉分析层（E-2 开发侧就绪）：vlm-analysis-v1 契约 + glm-4.6v-flash 直连
-from ..vlm import ImageUnreadable, validate_vlm_analysis, vlm_analyze_images, vlm_client_status
+from ..vlm import SCHEMA_VERSION, ImageUnreadable, validate_vlm_analysis, vlm_analyze_images, vlm_client_status
 from ..vlm.prompts import PROMPT_VERSION
 
 
@@ -445,10 +445,39 @@ def detect_fire(image_name: str = "default", image_path: Optional[str] = None, s
     return demo_observation(image_name, image_path)
 
 
+def _flatten_vlm_note(cleaned: Dict[str, Any]) -> Dict[str, Any]:
+    """把交付 v4 实测的分组嵌套（image_quality/fire_observation/smoke_trend/object_clues/review）
+    展开出顶层别名，供前端事实行、报告与下游消费者沿用扁平口径；嵌套原件保留可追溯。"""
+    groups = {
+        "image_quality": ("usable", "quality_level", "problems", "missing_inputs"),
+        "fire_observation": ("fire_presence", "affected_layer", "canopy_involvement", "visual_scale"),
+        "smoke_trend": ("smoke_density", "image_plane_drift", "temporal_trend"),
+    }
+    for group, fields in groups.items():
+        node = cleaned.get(group)
+        if not isinstance(node, dict):
+            continue
+        for field in fields:
+            if field in node and node[field] is not None:
+                cleaned.setdefault(field, node[field])
+    clues = cleaned.get("object_clues")
+    if isinstance(clues, dict) and isinstance(clues.get("people"), dict):
+        cleaned.setdefault("people", clues["people"])
+    review = cleaned.get("review")
+    if isinstance(review, dict):
+        if isinstance(review.get("conflicts"), list):
+            cleaned.setdefault("conflicts", review["conflicts"])
+        if review.get("manual_review_required") is not None:
+            cleaned.setdefault("manual_review_required", review["manual_review_required"])
+        if review.get("human_summary"):
+            cleaned.setdefault("human_summary", review["human_summary"])
+    return cleaned
+
+
 def analyze_with_vlm(observation: Dict[str, Any] = None, environment: Dict[str, Any] = None, people_status: str = "unknown", strict_real: bool = False, image_paths: Optional[List[str]] = None, task_id: Optional[str] = None, round_index: int = 1, previous_analysis: Dict[str, Any] = None, **_: Any) -> Dict[str, Any]:
     """VLM 解释分析，来源三级（api-contract §10）：
 
-    ① FIRE_VLM_ENDPOINT 外部适配器；② FIRE_VLM_API_KEY 直连 glm-4.6v-flash（冻结提示词 V1，
+    ① FIRE_VLM_ENDPOINT 外部适配器；② FIRE_VLM_API_KEY 直连 glm-4.6v-flash（交付最终提示词 v4，
     vlm-analysis-v1 契约校验 + 禁项守卫）；③ 未配置或失败回退规则解释器。
     strict_real 下外部来源失败返回结构化错误，不以回退掩盖。
     """
@@ -459,6 +488,20 @@ def analyze_with_vlm(observation: Dict[str, Any] = None, environment: Dict[str, 
             request = urllib.request.Request(endpoint, data=body, headers={"Content-Type": "application/json"})
             with urllib.request.urlopen(request, timeout=5) as response:
                 result = _validate_external_payload(json.loads(response.read().decode()), (), "analyze_with_vlm")
+            # 适配器若按交付契约（vlm-analysis-v1）返回，同样过禁项守卫并展平顶层别名；
+            # 自定义格式适配器原样透传（api-contract §10.1）
+            if result.get("schema_version") == SCHEMA_VERSION:
+                adapter_cleaned, adapter_report = validate_vlm_analysis(result)
+                if adapter_cleaned is not None:
+                    result = _flatten_vlm_note(adapter_cleaned)
+                    if adapter_cleaned.get("human_summary"):
+                        result.setdefault("summary", adapter_cleaned["human_summary"])
+                    if adapter_report.get("violations"):
+                        result["contract_guard"] = {"violations": adapter_report["violations"]}
+                    # 身份以平台口径为准（适配器无法感知平台 task_id 时回显不可信）
+                    if task_id:
+                        result["task_id"] = task_id
+                    result.setdefault("round_index", int(round_index or 1))
             result.setdefault("source", "vlm-adapter"); result["mode"] = "real"
             return result
         except Exception as error:
@@ -482,6 +525,7 @@ def analyze_with_vlm(observation: Dict[str, Any] = None, environment: Dict[str, 
         if raw is not None:
             cleaned, report = validate_vlm_analysis(raw, task_id=task_id, round_index=int(round_index or 1))
             if cleaned is not None:
+                cleaned = _flatten_vlm_note(cleaned)
                 # 来源标签以平台口径为准（api-contract §10：source 证明可追溯链路），模型名随行
                 cleaned["source"] = source_tag
                 cleaned["mode"] = "real"

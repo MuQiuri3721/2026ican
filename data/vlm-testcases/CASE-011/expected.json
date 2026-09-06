@@ -1,0 +1,37 @@
+{
+  "case_id": "CASE-011",
+  "verified": {
+    "date": "2026-09-06",
+    "method": "人工看图核验（视觉工具辅助）",
+    "basis": "2026-09-06人工核验：T02仅灰白浓烟、无任何火苗；T03茂密阔叶林、无火无烟；按输入设定（同火场前后帧）人工判定帧2较帧1火情明显减弱（烟消散）；两帧实为缺图替代组合、非真实连续帧，此局限已如实记录"
+  },
+  "checks_common": [
+    {
+      "desc": "两帧均无明火，禁止报flame_observed（防幻觉核心）",
+      "field": "fire_observation.fire_presence",
+      "op": "in",
+      "values": [
+        "smoke_only",
+        "none_observed",
+        "uncertain"
+      ]
+    },
+    {
+      "desc": "递减或如实看不出（人工判定帧2明显减弱，禁止答intensifying）",
+      "field": "smoke_trend.temporal_trend",
+      "op": "in",
+      "values": [
+        "weakening",
+        "unclear"
+      ]
+    },
+    {
+      "desc": "画面无人员→not_observed",
+      "field": "object_clues.people.state",
+      "op": "eq",
+      "value": "not_observed"
+    }
+  ],
+  "checks_extra": {},
+  "auto_checks": "结构/枚举/身份回显/禁止项扫描由02_run_cases.py自动执行，不在本文件重复"
+}

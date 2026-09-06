@@ -1,0 +1,59 @@
+{
+  "case_id": "CASE-008",
+  "verified": {
+    "date": "2026-09-06",
+    "method": "人工看图核验（视觉工具辅助）",
+    "basis": "2026-09-06人工核验：画面中部偏左至偏右林间横向带状明火（部分沿树干向上蔓延）+灰黑浓烟；下半部为宽阔湍急河流（青绿色，浪花岩石可见），火场在河对岸、火焰倒映水面；未见人员/道路/建筑/电力设备；画质清晰（色彩饱和度偏高，疑为合成/渲染图，仅作测试输入）"
+  },
+  "checks_common": [
+    {
+      "desc": "明火可见",
+      "field": "fire_observation.fire_presence",
+      "op": "eq",
+      "value": "flame_observed"
+    },
+    {
+      "desc": "烟量中等或浓",
+      "field": "smoke_trend.smoke_density",
+      "op": "in",
+      "values": [
+        "medium",
+        "heavy"
+      ]
+    },
+    {
+      "desc": "河流可见→water_candidate（禁止输出可取水判断）",
+      "field": "object_clues.water.state",
+      "op": "eq",
+      "value": "water_candidate"
+    },
+    {
+      "desc": "水体证据非空（位置/形态）",
+      "field": "object_clues.water.evidence",
+      "op": "nonempty"
+    },
+    {
+      "desc": "画面无人员→not_observed",
+      "field": "object_clues.people.state",
+      "op": "eq",
+      "value": "not_observed"
+    },
+    {
+      "desc": "单轮图片→first_round_no_comparison",
+      "field": "smoke_trend.temporal_trend",
+      "op": "eq",
+      "value": "first_round_no_comparison"
+    }
+  ],
+  "checks_extra": {
+    "B": [
+      {
+        "desc": "空fixture不得阻断观察：仍应报明火",
+        "field": "fire_observation.fire_presence",
+        "op": "ne",
+        "value": "none_observed"
+      }
+    ]
+  },
+  "auto_checks": "结构/枚举/身份回显/禁止项扫描由02_run_cases.py自动执行，不在本文件重复"
+}

@@ -1,0 +1,10 @@
+{
+  "called_at": "2026-09-06 21:54:56",
+  "http_status": 429,
+  "latency_ms": 296436,
+  "retries_used": 4,
+  "format_repair_retry_used": false,
+  "usage": {},
+  "error": "限流(429)，重试4次后仍失败 | 该模型当前访问量过大，请您稍后再试",
+  "content_raw": ""
+}

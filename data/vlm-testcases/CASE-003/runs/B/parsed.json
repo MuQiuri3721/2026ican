@@ -1,0 +1,64 @@
+{
+  "schema_version": "vlm-analysis-v1",
+  "task_id": "CASE-003",
+  "round_index": 1,
+  "image_ids": [
+    "CASE-003-R1-F1"
+  ],
+  "prompt_version": "v1",
+  "image_quality": {
+    "usable": true,
+    "quality_level": "good",
+    "problems": [
+      "none"
+    ],
+    "missing_inputs": []
+  },
+  "fire_observation": {
+    "fire_presence": "none_observed",
+    "affected_layer": "not_determinable",
+    "canopy_involvement": "not_observed",
+    "visual_scale": "not_determinable"
+  },
+  "smoke_trend": {
+    "smoke_density": "none",
+    "image_plane_drift": "none_observed",
+    "temporal_trend": "first_round_no_comparison"
+  },
+  "object_clues": {
+    "people": {
+      "state": "not_observed",
+      "evidence": ""
+    },
+    "road": {
+      "state": "not_observed",
+      "evidence": ""
+    },
+    "building": {
+      "state": "not_observed",
+      "evidence": ""
+    },
+    "power_equipment": {
+      "state": "not_observed",
+      "evidence": ""
+    },
+    "water": {
+      "state": "not_observed",
+      "evidence": ""
+    },
+    "obstacle": {
+      "state": "not_observed",
+      "evidence": ""
+    }
+  },
+  "review": {
+    "conflicts": [],
+    "manual_review_required": false,
+    "human_summary": "画面显示为茂密绿色针阔混交林，无火、无烟、无人员、道路、建筑或明显障碍物可见。"
+  },
+  "yolo_status": "fixture",
+  "mode": "fixture",
+  "source": "manual_fixture",
+  "model": "glm-4.6v-flash",
+  "analyzed_at": "2026-09-06 19:57:55"
+}

@@ -93,12 +93,15 @@ class AnalysisService:
             scenario = _normalize_scenario(request.scenario)
             # 多帧序列：frames 为早前帧，主文件自动作为最新一帧（api-contract §5.2）；同一序列供 VLM 时间对比（手册 §4.1）
             sequence_paths = ([*frame_paths, request.image_path] if request.image_path else list(frame_paths)) if frame_paths else []
+            # 单图上传也必须进 VLM 图片序列（BE-11：二级直连要求有可读图片，空序列会静默跳到规则回退）；
+            # 帧 序 列工具（140 行）仍用 sequence_paths——单帧无趋势可比，保持原样跳过
+            vlm_image_paths = sequence_paths or ([request.image_path] if request.image_path else [])
             context = {
                 "scene_id": request.scene_id,
                 "scenario": scenario,
                 "image_name": request.image_name or "default",
                 "image_path": request.image_path,
-                "image_paths": sequence_paths,
+                "image_paths": vlm_image_paths,
                 "task_id": item.analysis_id,
                 "round_index": 1,
                 "latitude": request.latitude,

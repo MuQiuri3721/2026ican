@@ -1,0 +1,24 @@
+{
+  "case_id": "CASE-006",
+  "verified": {
+    "date": "2026-09-06",
+    "method": "人工看图核验（视觉工具辅助）",
+    "basis": "2026-09-06人工核验：左侧及中下部明显明火（约占左半），烟灰白+深灰中等偏浓；仔细检查无人员；无道路/建筑/电力/水面；分辨率偏低有压缩痕迹"
+  },
+  "checks_common": [
+    {
+      "desc": "明火可见",
+      "field": "fire_observation.fire_presence",
+      "op": "eq",
+      "value": "flame_observed"
+    },
+    {
+      "desc": "未见人员→not_observed（禁止absent）",
+      "field": "object_clues.people.state",
+      "op": "eq",
+      "value": "not_observed"
+    }
+  ],
+  "checks_extra": {},
+  "auto_checks": "结构/枚举/身份回显/禁止项扫描由02_run_cases.py自动执行，不在本文件重复"
+}

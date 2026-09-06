@@ -1,0 +1,18 @@
+{
+  "note": "各档位的PWM-YOLO输入定义（人工fixture，非PWM-YOLO真实输出）",
+  "tiers": {
+    "A": {
+      "yolo_status": "missing",
+      "note": "PWM-YOLO服务未接入，本轮无检测结果"
+    },
+    "B": [
+      {
+        "schema_version": "yolo-observation-v1",
+        "mode": "fixture",
+        "source": "manual_fixture",
+        "frame_id": "CASE-008-R1-F1",
+        "detections": []
+      }
+    ]
+  }
+}

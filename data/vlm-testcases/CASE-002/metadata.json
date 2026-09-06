@@ -1,0 +1,25 @@
+{
+  "case_id": "CASE-002",
+  "scenario": "只见浓烟不见明火（防幻觉关键案例）：灰白浓烟弥漫，画面中无火苗",
+  "task_id": "CASE-002",
+  "task_name": "demo林场-01分区",
+  "round_index": 1,
+  "prompt_version": "v4",
+  "model": "glm-4.6v-flash",
+  "temperature": 0.1,
+  "max_tokens": 2048,
+  "frames": [
+    {
+      "frame_id": "CASE-002-R1-F1",
+      "file": "T02.jpg",
+      "order": 1,
+      "time_offset_s": 0,
+      "sha256_16": "0a339c87fe7e943c",
+      "size_kb": 85
+    }
+  ],
+  "source": null,
+  "license": null,
+  "source_note": "来源未记录（仅队内测试使用，图片不上传公开仓库）",
+  "updated": "2026-09-06 21:50:00"
+}

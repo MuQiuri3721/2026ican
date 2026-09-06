@@ -17,11 +17,19 @@ from typing import Any, Dict, List, Optional
 import requests
 
 from ..agentkit.llm import extract_json
-from .prompts import JSON_REPAIR_INSTRUCTION, PROMPT_VERSION, SYSTEM_PROMPT_V1, USER_TEMPLATE_V1
+from .prompts import (
+    FRAME_SEQUENCE_NOTE,
+    JSON_REPAIR_INSTRUCTION,
+    MISSING_FIELDS_INSTRUCTION,
+    PROMPT_VERSION,
+    SYSTEM_PROMPT_V4,
+    USER_TEMPLATE_V4,
+)
 
 _BASE_URL = os.environ.get("FIRE_VLM_BASE_URL", "https://open.bigmodel.cn/api/paas/v4")
 _MODEL = os.environ.get("FIRE_VLM_MODEL", "glm-4.6v-flash")
-_TIMEOUT = float(os.environ.get("FIRE_VLM_TIMEOUT", "25"))
+# 交付实测（48 次调用）：纯模型耗时中位 19s、最慢 51s（推理型输出），90s 为安全上限
+_TIMEOUT = float(os.environ.get("FIRE_VLM_TIMEOUT", "90"))
 MAX_IMAGES = 4  # 手册 §5.3：首轮 1—3 张；时间对比 2—4 张
 
 _LOCK = threading.Lock()
@@ -89,9 +97,20 @@ def _user_text(
     previous = None
     if isinstance(previous_analysis, dict):
         previous = previous_analysis.get("human_summary") or previous_analysis.get("summary") or None
-    return USER_TEMPLATE_V1.format(
+    # 多图轮次注入帧序列说明行（交付包 prompt-v3 §三 / v4 §三）
+    sequence_note = FRAME_SEQUENCE_NOTE if len(image_paths) > 1 else ""
+    alarm_location = (
+        observation.get("location")
+        or observation.get("alarm_location")
+        or environment.get("location")
+        or "未知"
+    )
+    return USER_TEMPLATE_V4.format(
+        task_id=task_id or "unknown",
         round_index=round_index,
+        alarm_location=alarm_location,
         frame_ids_with_time=frame_ids or "（无）",
+        frame_sequence_note=sequence_note,
         yolo_json=_compact(yolo),
         camera_json=_compact(camera),
         scene_context_json=_compact(environment),
@@ -100,12 +119,21 @@ def _user_text(
             "observation_confidence": observation.get("confidence"),
         }),
         previous_vlm_summary_or_null=previous or "null",
-        task_id=task_id or "unknown",
     )
 
 
 def _compact(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+
+def _incomplete_groups(payload: Dict[str, Any]) -> List[str]:
+    """vlm-analysis-v1 必填字段组缺失清单（交付 §7-1：缺字段也要定向修复，不只拦非法 JSON）。"""
+    groups = ("image_quality", "fire_observation", "smoke_trend", "object_clues", "review")
+    missing = [group for group in groups if not isinstance(payload.get(group), dict)]
+    review = payload.get("review")
+    if isinstance(review, dict) and not review.get("human_summary"):
+        missing.append("review.human_summary")
+    return missing
 
 
 def vlm_analyze_images(
@@ -120,7 +148,8 @@ def vlm_analyze_images(
 ) -> Optional[Dict[str, Any]]:
     """调 glm-4.6v-flash 输出 vlm-analysis-v1 JSON；失败返回 None（调用方必须自带确定性降级）。
 
-    手册 §5.3：temperature 0；非法 JSON 允许一次"只修复 JSON 格式"重试，再失败返回 None。
+    交付包 §7：temperature 0.1 / max_tokens 2048（推理型模型，reasoning 占 completion 69%）；
+    非法 JSON 允许一次"只修复 JSON 格式"重试，再失败返回 None；HTTP 200 空响应按失败处理（P07）。
     连续失败 ≥2 次进入 degraded，直接返回 None 快速走回退（成功一次即恢复，对齐 agentkit.llm 语义）。
     """
     global _FAILURES
@@ -136,22 +165,35 @@ def vlm_analyze_images(
         raise
     text = _user_text(selected, observation or {}, environment or {}, people_status, task_id, round_index, previous_analysis)
     messages: List[Dict[str, Any]] = [
-        {"role": "system", "content": SYSTEM_PROMPT_V1},
+        {"role": "system", "content": SYSTEM_PROMPT_V4},
         {"role": "user", "content": [*image_parts, {"type": "text", "text": text}]},
     ]
     raw = _post(messages)
     if raw is None:
         return None
     parsed = extract_json(raw)
-    if parsed is None:
-        # 一次"只修复 JSON 格式"重试：文本会话续接，不重传图片
-        repair_messages = [
-            *messages,
-            {"role": "assistant", "content": raw[:2000]},
-            {"role": "user", "content": JSON_REPAIR_INSTRUCTION},
-        ]
-        raw_retry = _post(repair_messages)
-        parsed = extract_json(raw_retry) if raw_retry else None
+    if parsed is not None:
+        # 解析成功但缺必填字段组（P01/P02 残留形态）：把缺失字段回传模型定向补全一次（交付 §7-1）
+        missing = _incomplete_groups(parsed)
+        if missing:
+            repair_messages = [
+                *messages,
+                {"role": "assistant", "content": raw[:2000]},
+                {"role": "user", "content": MISSING_FIELDS_INSTRUCTION.format(missing="、".join(missing))},
+            ]
+            raw_retry = _post(repair_messages)
+            parsed_retry = extract_json(raw_retry) if raw_retry else None
+            if parsed_retry is not None and not _incomplete_groups(parsed_retry):
+                parsed = parsed_retry
+        return parsed
+    # 非法 JSON：一次"只修复 JSON 格式"重试：文本会话续接，不重传图片
+    repair_messages = [
+        *messages,
+        {"role": "assistant", "content": raw[:2000]},
+        {"role": "user", "content": JSON_REPAIR_INSTRUCTION},
+    ]
+    raw_retry = _post(repair_messages)
+    parsed = extract_json(raw_retry) if raw_retry else None
     return parsed
 
 
@@ -160,15 +202,21 @@ def _post(messages: List[Dict[str, Any]]) -> Optional[str]:
     try:
         response = requests.post(
             _BASE_URL.rstrip("/") + "/chat/completions",
-            json={"model": _MODEL, "messages": messages, "max_tokens": 1024, "temperature": 0},
+            json={"model": _MODEL, "messages": messages, "max_tokens": 2048, "temperature": 0.1},
             headers={"Authorization": f"Bearer {_api_key()}"},
             timeout=(3, _TIMEOUT),
         )
         response.raise_for_status()
         text = (response.json().get("choices") or [{}])[0].get("message", {}).get("content")
+        text = (text or "").strip()
+        if not text:
+            # 交付包 P07：HTTP 200 空响应按可重试失败处理，不计成功
+            with _LOCK:
+                _FAILURES += 1
+            return None
         with _LOCK:
             _FAILURES = 0
-        return (text or "").strip() or None
+        return text
     except Exception:
         with _LOCK:
             _FAILURES += 1
