@@ -13,3 +13,4 @@ e2e/curl_ps.json
 e2e/ps_check.json
 e2e/small.json
 data/tts_cache/
+backend/data/
