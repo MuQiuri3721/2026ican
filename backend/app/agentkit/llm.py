@@ -52,7 +52,10 @@ def chat(messages: List[Dict[str, str]], max_tokens: int = 512, temperature: flo
     try:
         response = requests.post(
             _BASE_URL.rstrip("/") + "/chat/completions",
-            json={"model": _MODEL, "messages": messages, "max_tokens": max_tokens, "temperature": temperature},
+            # 思考型模型（glm-4.7/5.x）必须显式关思考，否则正文为空（输出全进 reasoning_content）；
+            # 非思考型（glm-4-flash）对该参数免疫，可无条件携带
+            json={"model": _MODEL, "messages": messages, "max_tokens": max_tokens, "temperature": temperature,
+                  "thinking": {"type": "disabled"}},
             headers={"Authorization": f"Bearer {_api_key()}"},
             timeout=(3, _TIMEOUT),
         )

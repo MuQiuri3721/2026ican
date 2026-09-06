@@ -8,17 +8,12 @@ import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-from .routes.assistant_routes import router as assistant_router
-from .routes.environment_routes import router as environment_router
-from .routes.task_routes import router as task_router
-from .tools.environment import DEFAULT_LATITUDE, DEFAULT_LONGITUDE, EnvironmentTool
-
 
 def _load_env() -> None:
-    """加载仓库根 .env（FE-22：GLM 解释层密钥不入库）；已设置的真实环境变量优先。"""
+    """加载仓库根 .env（FE-22：GLM 解释层密钥不入库）；已设置的真实环境变量优先。
+
+    必须在 routes/agentkit 导入之前执行：agentkit.llm 在模块导入时读取模型名。
+    """
     env_file = Path(__file__).resolve().parents[2] / ".env"
     if not env_file.exists():
         return
@@ -31,6 +26,14 @@ def _load_env() -> None:
 
 
 _load_env()
+
+from fastapi import FastAPI  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+
+from .routes.assistant_routes import router as assistant_router  # noqa: E402
+from .routes.environment_routes import router as environment_router  # noqa: E402
+from .routes.task_routes import router as task_router  # noqa: E402
+from .tools.environment import DEFAULT_LATITUDE, DEFAULT_LONGITUDE, EnvironmentTool  # noqa: E402
 
 
 def _warm_environment_cache() -> None:
