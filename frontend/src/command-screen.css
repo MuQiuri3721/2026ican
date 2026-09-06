@@ -149,6 +149,9 @@
 .map-view.screen .agent-chip.mt-PLAN_PROPOSAL{background:#1f1a2e;border-color:#3d3358;color:#c9b8f2}
 .map-view.screen .agent-chip.mt-JUDGMENT{background:#26200f;border-color:#5c4d1f;color:#e2b95d}
 .map-view.screen .agent-chip.mt-APPROVAL_REQ,.map-view.screen .agent-chip.mt-APPROVAL_DECISION{background:#0f231a;border-color:#1f4a36;color:#7fd9ae}
+.map-view.screen .agent-chip.mt-UAV_FAULT{background:#2a120c;border-color:#6b2a1a;color:#ff9c72}
+.map-view.screen .agent-chip.mt-BACKFILL{background:#26200f;border-color:#5c4d1f;color:#e2b95d}
+.map-view.screen .agent-chip.mt-SIM_RESULT{background:#14231f;border-color:#28483c;color:#7fd9c0}
 .map-view.screen .stream-agent-head small.src-glm{color:#7fb3ff}
 .map-view.screen .stream-agent-head small.src-rules{color:#5fbd92}
 .stream-head{display:flex;justify-content:space-between;align-items:center;gap:8px}

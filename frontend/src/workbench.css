@@ -307,6 +307,8 @@
 .agent-chip.mt-FINDING{background:var(--fire-soft);color:var(--fire-deep);border-color:var(--fire-line)}
 .agent-chip.mt-PLAN_PROPOSAL{background:var(--plan-soft);color:var(--plan);border-color:#e2d9f0}
 .agent-chip.mt-JUDGMENT{background:var(--warn-soft);color:var(--warn);border-color:#f0dfc0}
+.agent-chip.mt-UAV_FAULT{background:var(--fire-soft);color:var(--fire-deep);border-color:var(--fire-line)}
+.agent-chip.mt-BACKFILL{background:var(--warn-soft);color:var(--warn);border-color:#f0dfc0}
 .agent-chip.mt-APPROVAL_REQ,.agent-chip.mt-APPROVAL_DECISION{background:var(--ok-soft);color:var(--ok);border-color:var(--ok-line)}
 .agent-msg-body{min-width:0}
 .agent-msg-body strong{font-size:12.5px;color:var(--ink-2)}
