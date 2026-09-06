@@ -1308,6 +1308,12 @@ async function runMonitor(auto = false) {
     reconcileMission(payload.after)
     const action = payload.changes?.action || payload.after?.action || payload.next_action || '保持观察'
     addLog(`第 ${payload.round || roundNumber} 轮反馈完成 · 下一步：${payload.next_action || action} · ${payload.after?.reason || '无重规划原因'}`, { stage: 'monitor', source: 'rules' })
+    // FE-42：火情扑灭（finish→completed）立即停自动推演钟——此前 mission.active 未清，
+    // 任务条永远卡在「自动推演中 · 第 N 轮」，与后端已完成状态脱节
+    if (payload.next_action === 'finish' || action === 'finish' || taskStatus.value === '已完成') {
+      stopMission(true)
+      addLog('🔥 火情扑灭 · 任务完成归档', { stage: 'mission', source: 'rules' })
+    }
     if (payload.after?.replan_required) {
       stopAutoSim()
       addLog('触发重规划 · 自动推演暂停，请在调度建议面板处置', { stage: 'mission', source: 'rules' })
