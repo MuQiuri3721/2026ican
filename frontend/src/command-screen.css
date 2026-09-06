@@ -165,8 +165,32 @@
 .stream-chip{flex-shrink:0;font:500 10.5px/1 var(--font-data);padding:3px 7px;border-radius:999px;border:1px solid;white-space:nowrap;margin-top:1px}
 .stream-text{min-width:0;overflow-wrap:anywhere;color:var(--scr-muted);font-size:12px}
 .stream-empty{padding:14px 4px;color:#5c7a6d;font-size:12px;line-height:1.7}
-.stream-rows::-webkit-scrollbar,.map-view.screen .map-side-rail::-webkit-scrollbar{width:6px}
-.stream-rows::-webkit-scrollbar-thumb,.map-view.screen .map-side-rail::-webkit-scrollbar-thumb{background:var(--scr-line2);border-radius:3px}
+/* 大屏内滚区域统一细窄滚动条（部署/水源/协作流/侧栏） */
+.map-view.screen .stream-rows,.map-view.screen .map-side-rail,
+.map-view.screen .deploy-panel,.map-view.screen .deploy-rows,
+.map-view.screen .water-panel{
+  scrollbar-width:thin;scrollbar-color:var(--scr-line2) transparent;
+}
+.map-view.screen .stream-rows::-webkit-scrollbar,
+.map-view.screen .map-side-rail::-webkit-scrollbar,
+.map-view.screen .deploy-panel::-webkit-scrollbar,
+.map-view.screen .deploy-rows::-webkit-scrollbar,
+.map-view.screen .water-panel::-webkit-scrollbar{width:5px}
+.map-view.screen .stream-rows::-webkit-scrollbar-track,
+.map-view.screen .map-side-rail::-webkit-scrollbar-track,
+.map-view.screen .deploy-panel::-webkit-scrollbar-track,
+.map-view.screen .deploy-rows::-webkit-scrollbar-track,
+.map-view.screen .water-panel::-webkit-scrollbar-track{background:transparent}
+.map-view.screen .stream-rows::-webkit-scrollbar-thumb,
+.map-view.screen .map-side-rail::-webkit-scrollbar-thumb,
+.map-view.screen .deploy-panel::-webkit-scrollbar-thumb,
+.map-view.screen .deploy-rows::-webkit-scrollbar-thumb,
+.map-view.screen .water-panel::-webkit-scrollbar-thumb{background:var(--scr-line2);border-radius:3px}
+.map-view.screen .stream-rows::-webkit-scrollbar-thumb:hover,
+.map-view.screen .map-side-rail::-webkit-scrollbar-thumb:hover,
+.map-view.screen .deploy-panel::-webkit-scrollbar-thumb:hover,
+.map-view.screen .deploy-rows::-webkit-scrollbar-thumb:hover,
+.map-view.screen .water-panel::-webkit-scrollbar-thumb:hover{background:#4a6b5c}
 
 /* 标记详情卡 / 光标读数 / 底部状态栏（深色化） */
 .map-view.screen .marker-detail{background:#121b17f5;border-color:var(--scr-line);color:var(--scr-muted);backdrop-filter:blur(6px)}
