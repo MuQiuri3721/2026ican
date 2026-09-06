@@ -254,6 +254,8 @@ class AnalysisService:
         if updated.status == "completed":
             # 归档即释放：终态任务不得遗留资源锁（与 terminate/reject 同口径，自查发现 completed 曾带锁）。
             analysis_store.release_resources(analysis_id)
+            # 结案回收（对照 firepatrol recover_round）：扑灭归档时把全部在外机撤回基地。
+            self._recover_fleet_to_base(analysis_id, updated)
         self._persist_dispatch_report(analysis_id)
         return {**updated.model_dump(), "action": updated.result["monitor"]["action"]}
 
@@ -504,6 +506,45 @@ class AnalysisService:
             round_data["next_action"] = "awaiting_confirmation"
         self._persist_dispatch_report(analysis_id)
         return round_data
+
+    def _recover_fleet_to_base(self, analysis_id: str, updated) -> None:
+        """结案回收（对照 firepatrol recover_round，逐一清单②）：扑灭归档时把全部在外机撤回基地。
+
+        按火点→基地航程扣减返航 SOC（rate×minutes/60，下限 0），故障机归位即停机检修；
+        只更新机队与协作消息，不推进火情轮次（rounds 时间线止于扑灭轮）。
+        后端 fleet.position 恒为基地位，因此归位即状态收敛，前端标记由推演钟停摆自然定格。
+        """
+        import math
+        result = dict(updated.result or {})
+        fleet = result.get("fleet") or []
+        origin = (result.get("scene") or {}).get("fire_origin") or {"x": 0, "y": 0}
+        pts = [u.get("position") or {} for u in fleet]
+        base_x = sum(float(p.get("x", 0)) for p in pts) / max(len(pts), 1)
+        base_y = sum(float(p.get("y", 0)) for p in pts) / max(len(pts), 1)
+        distance_m = math.hypot(float(origin.get("x", 0)) - base_x, float(origin.get("y", 0)) - base_y)
+        outbound, longest = [], 0.0
+        for unit in fleet:
+            if unit.get("status") in {"flying", "working", "returning", "servicing", "charging"}:
+                speed = max(float(unit.get("speed_mps", 8)), 0.1)
+                minutes = distance_m / speed / 60
+                rate = float(unit.get("energy_rate_percent_per_hour", 180))
+                unit["soc"] = round(max(0.0, float(unit.get("soc", 0)) - rate * minutes / 60), 2)
+                longest = max(longest, minutes)
+                outbound.append(unit.get("uav_id", "?"))
+            if unit.get("status") != "fault":
+                unit["status"] = "available"
+        result["fleet"] = fleet
+        analysis_store.update(analysis_id, result=result)
+        analysis_store.update_resources(analysis_id, fleet, None)
+        names = "、".join(outbound) if outbound else "全员"
+        post_message(analysis_id, "RECOVERY", "human", "all",
+                     f"任务结束，下令全员返航：{names} 共 {len(outbound) if outbound else len(fleet)} 架返回紫霞湖基地。",
+                     {"returning": outbound or [u.get("uav_id") for u in fleet]}, source="rules")
+        post_message(analysis_id, "RECOVERY", "human", "all",
+                     f"全员返航完成：{len(fleet)} 架降落基地，最长航程 {longest:.1f} 分钟。故障机原地停机检修。",
+                     {"longest_minutes": round(longest, 1)}, source="rules")
+        analysis_store.add_event(analysis_id, "recovery",
+                                 f"结案回收：{len(fleet)} 架归位基地，最长航程 {longest:.1f} 分钟", "rules")
 
     def _maybe_fail_and_backfill(self, analysis_id: str, item, round_number: int) -> None:
         """场景剧本的单机失能注入 + 补位决策（FE-34）：幂等（同轮只注入一次）。"""

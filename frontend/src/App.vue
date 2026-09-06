@@ -253,7 +253,7 @@ const result = computed(() => {
   return { ...base, environment: { ...base.environment, ...environment.value } }
 })
 const statusLabels = { succeeded: '已完成', completed: '已完成', running: '执行中', awaiting_confirmation: '待确认', approved: '已批准', executing: '执行中', replanning: '重规划中', terminated: '已终止', action_required: '需要处置', failed: '失败', queued: '排队中', available: '待命', assigned: '已分配', flying: '飞行中', working: '作业中', returning: '返航中', servicing: '维护中', charging: '充电中', fault: '故障', offline: '离线' }
-const AGENT_MSG_LABELS = { TASK_ASSIGN: '建案派任务', FINDING: '态势发现', PLAN_PROPOSAL: '方案提案', SIM_RESULT: '仿真评估', APPROVAL_REQ: '审批请求', APPROVAL_DECISION: '审批仲裁', JUDGMENT: '自主研判', REPLAN_TRIGGER: '重规划触发', REPORT: '结案报告', EVAC_BROADCAST: '疏散广播', UAV_FAULT: '单机失能', BACKFILL: '补位接替', INFO: '信息', ERROR: '异常' }
+const AGENT_MSG_LABELS = { TASK_ASSIGN: '建案派任务', FINDING: '态势发现', PLAN_PROPOSAL: '方案提案', SIM_RESULT: '仿真评估', APPROVAL_REQ: '审批请求', APPROVAL_DECISION: '审批仲裁', JUDGMENT: '自主研判', REPLAN_TRIGGER: '重规划触发', REPORT: '结案报告', EVAC_BROADCAST: '疏散广播', UAV_FAULT: '单机失能', BACKFILL: '补位接替', RECOVERY: '结案回收', INFO: '信息', ERROR: '异常' }
 const AGENT_SOURCE_LABELS = { glm: 'GLM 在线', 'conservative-fallback': '保守降级', 'deterministic-offline': '规则离线', rules: '规则引擎', agent: 'Agent', user: '指挥员', 'parse-failed': '解析回退' }
 function agentMsgLabel(type) { return AGENT_MSG_LABELS[type] || type }
 function agentSourceLabel(source) { return AGENT_SOURCE_LABELS[source] || source || '规则' }

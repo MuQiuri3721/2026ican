@@ -269,6 +269,32 @@ def test_monitor_finish_releases_resource_locks():
     assert envelope["resource_locks"] == [], "completed 任务不得遗留资源锁"
 
 
+def test_monitor_finish_recovers_fleet_to_base():
+    """结案回收（逐一清单②，对照 firepatrol recover_round）：扑灭归档后全员返航基地——
+    在外机 status 收敛 available、按航程扣减返航 SOC、发 RECOVERY 协作消息与事件。"""
+    client = TestClient(app)
+    task_id, plan = _create_offline_task(client)
+    client.post(f"/api/tasks/{task_id}/approval", json={"action": "approve", "plan_id": plan["plan_id"]})
+    finished = client.post(f"/api/tasks/{task_id}/rounds", json={
+        "round": 1, "fire_load_flp": 2, "growth_rate": 0.1,
+        "elapsed_minutes": 5, "extinguishing_liters": 5000,
+    })
+    assert finished.status_code == 200
+
+    envelope = client.get(f"/api/analyze/{task_id}").json()
+    fleet = envelope["result"]["fleet"]
+    assert all(u["status"] in {"available", "fault"} for u in fleet), \
+        f"结案后机队必须归位待命：{[u['status'] for u in fleet]}"
+    events = [e["message"] for e in envelope["events"] if e["stage"] == "recovery"]
+    assert events and "结案回收" in events[0], "结案回收必须落事件时间线"
+
+    payload = client.get(f"/api/tasks/{task_id}/agent-messages").json()
+    msgs = payload.get("items", []) if isinstance(payload, dict) else payload
+    recovery = [m for m in msgs if m.get("msg_type") == "RECOVERY"]
+    assert len(recovery) >= 2, "结案回收必须发「下令返航」+「返航完成」协作消息"
+    assert any("全员返航完成" in m["content"] for m in recovery)
+
+
 def test_time_limit_constraint_filters_overtime_plans():
     """硬时限（target_minutes）剔除全部超时方案时必须输出时限缺口且判不可控（规则文档 §8.2）。
 

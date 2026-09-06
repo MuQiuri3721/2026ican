@@ -382,3 +382,4 @@ select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .chat-input-row input{flex:1;border:1px solid var(--line-strong);border-radius:var(--radius-s);padding:10px 12px;font:400 12.5px var(--font-data);color:var(--ink-2);background:var(--surface);outline:none}
 .chat-input-row input:focus{border-color:var(--accent)}
 .chat-send{margin-top:0}
+.agent-chip.mt-RECOVERY{background:var(--ok-soft,#e8f5ee);color:var(--ok,#1d7a4f);border-color:#c4e3d2}
