@@ -465,7 +465,8 @@ class AnalysisService:
             # 基线必须用 base_fire_load_flp（当前方案批准时）——flp_growth_pct_since_plan
             # 用的是任务首轮值，火高于开局就恒开闸，等于没有闸门。
             pct_vs_base = ((next_flp_now - base_flp) / base_flp * 100) if (base_flp and next_flp_now is not None) else 0
-            trend_gate = pct_vs_base >= 10 or (snapshot["flp_rising_streak"] or 0) >= 3
+            # 基线 <20 FLP（余烬清扫段）时趋势闸门恒关：±1 FLP 即超 10%，GLM 每轮都会建议 replan
+            trend_gate = base_flp and base_flp >= 20.0 and (pct_vs_base >= 10 or (snapshot["flp_rising_streak"] or 0) >= 3)
             if (judgment.get("decision") == "replan" and judgment.get("source") == "glm"
                     and request.round >= 2 and trend_gate and "llm_judgment_replan" not in triggers):
                 triggers.append("llm_judgment_replan")

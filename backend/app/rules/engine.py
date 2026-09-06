@@ -706,7 +706,9 @@ def simulate_monitor(
         action, reason = "continue", "火势受到抑制，继续当前任务并在 5 分钟后复评。"
 
     triggers = []
-    if fire_load > load_before * 1.2:
+    # BE-12 补：与 add_round 累计触发器同样的绝对下限——余烬级（<20 FLP）的 ±1 FLP
+    # 波动即超相对阈值，清扫阶段会每轮触发 wind/replan 风暴（实测 1.9→3.21 触发 v3）
+    if fire_load > load_before * 1.2 and fire_load >= 20.0:
         triggers.append("fire_load_increase_over_20_percent")
     if dispatch.get("wind_band") and dispatch["wind_band"].get("band") != band["band"]:
         triggers.append("wind_band_changed")
