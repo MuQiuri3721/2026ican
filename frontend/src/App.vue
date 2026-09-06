@@ -476,7 +476,7 @@ const waterSourcesList = computed(() => {
   const preferred = environment.value?.preferred_water
   return waters
     .map((water, index) => ({
-      id: `water-${water.id || water.name || index}`,
+      id: `water-${water.id || water.name || "x"}-${index}`,
       name: water.name || '未命名水体',
       type: waterTypeLabel(water),
       distance: Number.isFinite(Number(water.distance_m)) ? Math.round(Number(water.distance_m)) : null,

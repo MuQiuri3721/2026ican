@@ -282,6 +282,25 @@ class AnalysisService:
         fire = dict(result.get("fire_assessment", {}))
         observation = request.observation or {}
         fire.update({k: observation[k] for k in ("fire_area_m2", "smoke_area_m2", "growth_rate", "fire_load_flp") if k in observation})
+        # 状态续接（FE-39）：重规划必须「带着当前火势与风况」重新组织，而不是回到起点——
+        # 此前 fire_load_flp 用初始值、风用场景旧值，导致每轮重复触发 wind_band_changed
+        # （方案打到 v13、FLP 永远回到 1800、E 机反复从基地重飞）。
+        dispatch_now = result.get("dispatch_plan") or {}
+        latest_flp = dispatch_now.get("fire_load_flp")
+        if latest_flp is not None:
+            fire["fire_load_flp"] = latest_flp
+            fire["fire_area_m2"] = round(latest_flp * 180)
+        latest_growth = dispatch_now.get("growth_flp_per_hour")
+        if latest_growth is not None:
+            fire["growth_flp_per_hour"] = latest_growth
+        observed_wind = (result.get("environment") or {}).get("wind_speed")
+        if observed_wind is not None:
+            state["scene"]["wind_speed"] = observed_wind
+            fire["wind_speed"] = observed_wind
+            # 关键：dispatch 优先读 fire["wind_band"]（旧档位对象），必须同步重算，
+            # 否则新方案风档停留在旧值 → 每轮重复触发 wind_band_changed（v13 死循环根因）
+            from ..rules.engine import resolve_wind_band
+            fire["wind_band"] = resolve_wind_band(observed_wind)
         people_status = request.people_status.value if request.people_status else result.get("dispatch_plan", {}).get("people_branch", item.input.people_status.value)
         plan = deterministic_v1_dispatch(state, fire, people_status, constraints=request.constraints or result.get("constraints"))
         version = len(item.plan_versions) + 1

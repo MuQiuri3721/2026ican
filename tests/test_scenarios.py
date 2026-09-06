@@ -107,6 +107,17 @@ def test_wind_shift_drill_triggers_replan_new_version():
     assert wind_after == 8.5, "观测风速必须持久化"
     messages = client.get(f"/api/tasks/{task_id}/agent-messages").json()["items"]
     assert any("跨档变化" in (m.get("content") or "") for m in messages), "缺少观测风变消息"
+
+    # 状态续接（FE-39）：批准 v2 后第 3 轮必须从当前火势继续——
+    # 不得回到初始 1800（旧 bug：replan 用陈旧基线，每轮重复触发风变打到 v13）
+    client.post(f"/api/tasks/{task_id}/approval", json={"action": "approve", "plan_id": (envelope.get("plan_versions") or [{}])[-1].get("plan_id")})
+    baseline = (client.get(f"/api/tasks/{task_id}/plan").json()["plan"] or {}).get("fire_load_flp")
+    third = client.post(f"/api/tasks/{task_id}/rounds", json={"round": 3, "elapsed_minutes": 5, "extinguishing_liters": 100})
+    assert third.status_code == 200, third.text
+    third_body = third.json()
+    before3 = (third_body.get("before") or {}).get("fire_load_flp")
+    assert before3 == baseline, f"重规划后基线必须等于当前火势 {baseline}（实际 {before3}）"
+    assert "wind_band_changed" not in (third_body.get("replan_triggers") or []), "新方案风档已对齐观测，不得再次触发风变"
     _terminate(client, task_id)
 
 
