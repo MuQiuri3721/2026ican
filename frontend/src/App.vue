@@ -1007,9 +1007,11 @@ function adjustConstraints() {
   return constraints
 }
 
-async function submitApproval(action) {
+async function submitApproval(action, opts = {}) {
   if (!analysisId.value || approvalBusy.value) return
-  const reason = reasonInput.value.trim()
+  // FE-45：林区态势任务条没有原因输入框，其终止按钮使用默认原因（此前被必填守卫
+  // 静默拦截，按钮永远不可用）；指挥中枢面板仍强制填写原因
+  const reason = reasonInput.value.trim() || (opts.defaultReason || '')
   if ((action === 'reject' || action === 'terminate') && !reason) {
     errorMessage.value = '驳回或终止必须在原因框中说明原因。'
     return
@@ -1486,7 +1488,11 @@ function generateScenario() {
   const distance = 800 + Math.random() * 1700
   const angle = ((-25 + Math.random() * 100) * Math.PI) / 180
   const fireOrigin = { x: Math.round(base.x + Math.cos(angle) * distance), y: Math.round(base.y + Math.sin(angle) * distance) }
-  const areaM2 = Math.round(300 + Math.random() * 5700)
+  // FE-43：面积分层抽样——编队持续压制 ≈13 FLP/轮，300-6000 均匀分布下大多数随机火
+  // 超出能力（可胜区 ≤~900m²），「生成→扑灭」演示主流程应当多数落在可胜区间；
+  // 大火保留 10% 概率供失控/增援演练，重摇即可遇到
+  const sizeRoll = Math.random()
+  const areaM2 = Math.round(sizeRoll < 0.6 ? 300 + Math.random() * 600 : sizeRoll < 0.9 ? 900 + Math.random() * 1600 : 2500 + Math.random() * 3500)
   const growthRate = Math.round((0.2 + Math.random() * 0.4) * 100) / 100
   const people = ['confirmed', 'absent', 'unknown'][Math.floor(Math.random() * 3)]
   const metersPerLng = 111320 * Math.cos((ZIXIAHU_BASE_GPS.latitude * Math.PI) / 180)
@@ -1498,7 +1504,10 @@ function generateScenario() {
   // 演练互斥（FE-34/35）：风变重规划可能生成无灭火机方案，与失能演练语义冲突，二选一
   const drillRoll = Math.random()
   const failureRound = drillRoll < 0.35 ? 2 + Math.floor(Math.random() * 3) : null
-  const windShift = failureRound ? null : (Math.random() < 0.4 ? { round: 2 + Math.floor(Math.random() * 3), speed: Math.min(8.5, +(result.value.environment.wind_speed + 2.5).toFixed(1)) } : null)
+  // FE-44：风变目标必须真跨档（档位 0-4/4-6/6-8/8+）——旧逻辑 base+2.5 在低风天
+  // 仍同档（1.35→3.9 同在 band 0），风变重规划静默失效；按基准档位取下一档中值
+  const baseWind = Number(result.value.environment.wind_speed) || 0
+  const windShift = failureRound ? null : (Math.random() < 0.4 ? { round: 2 + Math.floor(Math.random() * 3), speed: baseWind < 4 ? 5.5 : baseWind < 6 ? 7.5 : baseWind < 8 ? 8.6 : 5.2 } : null)
   scenario.value = { fireOrigin, fireGps, areaM2, growthRate, people, failureRound, windShift }
   const peopleLabel = people === 'confirmed' ? '在场' : people === 'absent' ? '不在场' : '情况不明'
   addLog(`随机火情已生成 · 面积 ${areaM2}m² · 人员${peopleLabel} · 演训模拟就绪`, { stage: 'scenario', source: 'local' })
@@ -1635,7 +1644,7 @@ onMounted(() => {
         <template v-else-if="analysisEnvelope && analysisEnvelope.status === 'awaiting_confirmation'">
           <span class="scr-hint">方案 {{ planVersionLabel }} 已生成 · {{ (result.dispatch_plan.selected_uavs || []).length }} 架出动 · {{ result.dispatch_plan.can_control ? '可控' : '超出能力，建议增援' }}</span>
           <button class="scr-btn scr-primary" :disabled="approvalBusy" @click="submitApproval('approve')">✅ 批准主方案</button>
-          <button class="scr-btn" :disabled="approvalBusy" @click="submitApproval('terminate')">终止任务</button>
+          <button class="scr-btn" :disabled="approvalBusy" @click="submitApproval('terminate', { defaultReason: '指挥员在林区态势页终止任务' })">终止任务</button>
         </template>
         <template v-else-if="mission && mission.active">
           <span class="scr-hint scr-live"><i class="live-dot"></i> 自动推演中 · 第 {{ Math.min(Math.floor(missionNow / 5) + 1, activeRounds.length + 1) }} 轮 · 每轮 5 仿真分钟 · 结果见下方演化曲线与协作流</span>
