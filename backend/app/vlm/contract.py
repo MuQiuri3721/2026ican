@@ -68,6 +68,18 @@ def _clamp_semantics(node: Any, violations: List[str]) -> None:
             _clamp_semantics(item, violations)
 
 
+# 交付 prompt-v4 §二：五组必填字段组必须全部出现（缺失=载荷不完整，整包作废走回退）
+REQUIRED_GROUPS = ("image_quality", "fire_observation", "smoke_trend", "object_clues", "review")
+
+
+def _missing_groups(payload: Dict[str, Any]) -> List[str]:
+    missing = [group for group in REQUIRED_GROUPS if not isinstance(payload.get(group), dict)]
+    review = payload.get("review")
+    if isinstance(review, dict) and not review.get("human_summary"):
+        missing.append("review.human_summary")
+    return missing
+
+
 def validate_vlm_analysis(
     payload: Any, task_id: Optional[str] = None, round_index: Optional[int] = None
 ) -> Tuple[Optional[Dict[str, Any]], Dict[str, Any]]:
@@ -93,6 +105,10 @@ def validate_vlm_analysis(
         if echoed not in (None, round_index):
             report["missing_fields"].append(f"round_index 回显不一致（{payload.get('round_index')!r} ≠ {round_index!r}）")
             return None, report
+    missing = _missing_groups(payload)
+    if missing:
+        report["missing_fields"].append(f"缺少必填字段组：{'、'.join(missing)}（交付 prompt-v4 §二：所有字段必须全部出现）")
+        return None, report
 
     cleaned = _walk_forbidden(payload, "", violations)
     _clamp_semantics(cleaned, violations)

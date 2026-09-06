@@ -221,15 +221,48 @@ def test_client_repairs_incomplete_payload_once(tmp_path, vlm_env, monkeypatch):
     assert "image_quality" in result and result["review"]["human_summary"]
 
 
-def test_client_keeps_partial_payload_if_repair_still_incomplete(tmp_path, vlm_env, monkeypatch):
-    """修复后仍缺字段：保留首次解析结果（身份/禁项由契约层裁决，稀疏载荷如实呈现）。"""
+def test_analyze_with_vlm_sparse_payload_falls_back_as_contract_invalid(tmp_path, vlm_env, monkeypatch):
+    """修复后仍缺字段组：客户端原样上交，契约层按"缺少必填字段组"整包作废 → vlm_contract_invalid。"""
+    monkeypatch.delenv("FIRE_VLM_ENDPOINT", raising=False)
+    sparse = {"schema_version": SCHEMA_VERSION, "task_id": "task-1", "round_index": 1}
 
     def fake_post(url, **kwargs):
-        return _FakeResponse(json.dumps({"schema_version": SCHEMA_VERSION, "task_id": "task-1", "round_index": 1}))
+        return _FakeResponse(json.dumps(sparse))
+
+    monkeypatch.setattr(vlm_client.requests, "post", fake_post)
+    result = analyze_with_vlm(
+        observation={"detections": []}, people_status="unknown",
+        image_paths=[_write_png(tmp_path)], task_id="task-1", round_index=1,
+    )
+    assert result["mode"] == "fallback"
+    assert result["adapter_fallback"]["code"] == "vlm_contract_invalid"
+
+
+def test_contract_rejects_missing_required_groups():
+    """契约 §10.2：五组必填字段组缺一即整包作废（交付 prompt-v4 §二：所有字段必须全部出现）。"""
+    cleaned, report = validate_vlm_analysis({"schema_version": SCHEMA_VERSION, "task_id": "t", "round_index": 1})
+    assert cleaned is None
+    assert "缺少必填字段组" in report["missing_fields"][0]
+
+
+def test_client_completes_truncated_then_repaired_payload(tmp_path, vlm_env, monkeypatch):
+    """截断载荷走格式修复后仍缺组 → 必须再走缺字段定向修复（原漏洞：格式修复路径绕过完整性检查）。"""
+    truncated = json.dumps(_v1_payload())[:80]  # 截断 → 非法 JSON
+    calls = []
+
+    def fake_post(url, **kwargs):
+        calls.append(kwargs.get("json"))
+        if len(calls) == 1:
+            return _FakeResponse(truncated)  # 截断 → 非法 JSON
+        if len(calls) == 2:
+            # 格式修复重试：模型回了只含身份字段的最小 JSON
+            return _FakeResponse(json.dumps({"schema_version": SCHEMA_VERSION, "task_id": "task-1", "round_index": 1}))
+        return _FakeResponse(json.dumps(_v1_payload()))
 
     monkeypatch.setattr(vlm_client.requests, "post", fake_post)
     result = vlm_analyze_images([_write_png(tmp_path)], observation={}, environment={})
-    assert result["schema_version"] == SCHEMA_VERSION
+    assert len(calls) == 3  # 首调 + 格式修复 + 缺字段定向修复
+    assert "image_quality" in result
 
 
 def test_client_returns_none_after_second_invalid_json(tmp_path, vlm_env, monkeypatch):

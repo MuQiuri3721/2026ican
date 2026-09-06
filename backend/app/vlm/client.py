@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional
 import requests
 
 from ..agentkit.llm import extract_json
+from .contract import SCHEMA_VERSION
 from .prompts import (
     FRAME_SEQUENCE_NOTE,
     JSON_REPAIR_INSTRUCTION,
@@ -172,28 +173,30 @@ def vlm_analyze_images(
     if raw is None:
         return None
     parsed = extract_json(raw)
-    if parsed is not None:
-        # 解析成功但缺必填字段组（P01/P02 残留形态）：把缺失字段回传模型定向补全一次（交付 §7-1）
+    if parsed is None:
+        # 非法 JSON：一次"只修复 JSON 格式"重试（文本会话续接，不重传图片）
+        raw_retry = _post([
+            *messages,
+            {"role": "assistant", "content": raw[:2000]},
+            {"role": "user", "content": JSON_REPAIR_INSTRUCTION},
+        ])
+        parsed = extract_json(raw_retry) if raw_retry else None
+        if parsed is None:
+            return None  # 手册 §5.3：第二次仍非法即本批失败，走确定性回退
+    # 缺必填字段组（截断/格式修复后的常见残留，P01/P02）：定向补全一次；仍缺则原样上交，
+    # 由契约层判 vlm_contract_invalid（api-contract §10.2：五组必填字段必须全部出现）
+    if isinstance(parsed, dict) and parsed.get("schema_version") == SCHEMA_VERSION:
         missing = _incomplete_groups(parsed)
         if missing:
-            repair_messages = [
+            raw_retry = _post([
                 *messages,
                 {"role": "assistant", "content": raw[:2000]},
                 {"role": "user", "content": MISSING_FIELDS_INSTRUCTION.format(missing="、".join(missing))},
-            ]
-            raw_retry = _post(repair_messages)
+            ])
             parsed_retry = extract_json(raw_retry) if raw_retry else None
-            if parsed_retry is not None and not _incomplete_groups(parsed_retry):
+            if isinstance(parsed_retry, dict) and parsed_retry.get("schema_version") == SCHEMA_VERSION \
+                    and not _incomplete_groups(parsed_retry):
                 parsed = parsed_retry
-        return parsed
-    # 非法 JSON：一次"只修复 JSON 格式"重试：文本会话续接，不重传图片
-    repair_messages = [
-        *messages,
-        {"role": "assistant", "content": raw[:2000]},
-        {"role": "user", "content": JSON_REPAIR_INSTRUCTION},
-    ]
-    raw_retry = _post(repair_messages)
-    parsed = extract_json(raw_retry) if raw_retry else None
     return parsed
 
 
