@@ -36,7 +36,7 @@ class FirePerceptionSkill(BaseSkill):
         explanation = {}
         explanation_result = None
         if context.get("use_vlm", True):
-            explanation_result = self.registry.execute("analyze_with_vlm", {"observation": observation, "environment": (context.get("environment_assessment") or {}).get("environment", {}), "people_status": context.get("people_status", "unknown"), "strict_real": context.get("strict_real", False)})
+            explanation_result = self.registry.execute("analyze_with_vlm", {"observation": observation, "environment": (context.get("environment_assessment") or {}).get("environment", {}), "people_status": context.get("people_status", "unknown"), "strict_real": context.get("strict_real", False), "image_paths": context.get("image_paths"), "task_id": context.get("task_id"), "round_index": context.get("round_index", 1)})
             explanation = explanation_result.get("data") if isinstance(explanation_result.get("data"), dict) else {}
         return {"observation": {"fire_area_m2": observation.get("fire_area_m2", metrics_data.get("fire_area_m2", 1800)), "smoke_area_m2": observation.get("smoke_area_m2", metrics_data.get("smoke_area_m2", 4200)), "growth_rate": observation.get("growth_rate", 0.42), "confidence": observation.get("confidence", 0.91), "fire_center": context.get("fire_center") or observation.get("fire_center") or {"latitude": 32.04, "longitude": 118.78}, "source": observation.get("source", "vision-observation-fixture"), "detector": result, "metrics": metrics}, "explanation": explanation, "vlm_used": bool(context.get("use_vlm", True))}
 class EnvironmentAssessmentSkill(BaseSkill):

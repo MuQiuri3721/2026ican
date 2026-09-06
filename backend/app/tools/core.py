@@ -14,6 +14,10 @@ ROOT = Path(__file__).resolve().parents[3]
 # rules 层迁移（AG-4）：冻结数值实现已迁至 rules/engine.py，此处 re-export 兼容
 from ..rules.engine import read_json, v1_config, positive, calculate_distance, resolve_wind_band, resolve_slope_factor, calculate_flp_load, select_water_source, swap_battery, build_fire_grid, simulate_dispatch_candidate, score_candidate_plan, _agent_kappa
 
+# VLM 视觉分析层（E-2 开发侧就绪）：vlm-analysis-v1 契约 + glm-4.6v-flash 直连
+from ..vlm import ImageUnreadable, validate_vlm_analysis, vlm_analyze_images, vlm_client_status
+from ..vlm.prompts import PROMPT_VERSION
+
 
 
 
@@ -441,8 +445,13 @@ def detect_fire(image_name: str = "default", image_path: Optional[str] = None, s
     return demo_observation(image_name, image_path)
 
 
-def analyze_with_vlm(observation: Dict[str, Any] = None, environment: Dict[str, Any] = None, people_status: str = "unknown", strict_real: bool = False, **_: Any) -> Dict[str, Any]:
-    """调用 VLM 并校验 object 响应；strict_real 下外部失败返回结构化错误。"""
+def analyze_with_vlm(observation: Dict[str, Any] = None, environment: Dict[str, Any] = None, people_status: str = "unknown", strict_real: bool = False, image_paths: Optional[List[str]] = None, task_id: Optional[str] = None, round_index: int = 1, previous_analysis: Dict[str, Any] = None, **_: Any) -> Dict[str, Any]:
+    """VLM 解释分析，来源三级（api-contract §10）：
+
+    ① FIRE_VLM_ENDPOINT 外部适配器；② FIRE_VLM_API_KEY 直连 glm-4.6v-flash（冻结提示词 V1，
+    vlm-analysis-v1 契约校验 + 禁项守卫）；③ 未配置或失败回退规则解释器。
+    strict_real 下外部来源失败返回结构化错误，不以回退掩盖。
+    """
     endpoint = os.environ.get("FIRE_VLM_ENDPOINT")
     if endpoint:
         try:
@@ -458,6 +467,41 @@ def analyze_with_vlm(observation: Dict[str, Any] = None, environment: Dict[str, 
             explanation = vlm_explain_fire(observation, environment, people_status)
             explanation["adapter_fallback"] = {"code": "vlm_endpoint_unavailable", "message": str(error)}
             return explanation
+
+    paths = [path for path in (image_paths or []) if path]
+    if os.environ.get("FIRE_VLM_API_KEY") and paths:
+        source_tag = f"vlm-{vlm_client_status().get('model') or 'glm-4.6v-flash'}"
+        try:
+            raw = vlm_analyze_images(paths, observation=observation, environment=environment, people_status=people_status, task_id=task_id, round_index=int(round_index or 1), previous_analysis=previous_analysis)
+        except ImageUnreadable as error:
+            if strict_real:
+                return {"status": "error", "mode": "real", "source": source_tag, "error": {"code": "vlm_image_unreadable", "message": str(error)}}
+            explanation = vlm_explain_fire(observation, environment, people_status)
+            explanation["adapter_fallback"] = {"code": "vlm_image_unreadable", "message": str(error)}
+            return explanation
+        if raw is not None:
+            cleaned, report = validate_vlm_analysis(raw, task_id=task_id, round_index=int(round_index or 1))
+            if cleaned is not None:
+                # 来源标签以平台口径为准（api-contract §10：source 证明可追溯链路），模型名随行
+                cleaned["source"] = source_tag
+                cleaned["mode"] = "real"
+                cleaned["prompt_version"] = PROMPT_VERSION
+                if task_id:
+                    cleaned.setdefault("task_id", task_id)
+                cleaned.setdefault("round_index", int(round_index or 1))
+                # 下游合并/展示沿用 summary 字段；v1 契约正文在 human_summary
+                cleaned["summary"] = cleaned.get("human_summary") or cleaned.get("summary") or ""
+                if report.get("violations"):
+                    cleaned["contract_guard"] = {"violations": report["violations"]}
+                return cleaned
+            fallback_code = "vlm_contract_invalid"
+        else:
+            fallback_code = "vlm_call_failed"
+        if strict_real:
+            return {"status": "error", "mode": "real", "source": source_tag, "error": {"code": "vlm_unavailable", "message": fallback_code}}
+        explanation = vlm_explain_fire(observation, environment, people_status)
+        explanation["adapter_fallback"] = {"code": fallback_code}
+        return explanation
     return vlm_explain_fire(observation, environment, people_status)
 
 

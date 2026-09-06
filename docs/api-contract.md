@@ -120,12 +120,12 @@ queued → running → awaiting_confirmation → executing → completed
 
 ### 2.2 `GET /api/project-status`
 
-返回框架/演示管线/智能体层状态、`yolo`/`vlm` 接入状态（当前 `"pending"`）、环境模式列表与 Tool/Skill 数量、`last_checked`。
+返回框架/演示管线/智能体层状态、`yolo`/`vlm` 接入状态（按环境变量如实上报：已配置端点/Key 为 `"configured"`，未配置为 `"pending"`，口径见 §10.3）、环境模式列表与 Tool/Skill 数量、`last_checked`。
 
 ### 2.3 `GET /api/tools` · `GET /api/skills`
 
 ```json
-{"tools": ["analyze_with_vlm", "assess_fire_level", "...共 46 个确定性 Tool"]}
+{"tools": ["analyze_with_vlm", "assess_fire_level", "...共 53 个确定性 Tool"]}
 {"skills": ["candidate_generation", "closed_loop_monitoring", "...共 15 个 Skill"]}
 ```
 
@@ -491,19 +491,36 @@ Query：`once`（可选，`1` = 仅推送当前事件快照后结束，供一次
 
 接入成功后结果带 `mode="real"`、`source="pwm-yolo-adapter"`。前端与报告以 `mode/source` 展示来源，未配置端点时不得宣称真实识别。
 
-## 10. VLM 解释适配协议（FIRE_VLM_ENDPOINT）
+## 10. VLM 解释适配协议（FIRE_VLM_ENDPOINT / FIRE_VLM_API_KEY）
 
-平台侧实现：`backend/app/tools/core.py::analyze_with_vlm`。VLM 只做观察与解释，**不得输出/覆盖 FLP、SOC、药剂需求、无人机数量、时间等规则数字**。
+平台侧实现：`backend/app/tools/core.py::analyze_with_vlm`（直连客户端 `backend/app/vlm/`）。VLM 只做观察与解释，**不得输出/覆盖 FLP、SOC、药剂需求、无人机数量、时间等规则数字**（红线同 §9，由契约守卫强制执行）。冻结提示词、测试集与交付流程见 [VLM队员执行手册](VLM队员执行手册.md)。
 
-- 启用方式：环境变量 `FIRE_VLM_ENDPOINT`；未设置时使用规则回退解释器 `vlm_explain_fire`（`mode="fallback"`、`source="rule-explainer-fallback"`）。
-- 请求：`POST <endpoint>`，JSON：
+### 10.1 来源三级（按优先级）
 
-```json
-{"observation": {"...detect_fire 输出"}, "environment": {"...环境结果"}, "people_status": "unknown"}
-```
+| 级 | 启用条件 | 实现 | 标注 |
+|---|---|---|---|
+| ① 外部适配器 | 环境变量 `FIRE_VLM_ENDPOINT` | `POST <endpoint>`，JSON `{"observation", "environment", "people_status"}`，超时 5 秒，响应 JSON object | `source="vlm-adapter"`、`mode="real"` |
+| ② 直连 glm-4.6v-flash | 环境变量 `FIRE_VLM_API_KEY`（可选 `FIRE_VLM_MODEL`、`FIRE_VLM_BASE_URL`、`FIRE_VLM_TIMEOUT`）且有可读图片 | `backend/app/vlm/client.py` 标准 API 直连，冻结提示词 V1（`PROMPT_VERSION="v1"`），temperature 0，图片 ≤4 张（超出保首 3 + 最新 1），非法 JSON 允许一次格式修复重试 | `source="vlm-glm-4.6v-flash"`、`mode="real"`、`prompt_version` |
+| ③ 规则回退 | 未配置或上级失败 | `vlm_explain_fire`（只复述规则观测数字） | `mode="fallback"`、`source="rule-explainer-fallback"`，失败附 `adapter_fallback.code` |
 
-- 超时：5 秒。响应：JSON object（无必需字段），建议结构对齐规则回退解释器：`summary / people / buildings / roads / obstacles / fire_trend / conflicts[] / anomalies[]`；平台自动补 `source="vlm-adapter"`、`mode="real"`。
-- 失败行为同 §9：strict_real 返回 `{"status": "error", "error": {"code": "vlm_unavailable"}}`；否则回退规则解释并附 `adapter_fallback: {"code": "vlm_endpoint_unavailable"}`。
+- `adapter_fallback.code` 取值：`vlm_endpoint_unavailable`（①失败）/ `vlm_image_unreadable`（②图片缺失或不可读）/ `vlm_call_failed`（②网络或两次 JSON 非法）/ `vlm_contract_invalid`（②输出非 vlm-analysis-v1）。
+- `strict_real` 下任一外部级失败返回 `{"status": "error", "mode": "real", "error": {"code": "vlm_unavailable" | "vlm_image_unreadable"}}`，不以回退掩盖。
+- ② 的输入包（手册 §4.1）：`task_id`、`round_index`（由 `AnalysisService` 注入 analysis_id 与轮次 1）、图片序列（早前帧 + 最新帧，与 §5.2 frames 同源）、YOLO 检测摘要、环境摘要、上一轮 VLM 分析摘要（intake 为 null）。
+
+### 10.2 vlm-analysis-v1 输出契约与守卫
+
+直连级（②）输出必须 `schema_version="vlm-analysis-v1"`，且 `task_id`/`round_index` 回显一致，否则整包作废走回退。字段组（手册 §4.2）：身份来源（schema_version/task_id/round_index/mode/source）、图片质量（usable/quality_level/problems/missing_inputs）、火情观察（fire_presence/affected_layer/canopy_involvement/visual_scale）、烟雾趋势（smoke_density/image_plane_drift/temporal_trend）、对象线索（people/road/building/power_equipment/water/obstacle）、复核信息（conflicts/manual_review_required/human_summary）。
+
+`backend/app/vlm/contract.py` 守卫（剥除/钳位 + `contract_guard.violations` 标注，置 `manual_review_required=true`，不阻断）：
+
+- 禁项键任意层级剥除：`flp`、`fire_cells`、`*area_m2`、`growth_rate`、`wind_speed`、`wind_direction`、`drone_count`、`hover_altitude`、`soc`、`w20`、`co2`、`dosage`、`control_time`、`flight_route` 等（完整表见代码 `FORBIDDEN_KEYS`）。
+- `people.state="absent"` → 钳位 `not_observed`；水体 `confirmed/usable/...` → 钳位 `water_candidate`。
+
+平台额外加盖：`source`（三级口径）、`mode`、`prompt_version`、`task_id`/`round_index` 回显、`summary`（= `human_summary` 镜像，供下游合并与前端展示）。
+
+### 10.3 接入状态口径
+
+`GET /api/project-status` 的 `yolo`/`vlm` 字段按环境变量如实上报：配置了 `FIRE_YOLO_ENDPOINT` /（`FIRE_VLM_ENDPOINT` 或 `FIRE_VLM_API_KEY`）返回 `configured`（前端显示"已配置"），未配置返回 `pending`（"待接入"）。Key 一律经环境变量/仓库根 `.env` 注入（不入库）；标准 API Key 与团队 Coding Plan Key 严格分变量存放（`FIRE_VLM_API_KEY` ≠ `FIREOPS_LLM_API_KEY`）。
 
 ## 11. 兼容层
 
