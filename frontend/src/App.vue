@@ -1282,8 +1282,10 @@ async function runMonitor(auto = false) {
   try {
     // 新集成统一使用 /api/tasks/{id}/rounds（api-contract.md §5.7）；
     // 任务快照始终以后端 Store 为准，不再上送 fleet/inventory。
+    // extinguishing_liters=0（FE-41）：不设喷洒上限，由后端状态机按实际出动能力计算——
+    // 固定 40L 曾把 4 机 80L/轮的能力砍半，并在喷满 40L 时提前召回在作业机，III 级火永远压不平。
     const roundNumber = (analysisEnvelope.value?.monitor_round || 0) + 1
-    const response = await fetch(`/api/tasks/${monitoredId}/rounds`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ round: roundNumber, elapsed_minutes: 5, extinguishing_liters: 40 }) })
+    const response = await fetch(`/api/tasks/${monitoredId}/rounds`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ round: roundNumber, elapsed_minutes: 5, extinguishing_liters: 0 }) })
     const payload = await response.json().catch(() => ({}))
     if (!response.ok) {
       if (auto && response.status === 409) {

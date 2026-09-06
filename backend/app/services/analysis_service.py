@@ -20,12 +20,16 @@ REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _rising_streak(rounds, current_flp) -> int:
-    """尾部连续「带压制仍净上涨」的轮数（含本轮），供研判识别趋势而非单轮噪声。"""
+    """尾部连续「带压制仍净上涨」的轮数（含本轮），供研判识别趋势而非单轮噪声。
+
+    store 的 rounds 是 List[Dict]（Envelope.rounds），必须按 dict 取值——
+    曾误用模型属性访问（round_item.after.fire_load_flp）导致第 2 轮起 AttributeError。
+    """
     streak = 0
     prev = current_flp
     for round_item in reversed(rounds or []):
-        after = round_item.after.fire_load_flp if round_item.after else None
-        before = round_item.before.fire_load_flp if round_item.before else None
+        after = (round_item.get("after") or {}).get("fire_load_flp")
+        before = (round_item.get("before") or {}).get("fire_load_flp")
         if after is None or before is None:
             break
         if prev is not None and prev > before + 1e-9:
@@ -228,6 +232,8 @@ class AnalysisService:
             updated = dict(item.result)
             updated["fire_assessment"] = dict(updated["fire_assessment"])
             updated["fire_assessment"]["fire_area_m2"] = monitor_result["next_fire_area_m2"]
+            # BE-12：研判 FLP 与面积同步更新（此前面积动、FLP 停在初值，两个字段互相矛盾）
+            updated["fire_assessment"]["fire_load_flp"] = monitor_result.get("next_fire_load_flp", updated["fire_assessment"].get("fire_load_flp"))
             updated["fleet"] = monitor_result["next_fleet"]
             updated["inventory"] = monitor_result["next_inventory"]
             analysis_store.update_resources(analysis_id, monitor_result["next_fleet"], monitor_result["next_inventory"])
@@ -263,6 +269,15 @@ class AnalysisService:
                 pass
             self._persist_dispatch_report(analysis_id)
             return result
+        if request.action == "approve":
+            # BE-12：方案生效瞬间记录火情基线，闭环按「相对本方案的累计涨幅」触发重规划
+            # （此前基线逐轮漂移，20% 阈值永远触不到——火翻倍仍恒 continue）
+            live = analysis_store.get(analysis_id)
+            live_result = dict(live.result or {})
+            live_plan = dict(live_result.get("dispatch_plan") or {})
+            live_plan["base_fire_load_flp"] = live_plan.get("fire_load_flp")
+            live_result["dispatch_plan"] = live_plan
+            analysis_store.update(analysis_id, result=live_result)
         try:
             COMMANDER.arbitration(analysis_id, request.action, request.reason or "")
         except Exception:
@@ -281,6 +296,15 @@ class AnalysisService:
         state = load_demo_state(item.input.scene_id)
         result = dict(item.result or {})
         state["fleet"] = normalize_fleet(result.get("fleet", state["fleet"]))
+        # BE-12：重规划是「重新组织本任务」，在途/补给中的机不得因执行态被自己的重规划
+        # 排除——dispatch 候选只认 available/assigned，曾致重规划方案只剩 R/S 甚至为空、
+        # 压制归零、每轮触发累计涨幅的空转重规划循环（小火 60 轮不灭的根因）。
+        # status 归位供候选筛选；SOC 原值保留（<35% 仍被 §4.2 硬约束拦下），
+        # fault（FE-34 失能）继续排除。此处是规划用一次性副本，不影响运行态。
+        state["fleet"] = [
+            {**u, "status": ("available" if u.get("status") not in {"available", "assigned", "fault"} else u.get("status"))}
+            for u in state["fleet"]
+        ]
         state["inventory"] = normalize_inventory(result.get("inventory", state["inventory"]))
         fire = dict(result.get("fire_assessment", {}))
         observation = request.observation or {}
@@ -292,7 +316,8 @@ class AnalysisService:
         latest_flp = dispatch_now.get("fire_load_flp")
         if latest_flp is not None:
             fire["fire_load_flp"] = latest_flp
-            fire["fire_area_m2"] = round(latest_flp * 180)
+            # BE-12：面积按研判比率折算（area_per_flp 随场景 FLP 系数变化，禁硬编码 180）
+            fire["fire_area_m2"] = round(latest_flp * float(fire.get("area_per_flp") or 180.0))
         latest_growth = dispatch_now.get("growth_flp_per_hour")
         if latest_growth is not None:
             fire["growth_flp_per_hour"] = latest_growth
@@ -393,7 +418,20 @@ class AnalysisService:
             triggers.append("people_status_changed")
         if action in {"resupply", "return"} and "resource_or_soc" not in triggers:
             triggers.append("resource_or_soc")
+        # ---- 失控安全网（BE-12）：累计涨幅必须对比「本方案批准时的基线」——
+        # 此前 20% 阈值只有逐轮比较（每轮 +4% 永远到不了线），火翻一倍系统仍恒
+        # continue 零触发器；approve 时 stamp 的 base_fire_load_flp 让失控可见。
+        base_flp = (current.result or {}).get("dispatch_plan", {}).get("base_fire_load_flp")
+        next_flp_now = monitor_data.get("next_fire_load_flp")
+        # 绝对下限 20 FLP（≈3.6 ha）：余烬级清扫阶段的 ±3 FLP 波动即超相对阈值，
+        # 曾在 6-12 FLP 时触发重规划风暴（每轮一个新方案版本）
+        if base_flp and base_flp >= 20.0 and next_flp_now is not None and next_flp_now > base_flp * 1.2 and "fire_load_increase_over_20_percent" not in triggers:
+            triggers.append("fire_load_increase_over_20_percent")
         # ---- 每轮自主研判（AG-2）：LLM 优先 / conservative 降级；仅 GLM 来源可追加 replan 触发器 ----
+        # BE-12：rounds 存的是 dict（Envelope.rounds=List[Dict]），曾按模型属性访问
+        # .before.fire_load_flp → 第 2 轮起 AttributeError 被 except 静默吞掉，
+        # 自主研判从第 2 轮起整场消失。first_before 先按 dict 取出。
+        first_before = (item.rounds[0].get("before") or {}).get("fire_load_flp") if item.rounds else None
         try:
             fleet_now = analysis_store.fleet(analysis_id)
             snapshot = {
@@ -408,21 +446,33 @@ class AnalysisService:
                 "people": (result.get("result", {}).get("dispatch_plan", {}) or {}).get("people_branch"),
                 # 趋势补强（FE-31）：给研判大脑可见的累计涨幅与连涨轮数——
                 # 单轮 ±1% 的噪声看不出问题，累计越过 20% 线时 GLM 应能自主建议 replan
-                "flp_initial": item.rounds[0].before.fire_load_flp if item.rounds and item.rounds[0].before else None,
+                "flp_initial": first_before,
                 "flp_growth_pct_since_plan": (
-                    round((monitor_data.get("next_fire_load_flp", 0) - item.rounds[0].before.fire_load_flp)
-                          / max(item.rounds[0].before.fire_load_flp, 1e-6) * 100, 1)
-                    if item.rounds and item.rounds[0].before and monitor_data.get("next_fire_load_flp") is not None else None),
+                    round((monitor_data.get("next_fire_load_flp", 0) - first_before)
+                          / max(first_before, 1e-6) * 100, 1)
+                    if first_before is not None and monitor_data.get("next_fire_load_flp") is not None else None),
                 "flp_rising_streak": _rising_streak(item.rounds, monitor_data.get("next_fire_load_flp")),
             }
             judgment = SIMULATOR.judge(analysis_id, snapshot)
             # GLM replan 建议最低从第 2 轮起生效：首轮单样本噪声大，直接打断刚起步的推演
             # （失能演练、持续压制演示都会被截断）；建议本身仍落协作流可审计。
+            # BE-12：再加趋势闸门（累计涨幅 ≥10% 或连涨 ≥3 轮）——压制轮次天然有
+            # 「作业轮降、补给轮升」的锯齿，GLM 看到连涨 1-2 轮就建议 replan 会反复
+            # 打断作业节奏（实测一次任务被打断 7 次）；硬安全网（相对基线 20%）不受影响。
+            # BE-12：再加趋势闸门（相对当前方案基线累计 ≥10% 或连涨 ≥3 轮）——压制作业
+            # 天然锯齿（作业轮降、补给轮升），GLM 看到连涨 1-2 轮就建议 replan 会反复
+            # 打断作业节奏（实测一次任务被打断 7 次）；硬安全网（相对基线 20%）不受影响。
+            # 基线必须用 base_fire_load_flp（当前方案批准时）——flp_growth_pct_since_plan
+            # 用的是任务首轮值，火高于开局就恒开闸，等于没有闸门。
+            pct_vs_base = ((next_flp_now - base_flp) / base_flp * 100) if (base_flp and next_flp_now is not None) else 0
+            trend_gate = pct_vs_base >= 10 or (snapshot["flp_rising_streak"] or 0) >= 3
             if (judgment.get("decision") == "replan" and judgment.get("source") == "glm"
-                    and request.round >= 2 and "llm_judgment_replan" not in triggers):
+                    and request.round >= 2 and trend_gate and "llm_judgment_replan" not in triggers):
                 triggers.append("llm_judgment_replan")
-        except Exception:
-            pass
+        except Exception as error:  # 吞异常必须留痕，否则研判静默失联无从排查
+            import traceback
+            print(f"[judge-debug] R{request.round} 自主研判失败: {type(error).__name__}: {error}")
+            traceback.print_exc()
         round_data = {
             "round": request.round,
             "before": before,

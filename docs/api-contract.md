@@ -69,7 +69,7 @@ GPS 参考值单独存放、只用于展示与环境查询，**不参与距离�
 | 状态码 | 触发条件 |
 |---|---|
 | 404 | 任务/方案/Skill 不存在 |
-| 409 | 状态冲突：未审批即监测/反馈、过期 `plan_id`、轮次号倒退、终态任务操作、资源已被其他任务锁定 |
+| 409 | 状态冲突：未审批即监测/反馈、过期 `plan_id`、轮次号倒退、终态任务操作、资源已被其他任务锁定（409 明细列出占用任务 ID，可在历史任务中终止对方释放；`approved/executing/replanning` 任务超过 30 分钟无任何状态推进视为僵尸，其他任务申请同一资源时自动终止并回收其锁） |
 | 413 | 上传超过 200 MB |
 | 415 | 上传类型不在 `image/jpeg, image/png, video/mp4`，或文件魔数校验失败 |
 | 422 | 参数校验失败（Pydantic、未知 `scene_id`、经纬度/半径越界、负值输入） |
@@ -241,7 +241,7 @@ Query：`latitude`（默认 32.0725，紫金山主峰）、`longitude`（默认 
   "result": {
     "fire_assessment": {"level": 3, "label": "III 级 · 高风险", "fire_area_m2": 1800, "smoke_area_m2": 4200,
       "confidence": 0.91, "risk_score": 0.552, "growth_rate": 0.42, "fire_load_flp": 245.7,
-      "growth_flp_per_hour": 103.19, "fire_grid": {"cell_area_m2": 100, "cell_count": 18, "intensity": 3,
+      "growth_flp_per_hour": 103.19, "area_per_flp": 7.3235, "fire_grid": {"cell_area_m2": 100, "cell_count": 18, "intensity": 3,
       "k_fuel": 1.0, "k_wind": 1.2, "k_slope": 1.0, "fuel_type": "general_forest"},
       "wind_band": {"band": 1, "label": "4–6 m/s", "k_wind": 1.2, "wind_speed": 6.5},
       "slope_deg": 12, "spread_direction": "西北", "fire_type": "vegetation"},
@@ -330,7 +330,7 @@ Form 字段（全部为 multipart 表单字段，显式 `Form(...)` 绑定）：
 | `people_status` | null | 变化触发 `people_status_changed` |
 | `fleet_snapshot` / `inventory` | null | 兼容保留；**任务快照始终以 Store 为准** |
 | `elapsed_minutes` | 5（>0，≤120） | 内部按 1 分钟步长推进 |
-| `extinguishing_liters` | 0 | 本轮喷洒上限（L） |
+| `extinguishing_liters` | 0 | 本轮喷洒上限（L）。**0 = 不设上限**，由状态机按实际出动能力（作业相位 × 喷洒速率）计算；前端自 FE-41 起固定发送 0——固定 40L 曾把 4 机 80L/轮的压制能力砍半并在喷满时提前召回作业机 |
 
 响应 `round_data`：
 
@@ -445,6 +445,7 @@ Query：`once`（可选，`1` = 仅推送当前事件快照后结束，供一次
 - `battery_plan` 条目为 `{uav_id, soc_before, soc_after_return, sortie_soc_cost, sorties, swaps, refills, reserve_percent, state, outbound_minutes}`，不是 `outbound_soc/task_soc/return_soc/reserve_soc`；
 - `estimated_control_time` 为 `{earliest_minutes, latest_minutes, window_minutes, unit, simulated}`，不是 `{min, max}`；
 - 不可控时 `estimated_control_time.window_minutes=null`、`can_control=false`，并输出 `resource_gap`（不产出虚假时间窗口）。
+- `base_fire_load_flp`（BE-12）：方案批准瞬间由服务端记录的火情基线，闭环监测按「相对本方案的累计涨幅」触发 `fire_load_increase_over_20_percent`（此前与逐轮漂移的上轮值比较，每轮 +4% 永远触不到 20% 线，火翻倍系统仍恒 continue）。
 
 ## 8. 调度与闭环关键规则（契约级）
 

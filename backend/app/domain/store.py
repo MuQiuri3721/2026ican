@@ -5,6 +5,7 @@ from threading import RLock
 from typing import Any, Callable, Dict, List, Optional
 from uuid import uuid4
 import json
+import os
 
 from .schemas import AnalysisEnvelope, TaskEvent
 
@@ -18,7 +19,10 @@ class AnalysisStore:
         self._fleet_snapshots: Dict[str, List[dict]] = {}
         self._inventory_snapshots: Dict[str, dict] = {}
         self._lock = RLock()
-        self._db_path = Path(db_path) if db_path else Path(__file__).resolve().parents[3] / "data" / "analysis_store.db"
+        self._db_path = Path(db_path) if db_path else Path(
+            # BE-12：FIREOPS_DB_PATH 允许第二实例隔离库（并行会话/E2E 互不踩任务与锁）
+            os.environ.get("FIREOPS_DB_PATH")
+            or Path(__file__).resolve().parents[3] / "data" / "analysis_store.db")
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._db = connect(self._db_path, check_same_thread=False)
         self._db.execute(
@@ -198,12 +202,61 @@ class AnalysisStore:
         from ..pipeline import normalize_inventory
         return json.loads(json.dumps(normalize_inventory(inventory or {})))
 
+    # BE-12：executing/approved/replanning 任务超过该分钟数仍无任何状态推进，
+    # 视为僵尸（客户端断开/脚本崩溃遗留），其他任务申请同一资源时自动回收其锁。
+    STALE_LOCK_MINUTES = 30
+
+    def _reclaim_stale_locks(self, wanted: set) -> List[str]:
+        """（持锁调用）回收占用 wanted 资源的僵尸任务锁，返回被回收的任务 ID。"""
+        now = datetime.now()
+        freed: List[str] = []
+        for other in list(self._items.values()):
+            if other.analysis_id in {"", None} or other.status not in {"approved", "executing", "replanning"} or not other.resource_locks:
+                continue
+            if not (set(other.resource_locks) & wanted):
+                continue
+            try:
+                age_minutes = (now - datetime.fromisoformat(other.updated_at)).total_seconds() / 60
+            except (TypeError, ValueError):
+                continue
+            if age_minutes < self.STALE_LOCK_MINUTES:
+                continue
+            other.status = "terminated"
+            other.resource_locks = []
+            other.events = [TaskEvent(
+                stage="approval",
+                message=f"任务超过 {self.STALE_LOCK_MINUTES} 分钟无推进，自动终止并释放资源锁（BE-12 僵尸锁回收）",
+                source="system"), *other.events]
+            self._persist(other.analysis_id)
+            freed.append(other.analysis_id)
+        return freed
+
     def lock_resources(self, analysis_id: str, uav_ids: List[str]) -> List[str]:
         with self._lock:
             item = self._items.get(analysis_id)
             if item is None: raise KeyError(analysis_id)
-            active = {uav for other in self._items.values() if other.analysis_id != analysis_id and other.status in {"approved", "executing", "replanning"} for uav in other.resource_locks}
-            if active.intersection(uav_ids): raise ValueError("资源已被其他任务锁定")
+            wanted = set(uav_ids)
+
+            def _conflicts() -> Dict[str, str]:
+                holders: Dict[str, str] = {}
+                for other in self._items.values():
+                    if other.analysis_id == analysis_id or other.status not in {"approved", "executing", "replanning"}:
+                        continue
+                    for uav in other.resource_locks:
+                        if uav in wanted:
+                            holders.setdefault(uav, other.analysis_id)
+                return holders
+
+            conflicts = _conflicts()
+            if conflicts:
+                freed = self._reclaim_stale_locks(wanted)
+                if freed:
+                    conflicts = _conflicts()
+            if conflicts:
+                # BE-12：报错必须可见占用者——此前只报"资源已被其他任务锁定"，
+                # 用户无从知道该去终止哪个任务（曾因此连锁 409 无法自愈）
+                holders = sorted(set(conflicts.values()))
+                raise ValueError(f"资源已被其他任务锁定：{'、'.join(holders)}（可在历史任务中终止对方释放；僵尸任务 {self.STALE_LOCK_MINUTES} 分钟后自动回收）")
             item.resource_locks = list(dict.fromkeys(uav_ids))
             self._persist(analysis_id)
             return list(item.resource_locks)

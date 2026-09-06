@@ -134,7 +134,14 @@ def simulate_dispatch_candidate(selected: List[Dict[str, Any]] = None, fire_load
     eta = (config.get("drop_efficiency") or {}).get("clear", 0.9) * weather
     stock = dict(inventory or {})
     if module == "water_20l":
-        loads_left = min(float(stock.get("water_liters", 0)) // quantity, float(stock.get("water_modules_w20", 0)))
+        base_loads = min(float(stock.get("water_liters", 0)) // quantity, float(stock.get("water_modules_w20", 0)))
+        # BE-12：与闭环 monitor 的就地取水同口径（规则 §5.3 / FE-38）——可用且安全的水源
+        # 容量同样是可取的灭火剂载荷；此前 dispatch 仿真只看基地存量，低估补给能力
+        source_loads = sum(
+            float(s.get("capacity_liters", 0) or 0) // quantity
+            for s in (stock.get("water_sources") or [])
+            if s.get("available") and s.get("safe", True))
+        loads_left = base_loads + source_loads
     else:
         loads_left = float(stock.get("co2_modules_c6", 0))
     packs_left = float(stock.get("battery_packs", 0))
@@ -289,6 +296,9 @@ def assess_fire(state: Dict[str, Any], fire_area: Optional[float] = None, smoke_
         "confidence": 0.91, "risk_score": round(risk_score, 3), "growth_rate": growth_rate,
         "spread_direction": scene["wind_direction"], "fire_type": scene.get("fire_type", "vegetation"),
         "fire_load_flp": fire_load, "growth_flp_per_hour": round(fire_load * growth_rate, 2),
+        # BE-12：本研判自己的 FLP↔面积比率（FLP 公式含强度/燃料/风/坡系数，比率随场景变化）。
+        # monitor 与 replan 的面积折算统一用它，禁止再硬编码 180——否则首轮面积跳变近百倍
+        "area_per_flp": round(fire_area / max(fire_load, 1e-6), 4),
         "fire_grid": {key: grid[key] for key in ("cell_area_m2", "cell_count", "intensity", "k_fuel", "k_wind", "k_slope", "fuel_type")},
         "wind_band": band, "slope_deg": slope_deg,
     }
@@ -503,6 +513,12 @@ def simulate_monitor(
     load_before = float(dispatch.get("fire_load_flp", max(1.0, fire.get("fire_area_m2", 1800) / 180.0)))
     fire_load = load_before
     growth_flp_per_hour = float(dispatch.get("growth_flp_per_hour", load_before * float(fire.get("growth_rate", 0.42))))
+    # BE-12：growth_rate 是比例增长率（研判公式 growth = FLP × rate 即为此义）。
+    # monitor 曾把绝对增长当常数（压到 30 FLP 的余烬仍 +9/轮），小火永远压不死；
+    # 比率必须以「方案基线负荷」为参照（= 批准时的增长率语义）——若按每轮当前负荷
+    # 自参照，火压到接近 0 时比率爆炸（0.73 FLP 曾反弹 +9/轮），余烬永远复燃。
+    growth_base_flp = float(dispatch.get("base_fire_load_flp") or load_before)
+    growth_rate_per_hour = growth_flp_per_hour / max(growth_base_flp, 1e-6)
     selected_ids = {u for u in dispatch.get("selected_uavs", []) if str(u).startswith("E")}
     plan_by_uav = {entry.get("uav_id"): entry for entry in dispatch.get("battery_plan", [])}
     spray_cap = float(extinguishing_liters) if extinguishing_liters else None
@@ -532,6 +548,20 @@ def simulate_monitor(
     soc_return_risk = False
     emergency_soc = float(v1_config().get("emergency_soc_percent", 15))
     emergency_units: list = []
+
+    def _relaunch_after_service(drone, uid):
+        """BE-12：补给/换电/充电完成的在册灭火机立即重新出动。
+
+        此前置为 available 后干悬停到轮末（整轮浪费），周转被拉长到 4 轮、
+        占空比掉到 25%，成为"压制 ≈ 增长、火情徘徊"的直接原因之一。
+        """
+        if uid in selected_ids:
+            plan = plan_by_uav.get(uid) or {}
+            drone["status"] = "flying"
+            state_progress[uid] = {"phase_elapsed": 0.0, "phase_minutes": max(0.5, float(plan.get("outbound_minutes", 1.0)))}
+        else:
+            drone["status"] = "available"
+
     for _ in range(total_minutes):
         minute_suppression = 0.0
         for drone in fleet:
@@ -580,80 +610,85 @@ def simulate_monitor(
                         progress["phase_minutes"] = 4.0
                         drone["status"] = "servicing"
             elif status == "servicing":
-                # 换电计时中（规则 V1 §7：标准换电 5 min、换后 95%、库存−1）：计时满归队
-                progress = state_progress.get(uid)
-                if progress is not None and progress.get("swap_left", 0) > 0:
-                    progress["swap_left"] -= 1
-                    if progress["swap_left"] <= 0:
-                        progress["swap_left"] = 0
-                        drone["status"] = "available"
-                else:
-                    # 就地取水计时中（规则 V1 §5.3：水源装水 8 min，直接灌装不耗模块）
-                    if progress is not None and progress.get("source_refill_left", 0) > 0:
-                        progress["source_refill_left"] -= 1
-                        if progress["source_refill_left"] <= 0:
-                            progress["source_refill_left"] = 0
-                            drone["status"] = "available"
-                        continue
-                    if float(drone.get("agent_remaining", 0)) < capacity:
-                        if module == "water_20l":
-                            can_refill = stock.get("water_liters", 0) >= capacity and stock.get("water_modules_w20", 0) >= 1
-                            if can_refill:
-                                stock["water_liters"] = round(stock["water_liters"] - capacity, 2)
-                                stock["water_modules_w20"] = max(0, stock["water_modules_w20"] - 1)
-                        else:
-                            can_refill = stock.get("co2_modules_c6", 0) >= 1
-                            if can_refill:
-                                stock["co2_modules_c6"] = max(0, stock["co2_modules_c6"] - 1)
+                # BE-12：换电（§7，5 min）与就地装水（§5.3，8 min）的计时随无人机记录
+                # 跨轮持久（state_progress 是调用局部量，轮边界会丢）、两者并行计时，
+                # 全部完成立即重新出动——此前计时跨轮即失、装水期间换电串行白等 5 分钟。
+                if float(drone.get("_swap_left", 0) or 0) > 0 or float(drone.get("_refill_left", 0) or 0) > 0:
+                    drone["_swap_left"] = max(0.0, float(drone.get("_swap_left", 0) or 0) - 1)
+                    drone["_refill_left"] = max(0.0, float(drone.get("_refill_left", 0) or 0) - 1)
+                    if drone["_swap_left"] <= 0 and drone["_refill_left"] <= 0:
+                        drone.pop("_swap_left", None)
+                        drone.pop("_refill_left", None)
+                        _relaunch_after_service(drone, uid)
+                    continue
+                if float(drone.get("agent_remaining", 0)) < capacity:
+                    if module == "water_20l":
+                        can_refill = stock.get("water_liters", 0) >= capacity and stock.get("water_modules_w20", 0) >= 1
                         if can_refill:
-                            drone["agent_remaining"] = capacity
-                        elif module == "water_20l":
-                            # 基地不足 → 就地取水（规则 V1 §5.3）：扣水源容量，装水 8 min 后归队
-                            source = _pick_water_source(stock, capacity)
-                            if source is not None:
-                                source["capacity_liters"] = round(float(source.get("capacity_liters", 0)) - capacity, 2)
-                                drone["agent_remaining"] = capacity
-                                if progress is not None:
-                                    progress["source_refill_left"] = 8
-                                continue
-                        if not can_refill:
-                            stalled_agent = True
-                            drone["status"] = "charging"
-                            continue
-                    # 电池周转（规则 V1 §7）：优先换电（5 min → 95%），无备用电池才走慢速充电——
-                    # 此前只实现充电（45 min/轮），灭火周期被拉长到火力断续、火情只涨不灭
-                    if drone["soc"] < 95.0 and stock.get("battery_packs", 0) >= 1:
-                        stock["battery_packs"] = max(0.0, round(stock["battery_packs"] - 1, 2))
-                        drone["soc"] = 95.0
-                        if progress is not None:
-                            progress["swap_left"] = 5
-                        else:
-                            drone["status"] = "available"
+                            stock["water_liters"] = round(stock["water_liters"] - capacity, 2)
+                            stock["water_modules_w20"] = max(0, stock["water_modules_w20"] - 1)
                     else:
+                        can_refill = stock.get("co2_modules_c6", 0) >= 1
+                        if can_refill:
+                            stock["co2_modules_c6"] = max(0, stock["co2_modules_c6"] - 1)
+                    if can_refill:
+                        drone["agent_remaining"] = capacity
+                    elif module == "water_20l":
+                        # 基地不足 → 就地取水（规则 V1 §5.3）：扣水源容量，装水 8 min 后归队
+                        source = _pick_water_source(stock, capacity)
+                        if source is not None:
+                            source["capacity_liters"] = round(float(source.get("capacity_liters", 0)) - capacity, 2)
+                            drone["agent_remaining"] = capacity
+                            drone["_refill_left"] = 8
+                            # 装水期间并行换电（串行曾白等 5 分钟）
+                            if drone["soc"] < 95.0 and stock.get("battery_packs", 0) >= 1:
+                                stock["battery_packs"] = max(0.0, round(stock["battery_packs"] - 1, 2))
+                                drone["soc"] = 95.0
+                                drone["_swap_left"] = 5
+                            continue
+                    if not can_refill:
+                        stalled_agent = True
                         drone["status"] = "charging"
+                        continue
+                # 电池周转（规则 V1 §7）：优先换电（5 min → 95%），无备用电池才走慢速充电。
+                if drone["soc"] < 95.0 and stock.get("battery_packs", 0) >= 1:
+                    stock["battery_packs"] = max(0.0, round(stock["battery_packs"] - 1, 2))
+                    drone["soc"] = 95.0
+                    drone["_swap_left"] = 5
+                elif drone["soc"] < 100.0:
+                    drone["status"] = "charging"
+                else:
+                    _relaunch_after_service(drone, uid)
             elif status == "charging":
                 drone["soc"] = round(min(100.0, drone["soc"] + 100.0 / 60), 2)
                 if drone["soc"] >= 100.0:
-                    drone["status"] = "available"
+                    _relaunch_after_service(drone, uid)
             else:
                 # R/S 及待命无人机按悬停耗电缓慢下降。
                 drone["soc"] = max(0.0, round(drone["soc"] - rate * 0.75 / 60, 2))
+                # BE-12：待命机低于 45% 自动回充——保持随时可出动（覆盖 §4.2 的 35%
+                # 接单下限）。曾 hover 掉到 0 仍标 available；即便后来修成 <25 回充，
+                # 也会在重规划时因低于 35 门槛被排除，队形萎缩成 2 机压不住火。
+                if drone["soc"] < 45.0:
+                    drone["status"] = "charging"
             if 0.0 < drone.get("soc", 0) < emergency_soc and uid not in emergency_units:
                 emergency_units.append(uid)
             drone["battery"] = drone["soc"]
             drone["payload"] = drone["agent_remaining"]
             drone["last_updated"] = datetime.now().isoformat(timespec="seconds")
-        fire_load = max(0.0, fire_load + growth_flp_per_hour / 60 - minute_suppression)
+        fire_load = max(0.0, fire_load * (1.0 + growth_rate_per_hour / 60) - minute_suppression)
 
     # 补给时已经按整模块扣减库存；在途喷洒只扣减无人机载荷，避免重复扣减。
     stock["last_updated"] = datetime.now().isoformat(timespec="seconds")
 
-    # 面积口径保持向后兼容：FLP ↔ 面积按 dispatch 的 180 m²/FLP 折算。
-    next_area = round(fire_load * 180)
-    previous_area = round(load_before * 180)
+    # 面积折算（BE-12）：用研判时的真实比率（area_per_flp，随场景 FLP 系数变化），
+    # 旧数据缺字段回退 180。硬编码 180 曾让首轮面积从 2400m² 跳到 20 万 m²（近百倍）。
+    area_ratio = float(fire.get("area_per_flp") or 180.0)
+    next_area = round(fire_load * area_ratio)
+    previous_area = round(load_before * area_ratio)
     ratio = round((next_area - previous_area) / max(previous_area, 1), 3)
-    growth = max(0, round(growth_flp_per_hour / 60 * 180 * total_minutes))
-    reduction = round(suppression_total * 180)
+    growth = max(0, round(growth_flp_per_hour / 60 * area_ratio * total_minutes))
+    reduction = round(suppression_total * area_ratio)
     active = [d for d in fleet if d.get("uav_id") in selected_ids]
     any_working = any(d.get("status") == "working" for d in active)
     any_agent = any(float(d.get("agent_remaining", 0)) > 0 for d in active)
@@ -661,7 +696,9 @@ def simulate_monitor(
         action, reason = "finish", "火情负荷已清零，进入效果确认并归档。"
     elif stalled_agent or (active and not any_agent and not stock.get("water_liters")):
         action, reason = "resupply", "药剂或备用电池已耗尽，需要补给/换电后继续。"
-    elif fire_load > load_before * 1.05 and not any_working:
+    # BE-12：reinforce 判定带绝对下限——余烬级（<20 FLP）火情的 ±3 FLP 波动即超 5%，
+    # 相对阈值在清扫阶段噪声误报 reinforce（曾于 6 FLP 时反复触发重规划风暴）
+    elif fire_load > load_before * 1.05 and fire_load >= 20.0 and not any_working:
         action, reason = "reinforce", "火势增长快于处置能力，建议请求增援并扩大侦察范围。"
     elif soc_return_risk:
         action, reason = "return", "预计返航 SOC 低于 25%，触发硬约束，部分机组提前返航。"
@@ -679,6 +716,12 @@ def simulate_monitor(
         triggers.append("agent_insufficient")
     requested_liters = float(extinguishing_liters or 0)
     water_now = float(stock.get("water_liters", 0))
+    # BE-12：缺口口径与 can_control 一致——计入可用且安全水源容量（§5.3 就地取水），
+    # 否则出现 can_control=True 但缺口仍报水不足的自相矛盾展示
+    water_now += sum(
+        float(s.get("capacity_liters", 0) or 0)
+        for s in (stock.get("water_sources") or [])
+        if s.get("available") and s.get("safe", True))
     return {
         "next_fire_area_m2": next_area,
         "next_fire_load_flp": round(fire_load, 2),

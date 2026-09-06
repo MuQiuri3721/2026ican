@@ -8,11 +8,11 @@
 |---|---|---|---|
 | 场景/环境 | `scene_id`、`terrain_type`、`elevation_m`、`slope_deg`、`wind_speed_mps`、`wind_direction_deg`、`water_sources`、`roads_and_exits` | m、m/s、deg | 紫金山固定场景 JSON/GeoJSON/环境服务；含 `source`、`mode`、时间戳 |
 | 火情观测 | `fire_id`、`detected_classes`、`confidence`、`image_area_ratio`、`calibrated_cells`、`fire_type`、`people_status` | 比例、置信度；`confirmed/absent/unknown` | YOLO/PWM-YOLO fixture 或适配器；视觉不生成风速、真实面积或 SOC |
-| 火情负荷 | `fire_load_flp`、`growth_flp_per_hour`、`intensity_level`、`target_cells` | FLP、FLP/h、100 m² 网格 | 确定性规则 Tool；FLP 是演示内部量 |
+| 火情负荷 | `fire_load_flp`、`growth_flp_per_hour`、`intensity_level`、`target_cells`、`area_per_flp` | FLP、FLP/h、100 m² 网格 | 确定性规则 Tool；FLP 是演示内部量；`area_per_flp` 为本研判自己的 FLP↔面积比率（随场景 FLP 系数变化），monitor/重规划的面积折算统一用它，禁止硬编码 180 |
 | UAV | `uav_id`、`subgroup`、`status`、`position`、`soc`、`payload_capacity_kg`、`payload_module`、`agent_remaining`、`agent_unit`、`speed_mps`、`energy_rate_percent_per_hour`、`signal`、`health`、`assigned_task` | SOC/信号/健康度 %；`reconnaissance/suppression/support` | `data/fleet.json`；2+4+2 八架独立记录，R1–R2、E1–E4、S1–S2 |
 | 药剂模块 | `water_20l`、`co2_6kg`、`sup_10` | W20=L、C6/SUP10=kg | 植被火默认 W20；C6 只用于局部设备/电气热点 |
 | 库存 | `water_liters`、`water_modules_w20`、`co2_modules_c6`、`support_boxes_sup10`、`battery_packs`、`water_sources` | L、kg、件 | `data/inventory.json`；库存不得为负 |
-| 调度方案 | `plan_id`、`task_id`、`plan_version`、`selected_uavs`、`tasks`、`material_module`、`fire_load_flp`、`battery_plan`、`people_branch`、`estimated_control_time`、`feasibility`、`resource_gap`、`alternative_plan`、`replan_trigger`、`scoring` | 时间为 min 区间；W20=L、C6=kg | 确定性调度链（`deterministic_v1_dispatch`）；任务分配在 `tasks`，无 `agent_allocation`/`risk_level` 字段；完整字段见 api-contract.md §7 |
+| 调度方案 | `plan_id`、`task_id`、`plan_version`、`selected_uavs`、`tasks`、`material_module`、`fire_load_flp`、`base_fire_load_flp`、`battery_plan`、`people_branch`、`estimated_control_time`、`feasibility`、`resource_gap`、`alternative_plan`、`replan_trigger`、`scoring` | 时间为 min 区间；W20=L、C6=kg | 确定性调度链（`deterministic_v1_dispatch`）；任务分配在 `tasks`，无 `agent_allocation`/`risk_level` 字段；`base_fire_load_flp` 为批准瞬间记录的火情基线（BE-12，闭环按「相对本方案累计涨幅」触发重规划）；完整字段见 api-contract.md §7 |
 | 任务状态 | `status`、`approval`、`resource_locks` | `queued/running/awaiting_confirmation/approved/executing/replanning/completed/terminated/failed` | AnalysisStore；审批确认前不得执行 |
 | 反馈轮次 | `round`、`before`、`after`、`changes`、`replan_required`、`replan_triggers`、`next_action` | 1 分钟内部、5 分钟对外 | 监测与重规划接口 |
 | 事件 | `timestamp`、`stage`、`message`、`source` | ISO 时间 | 状态、审批、执行、反馈和归档审计 |

@@ -1,10 +1,10 @@
 {
   "schema_version": "inventory-v1",
-  "water_liters": 240,
-  "water_modules_w20": 12,
+  "water_liters": 480,
+  "water_modules_w20": 24,
   "co2_modules_c6": 4,
   "support_boxes_sup10": 6,
-  "battery_packs": 16,
+  "battery_packs": 48,
   "forward_supply_points": [
     {
       "id": "base",
