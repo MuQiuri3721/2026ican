@@ -11,6 +11,7 @@ import json
 import mimetypes
 import os
 import threading
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -35,6 +36,8 @@ MAX_IMAGES = 4  # 手册 §5.3：首轮 1—3 张；时间对比 2—4 张
 
 _LOCK = threading.Lock()
 _FAILURES = 0
+_LAST_FAIL = 0.0
+DEGRADED_COOLDOWN_S = 300.0  # 连续失败 ≥2 进入降级，5 分钟冷却后放行试探调用（成功即复位，避免永久残废）
 
 
 class ImageUnreadable(Exception):
@@ -157,8 +160,8 @@ def vlm_analyze_images(
     if not _api_key() or not image_paths:
         return None
     with _LOCK:
-        if _FAILURES >= 2:
-            return None
+        if _FAILURES >= 2 and (time.monotonic() - _LAST_FAIL) < DEGRADED_COOLDOWN_S:
+            return None  # 降级冷却期内快失败走回退；冷却结束自动放行试探，成功即复位
     try:
         selected = _select_sequence(list(image_paths))
         image_parts = [_encode_image(path) for path in selected]
@@ -201,7 +204,7 @@ def vlm_analyze_images(
 
 
 def _post(messages: List[Dict[str, Any]]) -> Optional[str]:
-    global _FAILURES
+    global _FAILURES, _LAST_FAIL
     try:
         response = requests.post(
             _BASE_URL.rstrip("/") + "/chat/completions",
@@ -216,6 +219,7 @@ def _post(messages: List[Dict[str, Any]]) -> Optional[str]:
             # 交付包 P07：HTTP 200 空响应按可重试失败处理，不计成功
             with _LOCK:
                 _FAILURES += 1
+                _LAST_FAIL = time.monotonic()
             return None
         with _LOCK:
             _FAILURES = 0
@@ -223,4 +227,5 @@ def _post(messages: List[Dict[str, Any]]) -> Optional[str]:
     except Exception:
         with _LOCK:
             _FAILURES += 1
+            _LAST_FAIL = time.monotonic()
         return None

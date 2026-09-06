@@ -314,6 +314,22 @@ def test_client_degraded_after_two_failures_skips_network(tmp_path, vlm_env, mon
     assert vlm_client.vlm_client_status()["mode"] == "deterministic-offline"
 
 
+def test_client_degraded_gate_recovers_after_cooldown(tmp_path, vlm_env, monkeypatch):
+    """BE-11：降级门控冷却结束后放行试探调用，成功即复位（不再永久残废）。"""
+    monkeypatch.setattr(vlm_client, "_FAILURES", 2)
+    monkeypatch.setattr(vlm_client, "_LAST_FAIL", __import__("time").monotonic() - 301)
+    assert vlm_client.vlm_client_status()["mode"] == "deterministic-offline"  # 冷却内仍显示降级
+
+    def fake_post(url, **kwargs):
+        return _FakeResponse(json.dumps(_v1_payload()))
+
+    monkeypatch.setattr(vlm_client.requests, "post", fake_post)
+    result = vlm_analyze_images([_write_png(tmp_path)], observation={}, environment={})
+    assert result is not None  # 冷却结束放行试探
+    assert vlm_client._FAILURES == 0  # 成功复位
+    assert vlm_client.vlm_client_status()["mode"] == "glm-vision"
+
+
 # ---------- tools.analyze_with_vlm 三级来源 ----------
 
 def test_analyze_with_vlm_adapter_tier_applies_contract_and_flatten(monkeypatch):
