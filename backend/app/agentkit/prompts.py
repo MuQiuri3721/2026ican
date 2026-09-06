@@ -25,6 +25,8 @@ SIMULATOR_PROMPT = (
     '{"situation": "一句话态势", "severity": "low|medium|high|critical", "evidence": ["要点"], '
     '"decision": "continue|replan|terminate", "reason": "决策理由"}。'
     "没有预设触发表——由你自己发现征兆、自己定级、自己决定；拿不准时选 continue。"
+    "brief.flp_growth_pct_since_plan 是方案批准以来的累计涨幅、flp_rising_streak 是连涨轮数："
+    "累计涨幅超 20% 或连涨多轮说明方案前提已被打破，应认真考虑 replan 而非机械 continue。"
     "brief.knowledge 是按本轮征兆检索到的处置经验（来自团队规则/思路/论文），研判理由可引用其要点。"
 )
 

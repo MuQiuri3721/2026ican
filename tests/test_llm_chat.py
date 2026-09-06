@@ -20,6 +20,8 @@ def _force_offline(monkeypatch):
 
 def test_llm_status_shape_offline(monkeypatch):
     _force_offline(monkeypatch)
+    # 重置全局失败计数：其他用例的真实 GLM 调用失败会泄漏 _FAILURES（degraded 是进程级状态）
+    monkeypatch.setattr(agentkit_llm, "_FAILURES", 0)
     payload = _client().get("/api/llm-status").json()
     assert payload["connected"] is False
     assert payload["configured"] is False

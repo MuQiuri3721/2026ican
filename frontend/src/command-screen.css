@@ -91,6 +91,10 @@
 .map-view.screen .water-panel,.map-view.screen .deploy-panel,.map-view.screen .stream-panel,.map-view.screen .terrain-data,.map-view.screen .slope-badge,.map-view.screen .wind-legend{background:var(--scr-panel);border-color:var(--scr-line);color:var(--scr-muted);box-shadow:none}
 /* rail 空间不足时禁止 flex 压缩面板（overflow:auto 会让 min-height 归零，deploy 曾被压没） */
 .map-view.screen .deploy-panel,.map-view.screen .water-panel{flex-shrink:0}
+/* 大屏下部署/水源限高内部滚动：协作流常驻第一屏，不留长尾空白 */
+.map-view.screen .deploy-panel{max-height:300px}
+.map-view.screen .deploy-rows{overflow-y:auto}
+.map-view.screen .water-panel{max-height:236px;overflow-y:auto}
 .map-view.screen .water-panel-head b,.map-view.screen .deploy-head b,.map-view.screen .stream-head b{color:var(--scr-ink)}
 .map-view.screen .water-row{background:var(--scr-panel-2);border-color:var(--scr-line);color:var(--scr-muted)}
 .map-view.screen .water-row:hover{border-color:#3d5c4e}
@@ -115,7 +119,8 @@
 .map-view.screen .slope-badge i{border-left-color:var(--scr-line)}
 
 /* 协作流 / 事件流双模式面板（协作 = 六角色黑板消息，事件 = 任务日志） */
-.stream-panel{display:flex;flex-direction:column;gap:7px;padding:13px 14px;border:1px solid var(--scr-line);border-radius:10px;background:var(--scr-panel);font:400 12.5px var(--font-data);color:var(--scr-muted);min-height:150px;flex:1}
+.stream-panel{display:flex;flex-direction:column;gap:7px;padding:13px 14px;border:1px solid var(--scr-line);border-radius:10px;background:var(--scr-panel);font:400 12.5px var(--font-data);color:var(--scr-muted);flex:1 1 auto;min-height:240px;max-height:46vh}
+.stream-rows{flex:1 1 auto}
 .stream-tabs{display:flex;gap:4px;margin-left:auto}
 .stream-tab{border:1px solid var(--scr-line2);background:transparent;color:var(--scr-muted);font:500 10.5px/1.2 var(--font-data);padding:3px 9px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:all var(--speed) ease}
 .stream-tab:hover{border-color:#4a6b5c}

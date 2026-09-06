@@ -18,6 +18,23 @@ REPORTS_DIR = ROOT / "data" / "reports"
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _rising_streak(rounds, current_flp) -> int:
+    """尾部连续「带压制仍净上涨」的轮数（含本轮），供研判识别趋势而非单轮噪声。"""
+    streak = 0
+    prev = current_flp
+    for round_item in reversed(rounds or []):
+        after = round_item.after.fire_load_flp if round_item.after else None
+        before = round_item.before.fire_load_flp if round_item.before else None
+        if after is None or before is None:
+            break
+        if prev is not None and prev > before + 1e-9:
+            streak += 1
+            prev = before
+        else:
+            break
+    return streak
+
+
 def _normalize_scenario(raw: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     """演训模拟场景（FE-18）钳位校验：非法类型 → 422，数值越界 → 钳到演示合理区间。"""
     if not raw:
@@ -57,11 +74,16 @@ class AnalysisService:
         )
         try:
             scenario = _normalize_scenario(request.scenario)
+            # 多帧序列：frames 为早前帧，主文件自动作为最新一帧（api-contract §5.2）；同一序列供 VLM 时间对比（手册 §4.1）
+            sequence_paths = ([*frame_paths, request.image_path] if request.image_path else list(frame_paths)) if frame_paths else []
             context = {
                 "scene_id": request.scene_id,
                 "scenario": scenario,
                 "image_name": request.image_name or "default",
                 "image_path": request.image_path,
+                "image_paths": sequence_paths,
+                "task_id": item.analysis_id,
+                "round_index": 1,
                 "latitude": request.latitude,
                 "longitude": request.longitude,
                 "environment_mode": request.environment_mode,
@@ -96,9 +118,8 @@ class AnalysisService:
                 fire_override = {key: observation[key] for key in ("fire_area_m2", "smoke_area_m2", "growth_rate") if observation.get(key) is not None}
             # 多帧序列（api-contract §5.2）：frames 为早前帧，主文件自动作为最新一帧，趋势显式驱动火情重算。
             visual_sequence = None
-            if frame_paths:
+            if sequence_paths:
                 from ..tools.core import analyze_frame_sequence
-                sequence_paths = [*frame_paths, request.image_path] if request.image_path else list(frame_paths)
                 visual_sequence = analyze_frame_sequence(sequence_paths)
                 frames = visual_sequence.get("frames") or []
                 if frames:
@@ -125,6 +146,7 @@ class AnalysisService:
                 fire = result.get("fire_assessment", {})
                 dispatch = result.get("dispatch_plan", {})
                 people_label = {"confirmed": "在场", "absent": "不在场", "unknown": "情况不明"}.get(request.people_status.value, "情况不明")
+                RECON.search_beat(item.analysis_id, (result.get("scene") or {}).get("fire_origin"), fire.get("level"))
                 RECON.finding(item.analysis_id, fire, people_label)
                 max_drones = int((request.constraints or {}).get("max_drones", 4) or 4)
                 strategy, strategy_source = SUPPRESSION.size_strategy(fire, min(max_drones, 4))
@@ -326,6 +348,14 @@ class AnalysisService:
                 "water_liters": (analysis_store.inventory(analysis_id) or {}).get("water_liters"),
                 "wind_speed": request.wind_speed or (result.get("result", {}).get("environment", {}) or {}).get("wind_speed"),
                 "people": (result.get("result", {}).get("dispatch_plan", {}) or {}).get("people_branch"),
+                # 趋势补强（FE-31）：给研判大脑可见的累计涨幅与连涨轮数——
+                # 单轮 ±1% 的噪声看不出问题，累计越过 20% 线时 GLM 应能自主建议 replan
+                "flp_initial": item.rounds[0].before.fire_load_flp if item.rounds and item.rounds[0].before else None,
+                "flp_growth_pct_since_plan": (
+                    round((monitor_data.get("next_fire_load_flp", 0) - item.rounds[0].before.fire_load_flp)
+                          / max(item.rounds[0].before.fire_load_flp, 1e-6) * 100, 1)
+                    if item.rounds and item.rounds[0].before and monitor_data.get("next_fire_load_flp") is not None else None),
+                "flp_rising_streak": _rising_streak(item.rounds, monitor_data.get("next_fire_load_flp")),
             }
             judgment = SIMULATOR.judge(analysis_id, snapshot)
             if judgment.get("decision") == "replan" and judgment.get("source") == "glm" and "llm_judgment_replan" not in triggers:
@@ -344,7 +374,9 @@ class AnalysisService:
                 "fire_load_flp": ((monitor_data.get("next_fire_load_flp"), before.get("fire_load_flp")) if monitor_data.get("next_fire_load_flp") != before.get("fire_load_flp") else None),
                 "action": action,
             },
-            "replan_required": bool(triggers) or action in {"reinforce", "resupply", "return"},
+            # finish（火情扑灭）是终态胜利，优先于任何重规划触发器（含 GLM 建议）——
+            # 否则扑灭后 GLM 说 replan 会撞上终态守卫 409（test_monitor_finish 复现）
+            "replan_required": action != "finish" and (bool(triggers) or action in {"reinforce", "resupply", "return"}),
             "replan_triggers": triggers,
             "next_action": "awaiting_confirmation" if triggers else action,
         }
@@ -352,7 +384,7 @@ class AnalysisService:
             # 推演期间任务被终止：本轮作废，不得覆盖终态
             raise ValueError("任务已终止，本轮反馈作废")
         latest = analysis_store.get(analysis_id); analysis_store.update(analysis_id, rounds=[*latest.rounds, round_data])
-        if triggers:
+        if triggers and action != "finish":
             analysis_store.add_event(analysis_id, "replan", "触发重规划关键事件：" + "、".join(triggers), "rules")
             # Generate and persist a new version immediately; it remains gated by
             # approval, so monitoring cannot continue on an unapproved plan.
