@@ -45,6 +45,8 @@ def main() -> int:
     backend_ok = check("后端 :8000 在线", _get(f"{BACKEND}/api/health") is not None,
                        hard=True, hint="cd backend && python -m uvicorn app.main:app --port 8000")
     if backend_ok:
+        # 预热环境缓存：冷启动首次研判会现抓 GIS/气象（30-90s），提前打一次让演示首跑即快
+        _get(f"{BACKEND}/api/environment?scene_id=forest-demo-01&latitude=32.0725&longitude=118.8415", timeout=240)
         status = _get(f"{BACKEND}/api/project-status") or {}
         check("VLM 接入状态=configured", status.get("vlm") == "configured",
               f"实际 {status.get('vlm')}", hard=True, hint="重启后端以加载 .env")
@@ -70,9 +72,9 @@ def main() -> int:
     return 0 if not failed else 1
 
 
-def _get(url):
+def _get(url, timeout=8):
     try:
-        return json.loads(requests.get(url, timeout=8).text)
+        return json.loads(requests.get(url, timeout=timeout).text)
     except Exception:
         return None
 
