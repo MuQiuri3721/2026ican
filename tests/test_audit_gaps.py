@@ -17,7 +17,9 @@ def test_people_status_change_triggers_replan(tmp_path):
     """审计§十 闭环：人员状态变化必须触发 people_status_changed → 重规划 v2 → 回审批门。"""
     from backend.app.main import app
 
-    with TestClient(app) as client:
+    # 裸 TestClient（不进 lifespan）：lifespan 会预热环境缓存污染后续契约测试的懒加载断言
+    client = TestClient(app)
+    if True:
         created = client.post("/api/analyze", json={
             "scene_id": "forest-demo-01", "image_name": "probe",
             "scenario": {"fire_origin": {"x": 100, "y": -200}, "fire_area_m2": 2000, "growth_rate": 0.4},
