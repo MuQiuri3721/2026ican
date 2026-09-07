@@ -69,7 +69,7 @@ def main() -> int:
         ok &= report(10, "火点标注", "火点中心" in fire.inner_text())
 
         drones = page.locator(".tmap-drone").count()
-        ok &= report(10, "无人机标记 8 架", drones == 8, f"drones={drones}")
+        ok &= report(10, "无人机标记 12 架", drones == 12, f"drones={drones}")
 
         # 光标经纬度读数（高德模式下 GCJ→WGS 反算）；需多步移动才触发 AMap mousemove
         box = page.locator(".tactical-amap").bounding_box()

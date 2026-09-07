@@ -74,7 +74,8 @@ def run_demo_analysis(scene_id: str, image_name: Optional[str], fire_override: O
         avg_x = sum(p["x"] for p in positions) / max(len(positions), 1)
         avg_y = sum(p["y"] for p in positions) / max(len(positions), 1)
         lat = ZIXIAHU_BASE_GPS[0] + (scenario["fire_origin"]["y"] - avg_y) / 111320
-        lng = ZIXIAHU_BASE_GPS[1] + (scenario["fire_origin"]["x"] - avg_x) / (111320 * math.cos(math.radians(lat)))
+        # 余弦参考统一用基地纬度（与 scenarios.random_scenario 同源），避免末位舍入抖动
+        lng = ZIXIAHU_BASE_GPS[1] + (scenario["fire_origin"]["x"] - avg_x) / (111320 * math.cos(math.radians(ZIXIAHU_BASE_GPS[0])))
         state["scene"]["fire_origin_gps"] = {"latitude": round(lat, 6), "longitude": round(lng, 6)}
         scenario["fire_origin_gps"] = state["scene"]["fire_origin_gps"]
     fire = RECON.assess(state, fire_override)
