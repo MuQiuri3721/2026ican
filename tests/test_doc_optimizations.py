@@ -85,3 +85,61 @@ def test_create_and_run_stamps_input_provenance(tmp_path):
     # 清理：测试任务立即终止释放资源锁
     aid = envelope.get("analysis_id")
     client.post(f"/api/tasks/{aid}/approval", json={"action": "terminate", "reason": "测试清理"})
+
+
+# ---------- 架构纪要对照（docs/架构职责划分纪要.md） ----------
+
+def test_fire_metrics_reports_image_ratio():
+    """纪要§二：PWM-YOLO 输出火焰/烟雾在图像中的占比。"""
+    from backend.app.tools.core import calculate_fire_metrics
+
+    metrics = calculate_fire_metrics(
+        [{"class_name": "fire", "box": [0, 0, 10, 10]},
+         {"class_name": "smoke", "box": [0, 0, 20, 10]}],
+        image_width=100, image_height=100,
+    )
+    assert metrics["fire_ratio"] == 0.01
+    assert metrics["smoke_ratio"] == 0.02
+
+
+def test_environment_surfaces_temperature_humidity_precipitation():
+    """纪要§四：地理环境信息模块向决策层提供温度、湿度、降水。"""
+    from backend.app.tools.environment import EnvironmentTool
+
+    raw = {"status": "ok",
+           "weather": {"status": "ok", "temperature_c": 21.5, "relative_humidity_pct": 63.0,
+                       "precipitation_mm": 0.0, "wind_speed_m_s": 3.0,
+                       "wind_to_direction": "S", "wind_to_deg": 201.0},
+           "terrain": {"status": "ok", "elevation_m": 438.0},
+           "water": {"status": "error"}, "road": {"status": "error"}, "landcover": {"status": "error"}}
+    data = EnvironmentTool._normalize("forest-demo-01", raw, mode="real", source="test")
+    assert data["temperature_c"] == 21.5
+    assert data["relative_humidity_pct"] == 63.0
+    assert data["precipitation_mm"] == 0.0
+
+
+def test_report_review_block():
+    """纪要§九：复盘档案——初始/最终火势、轮次、版本、审批次数与扑灭判定。"""
+    from types import SimpleNamespace
+
+    from backend.app.services.analysis_service import AnalysisService
+
+    item = SimpleNamespace(
+        rounds=[
+            {"before": {"fire_load_flp": 360.0}, "after": {"fire_load_flp": 300.0}},
+            {"before": {"fire_load_flp": 300.0}, "after": {"fire_load_flp": 0.0}},
+        ],
+        plan_versions=[{"plan_version": 1}, {"plan_version": 2}],
+        events=[SimpleNamespace(stage="approval"), SimpleNamespace(stage="approval"), SimpleNamespace(stage="dispatch")],
+        result={"fire_assessment": {"fire_load_flp": 360.0}},
+        status="completed",
+    )
+    review = AnalysisService._build_review(item)
+    assert review["initial_flp"] == 360.0
+    assert review["final_flp"] == 0.0
+    assert review["flp_delta"] == -360.0
+    assert review["extinguished"] is True
+    assert review["round_count"] == 2
+    assert review["plan_version_count"] == 2
+    assert review["approval_event_count"] == 2
+    assert review["status"] == "completed"

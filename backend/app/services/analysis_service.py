@@ -605,6 +605,33 @@ class AnalysisService:
         analysis_store.update(analysis_id, result=result)
         analysis_store.update_resources(analysis_id, fleet=fleet)
 
+    @staticmethod
+    def _build_review(item) -> Dict[str, Any]:
+        """复盘档案（架构纪要§九）：初始/最终火势、轮次、方案版本、审批与结果，全部出自 Store 记录。"""
+        rounds = item.rounds or []
+        result = item.result or {}
+        initial_flp = None
+        if rounds and isinstance(rounds[0].get("before"), dict):
+            initial_flp = rounds[0]["before"].get("fire_load_flp")
+        if initial_flp is None:
+            initial_flp = result.get("fire_assessment", {}).get("fire_load_flp")
+        final_flp = None
+        if rounds and isinstance(rounds[-1].get("after"), dict):
+            final_flp = rounds[-1]["after"].get("fire_load_flp")
+        if final_flp is None:
+            final_flp = result.get("dispatch_plan", {}).get("fire_load_flp")
+        numeric = isinstance(initial_flp, (int, float)) and isinstance(final_flp, (int, float))
+        return {
+            "initial_flp": initial_flp,
+            "final_flp": final_flp,
+            "flp_delta": round(final_flp - initial_flp, 2) if numeric else None,
+            "extinguished": bool(numeric and final_flp <= 0),
+            "round_count": len(rounds),
+            "plan_version_count": len(item.plan_versions or []),
+            "approval_event_count": sum(1 for e in item.events if "approval" in str(e.stage)),
+            "status": item.status,
+        }
+
     def report(self, analysis_id: str) -> Dict[str, Any]:
         item = analysis_store.get(analysis_id)
         if not item:
@@ -617,6 +644,7 @@ class AnalysisService:
             "rounds": item.rounds,
             "events": [e.model_dump() for e in item.events],
             "result": item.result,
+            "review": self._build_review(item),
         }
         self._persist_dispatch_report(analysis_id)
         return report

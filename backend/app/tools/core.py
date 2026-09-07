@@ -145,7 +145,8 @@ def calculate_fire_metrics(detections: list, image_width: int, image_height: int
         pixels = max(0, box[2] - box[0]) * max(0, box[3] - box[1])
         if detection.get("class_name") == "fire": fire_pixels += pixels
         if detection.get("class_name") == "smoke": smoke_pixels += pixels
-    return {"fire_area_m2": round(fire_pixels * area_scale, 2), "smoke_area_m2": round(smoke_pixels * area_scale, 2), "fire_pixels": fire_pixels, "smoke_pixels": smoke_pixels, "source": "demo-metric"}
+    total_pixels = max(int(image_width) * int(image_height), 1)
+    return {"fire_area_m2": round(fire_pixels * area_scale, 2), "smoke_area_m2": round(smoke_pixels * area_scale, 2), "fire_pixels": fire_pixels, "smoke_pixels": smoke_pixels, "fire_ratio": round(fire_pixels / total_pixels, 4), "smoke_ratio": round(smoke_pixels / total_pixels, 4), "source": "demo-metric"}
 
 
 def get_water_sources(scene_id: str = "forest-demo-01", max_distance_m: float = 5000, **_: Any) -> Dict[str, Any]:
