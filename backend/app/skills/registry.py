@@ -39,7 +39,15 @@ class FirePerceptionSkill(BaseSkill):
             explanation_result = self.registry.execute("analyze_with_vlm", {"observation": observation, "environment": (context.get("environment_assessment") or {}).get("environment", {}), "people_status": context.get("people_status", "unknown"), "strict_real": context.get("strict_real", False), "image_paths": context.get("image_paths"), "task_id": context.get("task_id"), "round_index": context.get("round_index", 1)})
             explanation = explanation_result.get("data") if isinstance(explanation_result.get("data"), dict) else {}
             if explanation.get("status") == "error":
-                explanation = {}  # strict_real 失败的错误对象不进解释链（BE-11：避免前端把错误渲染成空 VLM 注释）
+                # BE-11：strict_real 失败的错误对象不进解释链（避免前端把错误渲染成空 VLM 注释）。
+                # BE-47：失败不再留空块——回退规则解释器并显式携带降级码（429/网络等），不掩盖 VLM 未生效。
+                strict_error = (explanation.get("error") or {}).get("code", "vlm_unavailable")
+                try:
+                    from ..tools.core import vlm_explain_fire
+                    explanation = vlm_explain_fire(observation, (context.get("environment_assessment") or {}).get("environment", {}), context.get("people_status", "unknown"))
+                    explanation["degraded_reason"] = strict_error
+                except Exception:
+                    explanation = {}
         return {"observation": {"fire_area_m2": observation.get("fire_area_m2", metrics_data.get("fire_area_m2", 1800)), "smoke_area_m2": observation.get("smoke_area_m2", metrics_data.get("smoke_area_m2", 4200)), "growth_rate": observation.get("growth_rate", 0.42), "confidence": observation.get("confidence", 0.91), "fire_center": context.get("fire_center") or observation.get("fire_center") or {"latitude": 32.04, "longitude": 118.78}, "source": observation.get("source", "vision-observation-fixture"), "detector": result, "metrics": metrics}, "explanation": explanation, "vlm_used": bool(context.get("use_vlm", True))}
 class EnvironmentAssessmentSkill(BaseSkill):
     name = "environment_assessment"
