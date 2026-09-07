@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from harness import Session, report, FRONTEND  # noqa: E402
 
-FIRE_IMAGE = str(Path(__file__).resolve().parent / "fire.jpg")
+FIRE_IMAGE = str(Path(__file__).resolve().parent / "large-fire.jpg")  # FE-41 取消喷洒上限后 1800m² 默认火已可控：不可控覆盖改用 large-fire 档（12000m²/1.5，任何实时风下均不可控）
 
 
 def main() -> int:
@@ -34,7 +34,7 @@ def main() -> int:
         badge = session.page.locator(".task-badge").inner_text()
         ok &= report(2, "任务状态=待确认", "待确认" in badge, badge)
 
-        # 方案摘要：默认火情（1800m²）按冻结公式判不可控 → 显示缺口、时间区间为 '—'（不产虚假时间窗）
+        # 方案摘要：large-fire 档（12000m²）按冻结公式判不可控 → 显示缺口、时间区间为 '—'（不产虚假时间窗）
         summary = session.page.locator(".plan-summary").inner_text()
         ok &= report(2, "FLP 展示", "FLP" in summary, "")
         ok &= report(2, "不可控→显示缺口", "缺口：effective_flp" in summary or "缺口：water_20l" in summary or "缺口" in summary, summary[:120].replace("\n", " "))

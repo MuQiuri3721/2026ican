@@ -4,12 +4,33 @@
     "smoke_area_m2": 4200,
     "growth_rate": 0.42,
     "confidence": 0.91,
-    "fire_center": {"latitude": 32.04, "longitude": 118.78},
+    "fire_center": {
+      "latitude": 32.04,
+      "longitude": 118.78
+    },
     "image_width": 1920,
     "image_height": 1080,
     "detections": [
-      {"class_name": "fire", "confidence": 0.93, "box": [820, 410, 1130, 760]},
-      {"class_name": "smoke", "confidence": 0.89, "box": [650, 180, 1420, 820]}
+      {
+        "class_name": "fire",
+        "confidence": 0.93,
+        "box": [
+          820,
+          410,
+          1130,
+          760
+        ]
+      },
+      {
+        "class_name": "smoke",
+        "confidence": 0.89,
+        "box": [
+          650,
+          180,
+          1420,
+          820
+        ]
+      }
     ]
   },
   "small-fire": {
@@ -17,9 +38,30 @@
     "smoke_area_m2": 620,
     "growth_rate": 0.08,
     "confidence": 0.96,
-    "fire_center": {"latitude": 32.041, "longitude": 118.781},
+    "fire_center": {
+      "latitude": 32.041,
+      "longitude": 118.781
+    },
     "image_width": 1280,
     "image_height": 720,
-    "detections": [{"class_name": "fire", "confidence": 0.96, "box": [540, 260, 700, 390]}]
+    "detections": [
+      {
+        "class_name": "fire",
+        "confidence": 0.96,
+        "box": [
+          540,
+          260,
+          700,
+          390
+        ]
+      }
+    ]
+  },
+  "large-fire": {
+    "fire_area_m2": 12000,
+    "smoke_area_m2": 26000,
+    "growth_rate": 1.5,
+    "confidence": 0.93,
+    "note": "FE-41 取消喷洒上限后的不可控覆盖档：任何实时风下均超出机群压制能力"
   }
 }

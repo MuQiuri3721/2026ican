@@ -101,7 +101,13 @@ def retrieve_scene_knowledge(scene_id: str = "forest-demo-01", keywords: list = 
 
 def demo_observation(image_name: str = "default", image_path: str = None, **_: Any) -> Dict[str, Any]:
     observations = read_json("data/vision_observations.json")
-    key = "small-fire" if image_name and "small" in image_name.lower() else "default"
+    name = (image_name or "").lower()
+    if "small" in name:
+        key = "small-fire"
+    elif "large" in name:
+        key = "large-fire"
+    else:
+        key = "default"
     observation = dict(observations[key])
     observation.update({"image_name": image_name, "image_path": image_path, "mode": "demo", "source": "vision-observation-fixture"})
     return observation

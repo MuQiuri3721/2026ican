@@ -28,7 +28,7 @@ def main() -> int:
 
         session.page.get_by_role("button", name="启动智能研判").click()
         note = session.page.locator(".vlm-note")
-        note.wait_for(timeout=60000)
+        note.wait_for(timeout=180000)  # 冷启动后端环境抓取可达 60-90s，60s 会误报超时
         head = note.locator(".vlm-note-head").inner_text()
         ok &= report(2, "VLM 解释块出现", "VLM 视觉解释" in head, head)
 
