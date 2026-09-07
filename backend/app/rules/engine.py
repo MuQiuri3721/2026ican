@@ -533,7 +533,8 @@ def simulate_monitor(
     spray_cap = float(extinguishing_liters) if extinguishing_liters else None
     consumed = 0.0
     suppression_total = 0.0
-    available_drones = sum(1 for drone in fleet if drone.get("subgroup") == "suppression" and drone.get("soc", 0) >= 25 and drone.get("health", 0) >= 60)
+    # 多用途支援机（multi_role）参战时计入可用灭火机数（架构纪要§五扩展）
+    available_drones = sum(1 for drone in fleet if (drone.get("subgroup") == "suppression" or drone.get("multi_role")) and drone.get("soc", 0) >= 25 and drone.get("health", 0) >= 60)
 
     # 初始化执行态：被选中的 E 机按状态机进入 flying；R/S 维持监测/支援悬停。
     # 上一轮已在途（flying/returning）的机组必须携带进度条，否则没有状态推进、永远停在原地掉电；
