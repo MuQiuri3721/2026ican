@@ -77,6 +77,17 @@ def _normalize_scenario(raw: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any
     return normalized
 
 
+def _file_sha16(path: Optional[str]) -> Optional[str]:
+    """输入文件 SHA-256 前 16 位（溯源用）；文件缺失/不可读返回 None，不阻断分析。"""
+    if not path:
+        return None
+    try:
+        import hashlib
+        return hashlib.sha256(Path(path).read_bytes()).hexdigest()[:16]
+    except OSError:
+        return None
+
+
 class AnalysisService:
 
     """统一分析应用服务：所有入口共享同一份任务、规则和 Agent 链结果。"""
@@ -183,6 +194,12 @@ class AnalysisService:
             result["constraints"] = request.constraints
             if visual_sequence and visual_sequence.get("frame_count", 0) >= 2:
                 result["visual_sequence"] = visual_sequence
+            # 输入文件 hash 溯源（实现差异审计§八：provider/provenance）。
+            result["input_provenance"] = {
+                "image_name": request.image_name,
+                "image_sha256_16": _file_sha16(request.image_path),
+                "frame_sha256_16": [_file_sha16(p) for p in sequence_paths],
+            }
             analysis_store.update_resources(item.analysis_id, result.get("fleet"), result.get("inventory"))
             analysis_store.update(
                 item.analysis_id,

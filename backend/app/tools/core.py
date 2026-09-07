@@ -61,15 +61,36 @@ def extract_frames(video_path: str = None, interval_seconds: float = 1.0, **_: A
     return {"status": "ok", "frames": frames, "fps": fps, "frame_count": index}
 
 
+def _haversine_m(a: Dict[str, Any], b: Dict[str, Any]) -> float:
+    """两点经纬度大圆距离（米）。fire_center.x/y 约定为经度/纬度（api-contract §1.3）。"""
+    import math
+    lat1 = float(a.get("y", a.get("latitude", 0)))
+    lon1 = float(a.get("x", a.get("longitude", 0)))
+    lat2 = float(b.get("y", b.get("latitude", 0)))
+    lon2 = float(b.get("x", b.get("longitude", 0)))
+    radius = 6371000.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp, dl = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
+    h = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return round(2 * radius * math.asin(math.sqrt(h)), 1)
+
+
 def analyze_visual_trend(observations: list = None, **_: Any) -> Dict[str, Any]:
     """Summarize multi-frame fire area and center movement using deterministic statistics."""
     rows = observations or []
     areas = [float(row.get("fire_area_m2", 0)) for row in rows if isinstance(row, dict)]
+    centers = [row.get("fire_center") for row in rows if isinstance(row, dict) and isinstance(row.get("fire_center"), dict)]
     if len(areas) < 2:
         return {"status": "insufficient_data", "sample_count": len(areas), "trend": "unknown", "growth_rate": None}
     delta = areas[-1] - areas[0]
     trend = "growing" if delta > 0 else "shrinking" if delta < 0 else "stable"
-    return {"status": "ok", "sample_count": len(areas), "trend": trend, "area_delta_m2": round(delta, 2), "growth_rate": round(delta / max(areas[0], 1), 4), "areas_m2": areas}
+    result = {"status": "ok", "sample_count": len(areas), "trend": trend, "area_delta_m2": round(delta, 2), "growth_rate": round(delta / max(areas[0], 1), 4), "areas_m2": areas}
+    if len(centers) >= 2:
+        # 审计§六.3 位置变化：首末帧火点位移（米）
+        result["first_center"] = centers[0]
+        result["last_center"] = centers[-1]
+        result["center_delta_m"] = _haversine_m(centers[0], centers[-1])
+    return result
 
 
 def analyze_frame_sequence(frame_paths: List[str] = None, **_: Any) -> Dict[str, Any]:
@@ -86,6 +107,7 @@ def analyze_frame_sequence(frame_paths: List[str] = None, **_: Any) -> Dict[str,
             "smoke_area_m2": detection.get("smoke_area_m2"),
             "growth_rate": detection.get("growth_rate"),
             "confidence": detection.get("confidence"),
+            "fire_center": detection.get("fire_center"),
         })
     return {"frame_count": len(observations), "frames": observations, "trend": analyze_visual_trend(observations)}
 
