@@ -1664,6 +1664,11 @@ onMounted(() => {
         <template v-else-if="mission && mission.active">
           <span class="scr-hint scr-live"><i class="live-dot"></i> 自动推演中 · 第 {{ Math.min(Math.floor(missionNow / 5) + 1, activeRounds.length + 1) }} 轮 · 每轮 5 仿真分钟 · 结果见下方演化曲线与协作流</span>
         </template>
+        <template v-else-if="taskStatus === '执行中'">
+          <!-- FE-47：恢复的执行中任务落在推演钟不活跃分支，任务条不得误报「已结束」 -->
+          <span class="scr-hint scr-live"><i class="live-dot"></i> 任务推演中（已完成 {{ analysisEnvelope?.monitor_round || 0 }} 轮）· 自动推演未启动，可在指挥中枢执行下一轮监测或批准新方案</span>
+          <button class="scr-btn" :disabled="approvalBusy" @click="submitApproval('terminate', { defaultReason: '指挥员在林区态势页终止任务' })">终止任务</button>
+        </template>
         <template v-else>
           <span class="scr-hint">任务已结束（{{ displayStatus }}）· 可重新开始一局</span>
           <button class="scr-btn" @click="generateScenario">🎲 生成随机火情</button>
