@@ -87,3 +87,24 @@ def test_extract_video_frames_without_opencv_returns_503(tmp_path, monkeypatch):
         _extract_video_frames(video)
     assert getattr(error.value, "status_code", None) == 503
     assert "OpenCV" in str(error.value.detail)
+
+
+def test_multi_role_support_units_join_firefighting():
+    """FE-46：E1–E4 全部禁用时，多用途支援机 S3/S4 以「支援灭火」任务入选出动名单。"""
+    from backend.app.main import app
+
+    client = TestClient(app)
+    created = client.post("/api/analyze", json={
+        "scene_id": "forest-demo-01", "image_name": "probe",
+        "scenario": {"fire_origin": {"x": 150, "y": -150}, "fire_area_m2": 3000, "growth_rate": 0.5},
+        "people_status": "unknown", "environment_mode": "offline",
+        "constraints": {"disabled_uavs": ["E1", "E2", "E3", "E4"], "max_drones": 4},
+    }, timeout=300)
+    assert created.status_code == 200
+    aid = created.json()["analysis_id"]
+    plan = (created.json().get("result") or {}).get("dispatch_plan") or {}
+    tasks = {t.get("drone_id"): t.get("task") for t in (plan.get("tasks") or [])}
+    assert plan.get("selected_uavs") and set(plan["selected_uavs"]).isdisjoint(["E1", "E2", "E3", "E4"])
+    assert tasks.get("S3") == "支援灭火"
+    assert tasks.get("S4") == "支援灭火"
+    client.post(f"/api/tasks/{aid}/approval", json={"action": "terminate", "reason": "测试清理"})
