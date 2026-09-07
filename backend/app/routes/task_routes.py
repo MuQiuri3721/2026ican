@@ -6,6 +6,8 @@ import asyncio
 import json
 import re
 import os
+import shutil
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
@@ -266,6 +268,47 @@ def analyze(request: AnalysisInput):
         raise HTTPException(status_code=422, detail=str(error)) from error
 
 
+def _extract_video_frames(video_path: Path, max_frames: int = 4) -> List[Path]:
+    """视频主文件：均匀抽帧落盘为 JPG（≤max_frames），供检测与 VLM 时序对比（BE-11 视频适配）。
+
+    cv2 在 Windows 上对非 ASCII 路径不可靠：先复制到 ASCII 临时目录解码，
+    帧图片经 imencode 字节写回（UPLOAD_DIR 路径含中文）。
+    """
+    try:
+        import cv2
+    except ImportError:
+        raise HTTPException(status_code=503, detail="服务器未安装 OpenCV，无法处理视频")
+    tmp_dir = Path(tempfile.mkdtemp(prefix="frame-extract-"))
+    capture = None
+    try:
+        tmp_video = tmp_dir / "input.mp4"
+        shutil.copyfile(video_path, tmp_video)
+        capture = cv2.VideoCapture(str(tmp_video))
+        if not capture.isOpened():
+            raise HTTPException(status_code=422, detail="视频无法解码")
+        count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+        total = max(count, 1)
+        ratios = (0.02, 0.34, 0.67, 0.98)[:max_frames]
+        picks = sorted({min(total - 1, max(0, round(total * ratio))) for ratio in ratios})
+        saved: List[Path] = []
+        for index in picks:
+            capture.set(cv2.CAP_PROP_POS_FRAMES, index)
+            ok, frame = capture.read()
+            if not ok:
+                continue
+            encoded, buffer = cv2.imencode(".jpg", frame)
+            if not encoded:
+                continue
+            out = UPLOAD_DIR / (uuid4().hex[:12] + "-frame.jpg")
+            out.write_bytes(buffer.tobytes())
+            saved.append(out)
+        return saved
+    finally:
+        if capture is not None:
+            capture.release()
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
 @router.post("/api/analyze/upload")
 async def analyze_upload(
     scene_id: str = Form("forest-demo-01"),
@@ -322,7 +365,20 @@ async def analyze_upload(
             _validate_upload_signature(frame_target, frame.content_type)
             frame_targets.append(frame_target)
             frame_paths.append(str(frame_target))
-        result = analysis_service.create_and_run(AnalysisInput(scene_id=scene_id, image_name=safe_name, image_path=str(target), use_vlm=use_vlm, latitude=latitude, longitude=longitude, environment_mode=environment_mode, people_status=people_status, fire_type=fire_type, constraints=parsed_constraints, water_search_radius_m=water_search_radius_m, road_search_radius_m=road_search_radius_m), frame_paths=frame_paths or None)
+        # 视频主文件：均匀抽帧替代序列帧（BE-11 视频适配）——末帧作分析主图，其余为早前帧，
+        # 检测与 VLM 时序对比都吃到真实帧序列；视频与序列帧不可混传
+        if file.content_type == "video/mp4":
+            if frame_paths:
+                raise HTTPException(status_code=422, detail="视频主文件不可与序列帧同时上传，请二选一")
+            video_frames = _extract_video_frames(target)
+            if not video_frames:
+                raise HTTPException(status_code=422, detail="视频无可解码帧")
+            frame_paths = [str(item) for item in video_frames[:-1]]
+            frame_targets.extend(video_frames[:-1])
+            analysis_image = video_frames[-1]
+        else:
+            analysis_image = target
+        result = analysis_service.create_and_run(AnalysisInput(scene_id=scene_id, image_name=safe_name, image_path=str(analysis_image), use_vlm=use_vlm, latitude=latitude, longitude=longitude, environment_mode=environment_mode, people_status=people_status, fire_type=fire_type, constraints=parsed_constraints, water_search_radius_m=water_search_radius_m, road_search_radius_m=road_search_radius_m), frame_paths=frame_paths or None)
         keep_target = True
         return result
     except (SkillExecutionError, RuntimeError) as error:
