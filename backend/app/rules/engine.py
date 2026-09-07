@@ -359,7 +359,12 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
     origin = scene.get("fire_origin", {"x": 0, "y": 0})
     # 规则 V1 §4.2：SOC<35% 不得新接远程任务（new_task_floor_soc_percent）；25% 仅为返航硬约束。
     new_task_floor = float(v1_config().get("new_task_floor_soc_percent", 35))
-    e_candidates = [u for u in state["fleet"] if u.get("uav_id", "") not in disabled_uavs and u.get("uav_id", "").startswith("E") and u.get("status") in {"available", "assigned"} and u.get("health", 0) >= 60 and u.get("soc", 0) >= new_task_floor and (module == "water_20l" or u.get("payload_module") == module)]
+    # 多用途支援机（multi_role，架构纪要§五扩展）可携带灭火模块参与压制
+    def _can_fight(u):
+        uid = u.get("uav_id", "")
+        return uid.startswith("E") or (uid.startswith("S") and u.get("multi_role"))
+
+    e_candidates = [u for u in state["fleet"] if u.get("uav_id", "") not in disabled_uavs and _can_fight(u) and u.get("status") in {"available", "assigned"} and u.get("health", 0) >= 60 and u.get("soc", 0) >= new_task_floor and (module == "water_20l" or u.get("payload_module") == module)]
     recon = [u for u in state["fleet"] if u.get("uav_id", "") not in disabled_uavs and u.get("uav_id", "").startswith("R") and u.get("status") in {"available", "assigned"} and u.get("health", 0) >= 60 and u.get("soc", 0) >= new_task_floor]
     support = [u for u in state["fleet"] if u.get("uav_id", "") not in disabled_uavs and u.get("uav_id", "").startswith("S") and u.get("status") in {"available", "assigned"} and u.get("health", 0) >= 60 and u.get("soc", 0) >= new_task_floor]
     if fire.get("wind_band"):
@@ -427,9 +432,11 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
         errors.append(f"药剂模块 {module} 与火情类型 {fire_type} 不兼容")
     selected_ids = [u["uav_id"] for u in selected]
     r_ids = [recon[0]["uav_id"]] if recon else []
-    s_ids = [support[0]["uav_id"]] if support else []
+    fighting_set = set(selected_ids)
+    s_support_pool = [u["uav_id"] for u in support if u["uav_id"] not in fighting_set]
+    s_ids = s_support_pool[:1] if s_support_pool else []
     tasks = [{"drone_id": r_ids[0], "task": "持续侦察", "branch": "reconnaissance"}] if r_ids else []
-    tasks += [{"drone_id": u, "task": "主力灭火", "module": module, "target_flp": round(fire_load / max(len(selected), 1), 2)} for u in selected_ids]
+    tasks += [{"drone_id": u, "task": "支援灭火" if u.startswith("S") else "主力灭火", "module": module, "target_flp": round(fire_load / max(len(selected), 1), 2)} for u in selected_ids]
     tasks += [{"drone_id": s_ids[0], "task": "通信广播/疏散引导" if people_status == "confirmed" else ("物流补给" if people_status == "absent" else "复核人员与后备侦察"), "branch": "support"}] if s_ids else []
     alternatives = sorted(
         (
@@ -453,7 +460,8 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
         window = None
     return {
         "schema_version": "uav-dispatch-v1",
-        "fleet_shape": {"reconnaissance": 2, "suppression": 4, "support": 2},
+        "fleet_shape": {"reconnaissance": 2, "suppression": 6, "support": 4},
+        "firefighting_uavs": selected_ids,
         "can_control": bool(ok),
         "feasibility": ok and bool(r_ids) and bool(s_ids),
         "required_drones": max(1, math.ceil(fire_load / max(quantity * kappa * 0.9, 1))),
@@ -519,7 +527,8 @@ def simulate_monitor(
     # 自参照，火压到接近 0 时比率爆炸（0.73 FLP 曾反弹 +9/轮），余烬永远复燃。
     growth_base_flp = float(dispatch.get("base_fire_load_flp") or load_before)
     growth_rate_per_hour = growth_flp_per_hour / max(growth_base_flp, 1e-6)
-    selected_ids = {u for u in dispatch.get("selected_uavs", []) if str(u).startswith("E")}
+    # 优先用方案里的灭火机清单（含多用途支援机）；旧信封回退 E 前缀口径
+    selected_ids = set(dispatch.get("firefighting_uavs") or [u for u in dispatch.get("selected_uavs", []) if str(u).startswith("E")])
     plan_by_uav = {entry.get("uav_id"): entry for entry in dispatch.get("battery_plan", [])}
     spray_cap = float(extinguishing_liters) if extinguishing_liters else None
     consumed = 0.0

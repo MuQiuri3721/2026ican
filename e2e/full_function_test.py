@@ -88,7 +88,7 @@ code, llm = call("GET", "/api/llm-status")
 record("A", "llm-status", code == 200 and "available" in llm, f"mode={llm.get('mode')}")
 code, fleet = call("GET", "/api/fleet")
 fleet_count = len(fleet.get("fleet", fleet)) if isinstance(fleet, dict) else 0
-record("A", "机群 2R+4E+2S", fleet_count == 8, f"count={fleet_count}")
+record("A", "机群 2R+6E+4S", fleet_count == 12, f"count={fleet_count}")
 code, inv = call("GET", "/api/inventory")
 record("A", "库存", code == 200 and isinstance(inv, dict) and "water_liters" in json.dumps(inv))
 code, tools = call("GET", "/api/tools")

@@ -97,11 +97,12 @@ def test_fleet_and_inventory_contract_are_2_plus_4_plus_2_and_non_negative():
     assert fleet_response.status_code == 200
     fleet = fleet_response.json()
     assert fleet["schema_version"] == "fleet-v1"
-    assert fleet["count"] == 8
+    assert fleet["count"] == 12  # 2026-09-08 扩编：2 侦察 + 6 灭火 + 4 支援（含 2 架多用途支援机）
     assert {uav["subgroup"] for uav in fleet["fleet"]} == {"reconnaissance", "suppression", "support"}
     assert sum(uav["subgroup"] == "reconnaissance" for uav in fleet["fleet"]) == 2
-    assert sum(uav["subgroup"] == "suppression" for uav in fleet["fleet"]) == 4
-    assert sum(uav["subgroup"] == "support" for uav in fleet["fleet"]) == 2
+    assert sum(uav["subgroup"] == "suppression" for uav in fleet["fleet"]) == 6
+    assert sum(uav["subgroup"] == "support" for uav in fleet["fleet"]) == 4
+    assert sum(1 for uav in fleet["fleet"] if uav.get("multi_role")) == 2  # S3/S4 多用途支援机可参与灭火
     assert all(0 <= uav["soc"] <= 100 and uav["agent_remaining"] >= 0 for uav in fleet["fleet"])
 
     inventory_response = client.get("/api/inventory")

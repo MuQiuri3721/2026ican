@@ -77,6 +77,9 @@ def _normalize_scenario(raw: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any
     return normalized
 
 
+_ADD_ROUND_SEQ = 0
+
+
 def _file_sha16(path: Optional[str]) -> Optional[str]:
     """输入文件 SHA-256 前 16 位（溯源用）；文件缺失/不可读返回 None，不阻断分析。"""
     if not path:
@@ -375,6 +378,9 @@ class AnalysisService:
         if item.status in {"completed", "terminated", "failed"}: raise ValueError("终态任务禁止反馈")
         if request.round != item.monitor_round + 1:
             raise ValueError("轮次必须按任务当前轮次递增")
+        global _ADD_ROUND_SEQ
+        _ADD_ROUND_SEQ += 1
+        print(f"[add-round-dbg] #{_ADD_ROUND_SEQ} tid={analysis_id[-6:]} round={request.round} status={item.status}")
         # 将本轮观测显式注入闭环计算，避免继续使用首轮固定参数。
         current = analysis_store.get(analysis_id)
         # before is always the Store-owned state, never client supplied values.
@@ -412,15 +418,22 @@ class AnalysisService:
         pass  # shift 注入完成后无需额外处理
         previous_wind = (current.result or {}).get("environment", {}).get("wind_speed")
         previous_flp = float((current.result or {}).get("dispatch_plan", {}).get("fire_load_flp", request.fire_load_flp or 0))
-        # ---- 单机失能 → 方案内补位（FE-34）：轮次开始时按场景剧本注入失能。
-        # 候选两档由规则算好、大脑只选人；方案内换机不过审批门，补位机当轮即出动。
+        # ---- 单机失能 → 方案内补位（FE-34，两阶段）：轮次开始时标记故障机（先于监测，
+        # 使重规划 regeneration 自动排除故障机）；监测/重规划之后再执行补位换机，
+        # 避免同轮重规划的新名单覆盖补位结果（2026-09-08 修复）。
         try:
-            self._maybe_fail_and_backfill(analysis_id, current, request.round)
+            victim_id = self._mark_fault(analysis_id, current, request.round)
         except Exception as error:
             import traceback
             print(f"[drill-debug] {type(error).__name__}: {error}")
             traceback.print_exc()
         result = self.monitor_and_update(analysis_id, MonitorInput(elapsed_minutes=request.elapsed_minutes, extinguishing_liters=request.extinguishing_liters, fleet_snapshot=analysis_store.fleet(analysis_id), inventory=analysis_store.inventory(analysis_id)))
+        try:
+            self._backfill_after_monitor(analysis_id, victim_id, request.round)
+        except Exception as error:
+            import traceback
+            print(f"[drill-debug] backfill: {type(error).__name__}: {error}")
+            traceback.print_exc()
         monitor_data = result.get("result", {}).get("monitor", {})
         action = result.get("action")
 
@@ -563,20 +576,23 @@ class AnalysisService:
         analysis_store.add_event(analysis_id, "recovery",
                                  f"结案回收：{len(fleet)} 架归位基地，最长航程 {longest:.1f} 分钟", "rules")
 
-    def _maybe_fail_and_backfill(self, analysis_id: str, item, round_number: int) -> None:
-        """场景剧本的单机失能注入 + 补位决策（FE-34）：幂等（同轮只注入一次）。"""
+    def _mark_fault(self, analysis_id: str, item, round_number: int) -> Optional[str]:
+        """场景剧本单机失能注入（FE-34）第一阶段：幂等标记故障机，返回 victim_id。
+
+        故障标记必须在监测/重规划之前完成，使重规划 regeneration 自动排除故障机；
+        补位换机在监测之后执行（_backfill_after_monitor），避免同轮重规划覆盖补位名单。
+        """
         scenario = getattr(item.input, "scenario", None) or {}
         fail_round = scenario.get("uav_failure_round") if isinstance(scenario, dict) else None
         if not fail_round or int(fail_round) != round_number:
-            return
+            return None
         existing = analysis_store.get_messages(analysis_id)
         for message in existing:
-            if message.get("msg_type") == "UAV_FAULT" and (message.get("data") or {}).get("round") == round_number:
-                return
-        from ..agents import backfill as backfill_mod
+            if message.get("msg_type") == "UAV_FAULT":
+                return None  # 失能演练每任务一次（uav_failure_round 指定轮；重试/后续轮不得二次注入）
         result = item.result or {}
         dispatch = dict(result.get("dispatch_plan") or {})
-        selected = [u for u in dispatch.get("selected_uavs", []) if str(u).startswith("E")]
+        selected = list(dispatch.get("firefighting_uavs") or [u for u in dispatch.get("selected_uavs", []) if str(u).startswith("E")])
         fleet = analysis_store.fleet(analysis_id)
         by_id = {d.get("uav_id"): d for d in fleet}
         flying = [u for u in selected if (by_id.get(u) or {}).get("status") in {"flying", "working"}]
@@ -585,25 +601,57 @@ class AnalysisService:
             post_message(analysis_id, "INFO", "recon", "commander",
                          f"失能演练跳过：当前方案（第 {round_number} 轮）无在飞灭火机，无失能目标。",
                          {"round": round_number, "skipped": True}, source="rules")
-            return
+            return None
         import random
         victim_id = random.Random(f"fail-{analysis_id}").choice(pool)
         by_id[victim_id]["status"] = "fault"
-        candidates = backfill_mod.build_candidates(fleet, {victim_id}, 20.0)
-        decision = backfill_mod.decide(candidates, {"faulted": [victim_id], "fire_load_flp": dispatch.get("fire_load_flp")})
-        backfill_mod.announce(analysis_id, victim_id, decision, candidates, round_number)
-        choice = decision.get("choice")
-        # 无论是否补到机，失能机都必须移出出动名册（fault 状态不可执行）
-        dispatch["selected_uavs"] = [choice if u == victim_id else u
-                                     for u in dispatch.get("selected_uavs", []) if u != victim_id]
-        dispatch["tasks"] = [dict(t, drone_id=choice) if t.get("drone_id") == victim_id else dict(t)
-                             for t in dispatch.get("tasks", []) if t.get("drone_id") != victim_id]
-        if choice and choice != "none" and choice in by_id:
-            by_id[choice]["status"] = "assigned"
-            dispatch["selected_uavs"] = [choice if u == victim_id else u for u in dispatch.get("selected_uavs", [])]
-        result["dispatch_plan"] = dispatch
-        analysis_store.update(analysis_id, result=result)
         analysis_store.update_resources(analysis_id, fleet=fleet)
+        post_message(analysis_id, "UAV_FAULT", "simulator", "commander",
+                     f"⚠ {victim_id} 遥测中断、电量骤降，按机电故障处置，立即评估补位。",
+                     {"faulted": victim_id, "round": round_number}, source="rules")
+        return victim_id
+
+    def _backfill_after_monitor(self, analysis_id: str, victim_id: Optional[str], round_number: int) -> None:
+        """FE-34 第二阶段：监测/重规划尘埃落定后的补位换机。
+
+        若同轮触发重规划，新方案版本已自动把故障机移出名单（候选池排除 fault），
+        此时补位转为提示；未触发重规划时按两档候选换机（方案内换机，不过审批门）。
+        """
+        if not victim_id:
+            return
+        from ..agents import backfill as backfill_mod
+        result = (analysis_store.get(analysis_id).result or {})
+        dispatch = dict(result.get("dispatch_plan") or {})
+        roster = list(dispatch.get("selected_uavs") or dispatch.get("firefighting_uavs") or [])
+        fleet = analysis_store.fleet(analysis_id)
+        if victim_id not in roster:
+            post_message(analysis_id, "BACKFILL", "suppression", "commander",
+                         f"🔁 {victim_id} 失能：同轮触发重规划，新方案版本已将故障机移出出动名单"
+                         f"（当前出动 {roster}），无需单独补位。",
+                         {"faulted": victim_id, "choice": "none", "round": round_number}, source="rules")
+            return
+        candidates = backfill_mod.build_candidates(fleet, set(roster) | {victim_id}, 20.0)
+        decision = backfill_mod.decide(candidates, {"faulted": [victim_id], "fire_load_flp": dispatch.get("fire_load_flp")})
+        choice = decision.get("choice")
+        rationale = str(decision.get("rationale", ""))[:120]
+        if choice and choice != "none" and choice in {d.get("uav_id") for d in fleet}:
+            # 原位替换 victim→choice（旧推导式先过滤 victim 再判 u==victim，choice 永远插不进名单）
+            dispatch["selected_uavs"] = [choice if u == victim_id else u for u in roster]
+            dispatch["tasks"] = [dict(t, drone_id=choice) if t.get("drone_id") == victim_id else dict(t)
+                                 for t in dispatch.get("tasks", []) if t.get("drone_id") != victim_id]
+            fleet_by_id = {d.get("uav_id"): d for d in fleet}
+            fleet_by_id[choice]["status"] = "assigned"
+            result["dispatch_plan"] = dispatch
+            analysis_store.update(analysis_id, result=result)
+            analysis_store.update_resources(analysis_id, fleet=fleet)
+            post_message(analysis_id, "BACKFILL", "suppression", "commander",
+                         f"🔁 补位决策：{victim_id} 失能 → {choice} 顶替（方案内换机，不改目标与规模，"
+                         f"无需重新审批）。{rationale}",
+                         {"faulted": victim_id, "choice": choice, "candidates": candidates}, source=decision.get("source", "rules"))
+        else:
+            post_message(analysis_id, "BACKFILL", "suppression", "commander",
+                         f"🔁 补位决策：{victim_id} 失能，无满足出动门槛的备用机；{rationale}。移交自主研判。",
+                         {"faulted": victim_id, "choice": "none"}, source=decision.get("source", "rules"))
 
     @staticmethod
     def _build_review(item) -> Dict[str, Any]:

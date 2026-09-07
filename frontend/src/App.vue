@@ -212,7 +212,7 @@ const fleetGroups = computed(() => FLEET_GROUP_META
   .filter((group) => group.drones.length))
 
 // 本地演示兜底结果仅在后端不可用时展示；字段与 docs/api-contract.md §7 对齐，
-// 使用 2+4+2 口径和仿真时间区间，不出现旧三机/单点分钟结论。
+// 使用 2+6+4 口径（2026-09-08 扩编）和仿真时间区间，不出现旧三机/单点分钟结论。
 const fallbackResult = {
   analysis_id: 'analysis-demo-001',
   fire_assessment: { level: 2, label: 'II 级 · 中等火情', fire_area_m2: 1800, smoke_area_m2: 4200, confidence: 0.91, spread_direction: '西北', fire_load_flp: 245.7, growth_rate: 0.42 },

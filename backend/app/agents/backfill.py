@@ -70,7 +70,8 @@ def build_candidates(fleet: List[Dict[str, Any]], selected_ids: set, capacity: f
     ready_after: List[Dict[str, Any]] = []
     for drone in fleet:
         uid = drone.get("uav_id", "")
-        if uid in selected_ids or drone.get("subgroup") != "suppression":
+        is_fighter = drone.get("subgroup") == "suppression" or drone.get("multi_role")
+        if uid in selected_ids or not is_fighter:
             continue
         if drone.get("status") in {"fault"} or drone.get("health", 100) < 60:
             continue

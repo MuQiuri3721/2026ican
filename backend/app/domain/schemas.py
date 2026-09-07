@@ -63,6 +63,7 @@ class UAVRecord(BaseModel):
     health: float = Field(default=100, ge=0, le=100)
     assigned_task: Optional[str] = None
     last_updated: str = ""
+    multi_role: bool = False  # 多用途支援机：可携带灭火模块参与压制（架构纪要§五扩展）
 
     @model_validator(mode="after")
     def validate_payload(self):

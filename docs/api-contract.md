@@ -403,7 +403,7 @@ Query：`once`（可选，`1` = 仅推送当前事件快照后结束，供一次
   "task_id": "analysis-0097b06a834b",
   "plan_version": 1,
   "generated_at": "2026-09-03T22:31:04",
-  "fleet_shape": {"reconnaissance": 2, "suppression": 4, "support": 2},
+  "fleet_shape": {"reconnaissance": 2, "suppression": 6, "support": 4},（2026-09-08 扩编 2+6+4；多用途支援机 S3/S4 可入灭火候选池，字段 firefighting_uavs 标注实际灭火机）
   "can_control": true,
   "feasibility": true,
   "required_drones": 2,
