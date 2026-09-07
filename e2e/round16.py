@@ -31,8 +31,15 @@ def main() -> int:
         page.locator(".plan-summary").wait_for(timeout=180000)
         ok &= report(16, "视频研判完成", True)
 
-        aid = session.api("GET", "/api/analyzes?limit=1&slim=1")
-        items = aid.get("items", aid) if isinstance(aid, dict) else aid
+        # 前端适配展示：帧序列趋势条 + 输入溯源行
+        page.locator(".frame-trend").wait_for(timeout=15000)
+        trend_text = page.locator(".frame-trend").inner_text()
+        ok &= report(16, "帧序列趋势条", "帧序列 4 帧" in trend_text, trend_text)
+        prov_text = page.locator(".decision-panel .src-note", has_text="输入溯源").first.inner_text()
+        ok &= report(16, "输入溯源行", "sha256:" in prov_text and "序列帧" in prov_text, prov_text)
+
+        latest = session.api("GET", "/api/analyzes?limit=1")
+        items = latest.get("items", latest) if isinstance(latest, dict) else latest
         tid = (items[0] or {}).get("analysis_id") or (items[0] or {}).get("id")
         envelope = session.api("GET", f"/api/analyze/{tid}")
         image_name = (envelope.get("input") or {}).get("image_name") or ""
