@@ -383,3 +383,9 @@ select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .chat-input-row input:focus{border-color:var(--accent)}
 .chat-send{margin-top:0}
 .agent-chip.mt-RECOVERY{background:var(--ok-soft,#e8f5ee);color:var(--ok,#1d7a4f);border-color:#c4e3d2}
+.log-repeat{font:600 11px var(--font-data);color:#8a5a2a;background:#f5ead6;border:1px solid #e3cfa8;border-radius:9px;padding:0 7px;line-height:17px;white-space:nowrap}
+
+.full-logs{display:grid;gap:8px;max-height:calc(100vh - 320px);overflow-y:auto;padding-right:6px;scrollbar-width:thin;scrollbar-color:#c8d1d8 transparent}
+.full-logs>div{display:flex;gap:10px;align-items:baseline;padding:9px 12px;background:var(--plan-soft);border:1px solid #e2d9f0;border-radius:var(--radius-s);font:400 12.5px var(--font-data)}
+.full-logs::-webkit-scrollbar{width:6px}
+.full-logs::-webkit-scrollbar-thumb{background:#c8d1d8;border-radius:3px}

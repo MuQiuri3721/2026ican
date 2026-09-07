@@ -1,6 +1,7 @@
 import math
 from typing import Any, Dict, Optional
 
+from ..tools.base import ToolError
 from ..tools.registry import ToolRegistry, build_registry
 
 
@@ -209,16 +210,20 @@ class CandidateGenerationSkill(BaseSkill):
         # FLP 必须由网格公式计算（与 pipeline assess_fire 同一冻结公式），
         # 不能退化成 fire_area/常数——audit §三.1 与 api-contract §8 的要求。
         if not fire.get("fire_load_flp"):
+            # 输入兜底：环境抓取失败时 wind_speed 可能为 None，直接进 positive() 会把
+            # 工具失败信封（无 data）带进下方硬索引 → KeyError('cell_area_m2') 422（用户实测 2026-09-07）
             grid = self.registry.execute("build_fire_grid", {
-                "fire_area_m2": fire.get("fire_area_m2", 1800),
-                "wind_speed": fire.get("wind_speed", 0),
+                "fire_area_m2": fire.get("fire_area_m2") or 1800,
+                "wind_speed": fire.get("wind_speed") or 0,
                 "slope_deg": state["scene"].get("slope_deg", 12),
                 "fuel_type": state["scene"].get("fuel_type", "general_forest"),
                 "intensity": min(4, max(1, assessment.get("level", 2))),
             })
-            grid_data = grid.get("data", {})
+            grid_data = grid.get("data") or {}
             fire["fire_load_flp"] = grid_data.get("fire_load_flp")
-            fire["fire_grid"] = {key: grid_data[key] for key in ("cell_area_m2", "cell_count", "intensity", "k_fuel", "k_wind", "k_slope", "fuel_type")}
+            if fire["fire_load_flp"] is None:
+                raise ToolError("fire_grid_failed", f"火情网格计算失败: {grid.get('error') or '工具无有效返回'}")
+            fire["fire_grid"] = {key: grid_data.get(key) for key in ("cell_area_m2", "cell_count", "intensity", "k_fuel", "k_wind", "k_slope", "fuel_type")}
             fire["growth_flp_per_hour"] = round(float(fire["fire_load_flp"]) * float(fire.get("growth_rate", 0.42)), 2)
         plan = deterministic_v1_dispatch(
             state,
