@@ -7,8 +7,8 @@
 | 数据对象 | 关键字段 | 单位/枚举 | 来源与说明 |
 |---|---|---|---|
 | 场景/环境 | `scene_id`、`terrain_type`、`elevation_m`、`slope_deg`、`wind_speed_mps`、`wind_direction_deg`、`water_sources`、`roads_and_exits` | m、m/s、deg | 紫金山固定场景 JSON/GeoJSON/环境服务；含 `source`、`mode`、时间戳 |
-| 火情观测 | `fire_id`、`detected_classes`、`confidence`、`image_area_ratio`、`calibrated_cells`、`fire_type`、`people_status` | 比例、置信度；`confirmed/absent/unknown` | YOLO/PWM-YOLO fixture 或适配器；视觉不生成风速、真实面积或 SOC |
-| 火情负荷 | `fire_load_flp`、`growth_flp_per_hour`、`intensity_level`、`target_cells`、`area_per_flp` | FLP、FLP/h、100 m² 网格 | 确定性规则 Tool；FLP 是演示内部量；`area_per_flp` 为本研判自己的 FLP↔面积比率（随场景 FLP 系数变化），monitor/重规划的面积折算统一用它，禁止硬编码 180 |
+| 火情观测 | `fire_area_m2`、`smoke_area_m2`、`growth_rate`、`confidence`、`fire_center`、`image_width`、`image_height`、`detections`、`fire_type`、`people_status` | m²、m²、比率/h；`confirmed/absent/unknown` | YOLO/PWM-YOLO fixture 或适配器 + `data/vision_observations.json` 口径；视觉不生成风速、真实面积或 SOC |
+| 火情负荷 | `fire_load_flp`、`growth_flp_per_hour`、`growth_rate_per_hour`、`fire_grid.intensity`、`fire_grid.cell_count`、`area_per_flp` | FLP、FLP/h、100 m² 网格 | 确定性规则 Tool；FLP 是演示内部量；`area_per_flp` 为本研判自己的 FLP↔面积比率（随场景 FLP 系数变化），monitor/重规划的面积折算统一用它，禁止硬编码 180 |
 | UAV | `uav_id`、`subgroup`、`status`、`position`、`soc`、`payload_capacity_kg`、`payload_module`、`agent_remaining`、`agent_unit`、`speed_mps`、`energy_rate_percent_per_hour`、`signal`、`health`、`assigned_task` | SOC/信号/健康度 %；`reconnaissance/suppression/support` | `data/fleet.json`；2+6+4 十二架独立记录，R1–R2、E1–E6、S1–S4（S3/S4 `multi_role: true` 可参战灭火） |
 | 药剂模块 | `water_20l`、`co2_6kg`、`sup_10` | W20=L、C6/SUP10=kg | 植被火默认 W20；C6 只用于局部设备/电气热点 |
 | 库存 | `water_liters`、`water_modules_w20`、`co2_modules_c6`、`support_boxes_sup10`、`battery_packs`、`water_sources` | L、kg、件 | `data/inventory.json`；库存不得为负 |

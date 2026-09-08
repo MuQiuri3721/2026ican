@@ -10,13 +10,13 @@
 
 1. `docs/api-contract.md` —— 接口、字段、单位、错误码、模型接入协议的唯一权威；
 2. `docs/无人机子群与参数规则1.md` —— 冻结的仿真参数与业务规则 V1；
-3. `README.md`、`docs/architecture.md`、`docs/agent-architecture.md`、`docs/algorithm.md`、`docs/data-dictionary.md` —— 与代码同步维护的现状文档；
+3. `README.md`、`docs/architecture.md`（含算法与 Agent 分层）、`docs/data-dictionary.md` —— 与代码同步维护的现状文档；
 4. `docs/task-progress.md` —— 进度与验收口径；
 5. `docs/无人机规则落地实施规划.md` —— 实施规划，阶段状态以其"当前实现状态"小节为准；
 6. `docs/实现差异审计.md` —— 2026-09-03 的审计快照，只作历史参考，不随代码更新；
 7. `森林火灾救援智能体项目方案.md` —— **历史立项存档**。其中的"无人机一/二/三""80 kg 水剂""18 分钟""drone-1/2/3""simulation.yaml"等均为旧口径示例，已被第 2 节的冻结口径取代，仅作背景阅读，禁止作为开发依据。
 
-`docs/思路细化.md` 是需求思路文档：业务流程与交互原则有效，具体接口/文件名以 api-contract.md 为准。
+`docs/requirements.md` 是需求与设计思路文档：业务流程与交互原则有效，具体接口/文件名以 api-contract.md 为准。
 
 ## 2. 统一冻结口径
 
@@ -46,7 +46,7 @@
 - 任务生命周期：`backend/app/domain/`、`backend/app/services/analysis_service.py`；
 - 智能体分层：`backend/app/agents/`、`backend/app/skills/`、`backend/app/tools/base.py`、`tools/registry.py`、`tools/core.py`、`backend/app/pipeline.py`；
 - 数据与配置：`data/scene.json`、`data/fleet.json`、`data/inventory.json`、`data/vision_observations.json`、`configs/simulation.json`；
-- 契约与测试：`tests/`（契约、规则、场景、适配器测试）、`docs/api-contract.md`（双人冻结）、`docs/algorithm.md`、`docs/data-dictionary.md`、`docs/task-progress.md`、`docs/architecture.md`、`docs/agent-architecture.md`；
+- 契约与测试：`tests/`（契约、规则、场景、适配器测试）、`docs/api-contract.md`（双人冻结）、`docs/data-dictionary.md`、`docs/task-progress.md`、`docs/architecture.md`；
 - 后端侧联调、发布门禁与验收记录。
 
 ### 开发者 B：环境态势与指挥工作台（前端 + 环境域）
@@ -84,8 +84,8 @@
 | `tests/test_contracts.py`、`test_rules.py`、`test_scenarios.py`、`test_adapters.py` | A | 契约测试是变更门禁 |
 | `tests/test_environment*.py` | B | 环境域测试 |
 | `docs/api-contract.md`、`CONTRIBUTING.md`、`docs/无人机子群与参数规则1.md` | 双人冻结 | 修改需两人确认（6.2） |
-| `docs/architecture.md`、`agent-architecture.md`、`algorithm.md`、`data-dictionary.md`、`task-progress.md` | A | 与后端代码同步 |
-| `docs/requirements.md`、`demo-script.md` | B | 需求展示与演示流程 |
+| `docs/architecture.md`（含算法/Agent 分层）、`data-dictionary.md`、`task-progress.md` | A | 与后端代码同步 |
+| `docs/requirements.md`（含设计思路）、`demo-script.md` | B | 需求展示与演示流程 |
 | `yolo/`（权重、脚本、yolo/README.md） | 外部（听日） | 不进入后端运行链 |
 | `森林火灾救援智能体项目方案.md`、`docs/实现差异审计.md` | 冻结 | 历史存档，只加声明不改写 |
 

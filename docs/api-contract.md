@@ -2,7 +2,7 @@
 
 > 本文件是接口、字段、单位、错误码与模型接入协议的**唯一权威**。修改流程见 [CONTRIBUTING.md](../CONTRIBUTING.md) 第 6 节（文档 → 契约测试 → 实现，同一提交）。
 > 与代码的对应关系：`backend/app/main.py`（应用装配）、`backend/app/routes/task_routes.py`（任务/平台路由，开发者 A）、`backend/app/routes/environment_routes.py`（环境/等高线路由，开发者 B）、`backend/app/domain/schemas.py`（Pydantic 契约）、`backend/app/domain/store.py`（状态与锁）、`backend/app/pipeline.py`（调度与闭环仿真）、`backend/app/tools/core.py`（模型适配协议）。
-> 最近更新：2026-09-04。
+> 最近更新：2026-09-08（BE-13/BE-13e/BE-14：control_verdict、execution_provenance、出动上限动态 8、药耗分键、相位 battery_plan、MP4 自动抽帧口径）。
 
 ## 1. 通用约定
 
@@ -175,7 +175,7 @@ Query：`latitude`（默认 32.0725，紫金山主峰）、`longitude`（默认 
 ```json
 {
   "schema_version": "fleet-v1",
-  "count": 8,
+  "count": 12,
   "task_id": null,
   "fleet": [
     {"schema_version": "uav-v1", "uav_id": "E1", "id": "E1",
@@ -197,8 +197,8 @@ Query：`latitude`（默认 32.0725，紫金山主峰）、`longitude`（默认 
 ### 4.2 `GET /api/inventory?task_id=<可选>`
 
 ```json
-{"schema_version": "inventory-v1", "water_liters": 240, "water_modules_w20": 12, "co2_modules_c6": 4,
- "support_boxes_sup10": 6, "battery_packs": 16,
+{"schema_version": "inventory-v1", "water_liters": 480, "water_modules_w20": 24, "co2_modules_c6": 4,
+ "support_boxes_sup10": 6, "battery_packs": 48,
  "forward_supply_points": [{"id": "base", "name": "北侧前置补给点", "position": {"x": 100, "y": 60}, "available": true}],
  "water_sources": [{"id": "reservoir-north", "name": "北侧蓄水池", "available": true, "capacity_liters": 1200, "distance_m": 680, "safe": true}],
  "dry_powder_kg": 60, "nearby_water_available": true, "last_updated": "...", "task_id": "仅带 task_id 时出现"}
@@ -274,7 +274,7 @@ Form 字段（全部为 multipart 表单字段，显式 `Form(...)` 绑定）：
 
 多帧序列响应附加字段：`result.visual_sequence = {"frame_count": N, "frames": [{image_name, fire_area_m2, smoke_area_m2, growth_rate, confidence}], "trend": {status, trend, growth_rate, areas_m2}}`；趋势状态 `ok` 时序列增长率与最新帧面积显式驱动火情重算。
 
-> MP4 会被接收但不等于视频分析：抽帧 Tool `extract_frames` 依赖 OpenCV 且当前未挂入主链。
+> MP4 上传即自动抽帧（BE-11，2026-09-07）：路由层均匀抽 ≤4 帧、末帧作分析主图，帧序列参与检测与 VLM 趋势分析；OpenCV 缺失时返回 `opencv_not_available` 降级口径。
 
 ### 5.3 `GET /api/analyzes` · `GET /api/analyze/{analysis_id}` · `GET /api/analyze/{analysis_id}/events`
 
