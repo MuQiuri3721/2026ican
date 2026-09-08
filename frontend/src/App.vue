@@ -333,6 +333,10 @@ const vlmNoteSource = computed(() => {
   const bits = [note.mode === 'real' ? (note.source || 'vlm') : (note.source || 'rule-explainer-fallback')]
   if (note.prompt_version) bits.push(`提示词 ${note.prompt_version}`)
   if (note.adapter_fallback?.code) bits.push(`回退 ${note.adapter_fallback.code}`)
+  if (['vlm_call_failed', 'vlm_endpoint_unavailable'].includes(note.adapter_fallback?.code || '')) {
+    bits.push('免费档限流,稍后重传可获真实识别')
+  }
+  if (note.degraded_reason) bits.push(`VLM 不可用(${note.degraded_reason})`)
   return bits.join(' · ')
 })
 const vlmNoteIssues = computed(() => {

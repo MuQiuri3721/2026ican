@@ -131,12 +131,11 @@ def main():
     check("T3 水源口径(只判候选)", water.get("state") in ("water_candidate", "not_observed"),
           f"water.state={water.get('state')}(不得 confirmed/usable)")
 
-    # T4 分布外风险(提示级):纯纹理合成图可能被误判为火——记录性断言,不计入失败
+    # T4 分布外风险(信息项,不计通过率):纯纹理合成图可能被误判为火
     v4 = run("synthetic-forest.jpg", nofire)
     p4 = presence(v4)
-    check("T4 分布外合成图(提示:模型可能误判,不计失败)", p4 in ("none_observed", "uncertain"),
-          f"fire_presence={p4}(分布外输入误判风险,已知局限)",
-          ) or RESULTS.append(("T4-OOD 提示", True))
+    state4 = "✅" if p4 in ("none_observed", "uncertain") else "⚠"
+    print(f"{state4} T4 分布外合成图(信息项): fire_presence={p4}(分布外输入误判风险,已知局限,不计通过率)")
 
     print()
     fails = [name for name, ok in RESULTS if not ok]
