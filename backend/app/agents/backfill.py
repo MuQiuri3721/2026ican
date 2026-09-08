@@ -59,14 +59,31 @@ def rule_fallback(candidates: Dict[str, List[Dict[str, Any]]]) -> Dict[str, Any]
     return {"choice": "none", "rationale": "无满足出动门槛的备用机，交由自主研判决定重规划或降级", "source": "rule-fallback"}
 
 
+def _can_resupply(module: str | None, inventory: Dict[str, Any] | None) -> bool:
+    """补给条件（评审§五：补位候选必须重过补给约束）——库存能否为该机补满一个模块。"""
+    if not inventory:
+        return False
+    if module == "co2_6kg":
+        return int(inventory.get("co2_modules_c6", 0) or 0) >= 1
+    if float(inventory.get("water_liters", 0) or 0) >= 20.0 and int(inventory.get("water_modules_w20", 0) or 0) >= 1:
+        return True
+    return any(
+        s.get("available") and s.get("safe", True) and float(s.get("capacity_liters", 0) or 0) >= 20.0
+        for s in (inventory.get("water_sources") or []))
+
+
 def build_candidates(fleet: List[Dict[str, Any]], selected_ids: set, capacity: float,
-                     outbound_cost_soc: float = 25.0, module: str | None = None) -> Dict[str, List[Dict[str, Any]]]:
+                     outbound_cost_soc: float = 25.0, module: str | None = None,
+                     inventory: Dict[str, Any] | None = None) -> Dict[str, List[Dict[str, Any]]]:
     """规则引擎口径的两档补位候选（不选中、非故障、健康达标的 E 机）。
 
-    ready_now：SOC 足够「出动+返航储备」；ready_after：SOC 够安全但需先换电（库存有包）。
-    BE-13（评审问题5）：传入 module 时候选必须装载同型药剂——换机不得混用水/C6。
+    ready_now：SOC 足够「出动+返航储备」且机上有机剂；ready_after：SOC 够安全、
+    需先换电/补给一轮（库存可补）。
+    BE-13e（评审问题2/§五）：候选必须重过「载荷+药剂+补给」约束——
+    - 药剂：传入 module 时候选必须装载同型模块，不得混用水/C6；
+    - 载荷：机上药剂为 0 的机不得进 ready_now（有电无剂不得空跑灭火）；
+    - 补给：无机上药剂且库存也无法补满同型模块的机，两档都不收录。
     """
-    packs = True  # 换电可行性由执行层在换电时刻按库存判定，这里只按 SOC 分档
     ready_now: List[Dict[str, Any]] = []
     ready_after: List[Dict[str, Any]] = []
     for drone in fleet:
@@ -78,11 +95,14 @@ def build_candidates(fleet: List[Dict[str, Any]], selected_ids: set, capacity: f
             continue
         if module is not None and drone.get("payload_module") != module:
             continue
+        has_agent = float(drone.get("agent_remaining", 0) or 0) > 0
+        if not has_agent and not _can_resupply(module, inventory):
+            continue  # 无药剂且无补给条件：候选资格整体不通过
         soc = float(drone.get("soc", 0))
-        entry = {"uav_id": uid, "soc": round(soc, 1), "status": drone.get("status")}
-        if soc - outbound_cost_soc >= 25:
+        entry = {"uav_id": uid, "soc": round(soc, 1), "status": drone.get("status"), "agent_remaining": float(drone.get("agent_remaining", 0) or 0)}
+        if soc - outbound_cost_soc >= 25 and has_agent:
             ready_now.append(entry)
-        elif soc >= 35 and packs:
+        elif soc >= 35:
             ready_after.append(entry)
     ready_now.sort(key=lambda c: -c["soc"])
     ready_after.sort(key=lambda c: -c["soc"])

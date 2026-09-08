@@ -419,6 +419,16 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
     selected = chosen["selected"]
     simulation = chosen["simulation"]
     ok = bool(selected) and simulation["controlled"] and time_gap is None
+    # BE-13e（评审测试8/§八）：可行性三态裁决——can_control=时限内可灭；
+    # maintain_only=平均压制追平增长（可维持不扩散，但时限内灭不掉，属"慢压"，加速需增援）；
+    # cannot_control=压制追不上增长（必须增援）。此前只有 can_control 布尔值，
+    # "慢压可维持"与"完全压不住"两种局面共用 False，无法向指挥员区分。
+    if simulation["controlled"]:
+        control_verdict = "can_control"
+    elif simulation.get("suppression_flp", 0.0) / max(simulation.get("minutes_used", 0), 1) >= growth_rate_per_hour * fire_load / 60.0:
+        control_verdict = "maintain_only"
+    else:
+        control_verdict = "cannot_control"
     battery_plan = [
         {
             "uav_id": entry["uav_id"], "soc_before": next((u.get("soc", 0) for u in selected if u.get("uav_id") == entry["uav_id"]), 0),
@@ -471,6 +481,7 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
         "fleet_shape": {"reconnaissance": 2, "suppression": 6, "support": 4},
         "firefighting_uavs": selected_ids,
         "can_control": bool(ok),
+        "control_verdict": control_verdict,
         "feasibility": ok and bool(r_ids) and bool(s_ids),
         "required_drones": max(1, math.ceil(fire_load / max(quantity * kappa * 0.9, 1))),
         "selected_uavs": r_ids + selected_ids + s_ids,

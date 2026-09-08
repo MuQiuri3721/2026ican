@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Optional
 
 import json
 import time
+from functools import lru_cache
 from uuid import uuid4
 from datetime import datetime
 from pathlib import Path
@@ -89,6 +90,18 @@ def _file_sha16(path: Optional[str]) -> Optional[str]:
         return hashlib.sha256(Path(path).read_bytes()).hexdigest()[:16]
     except OSError:
         return None
+
+
+@lru_cache(maxsize=1)
+def _backend_commit() -> str:
+    """后端提交版本（评审§二：每次测试必须记录对应提交）；非 git 环境/失败返回 unknown。"""
+    import subprocess
+    try:
+        completed = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT,
+                                   capture_output=True, text=True, timeout=5)
+        return (completed.stdout or "").strip() or "unknown"
+    except Exception:
+        return "unknown"
 
 
 class AnalysisService:
@@ -203,6 +216,14 @@ class AnalysisService:
                 "image_name": request.image_name,
                 "image_sha256_16": _file_sha16(request.image_path),
                 "frame_sha256_16": [_file_sha16(p) for p in sequence_paths],
+            }
+            # 执行溯源（评审§二/第0步：每次测试记录提交版本、机群数量与运行模式；
+            # 机群/库存初始快照本就随 result.fleet/inventory 持久，每轮快照在 rounds）。
+            result["execution_provenance"] = {
+                "backend_commit": _backend_commit(),
+                "fleet_count": len(result.get("fleet") or []),
+                "environment_mode": request.environment_mode,
+                "recorded_at": datetime.now().isoformat(timespec="seconds"),
             }
             analysis_store.update_resources(item.analysis_id, result.get("fleet"), result.get("inventory"))
             analysis_store.update(
@@ -640,7 +661,7 @@ class AnalysisService:
                          f"（当前出动 {roster}），无需单独补位。",
                          {"faulted": victim_id, "choice": "none", "round": round_number}, source="rules")
             return
-        candidates = backfill_mod.build_candidates(fleet, set(roster) | {victim_id}, 20.0, module=dispatch.get("material_module", "water_20l"))
+        candidates = backfill_mod.build_candidates(fleet, set(roster) | {victim_id}, 20.0, module=dispatch.get("material_module", "water_20l"), inventory=result.get("inventory"))
         decision = backfill_mod.decide(candidates, {"faulted": [victim_id], "fire_load_flp": dispatch.get("fire_load_flp")})
         choice = decision.get("choice")
         rationale = str(decision.get("rationale", ""))[:120]
@@ -787,7 +808,7 @@ class AnalysisService:
         assessment = chain.get("fire_assessment", {}).get("assessment", {}).get("data", {})
         if observation:
             result["fire_assessment"].update(
-                {key: observation[key] for key in ("fire_area_m2", "smoke_area_m2", "growth_rate", "confidence") if key in observation}
+                {key: observation[key] for key in ("fire_area_m2", "smoke_area_m2", "growth_rate", "confidence", "fire_params_source", "fire_params_scale") if key in observation}
             )
         if assessment:
             result["fire_assessment"].update(

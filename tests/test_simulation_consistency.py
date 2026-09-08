@@ -283,6 +283,23 @@ def test_6_backfill_atomic_sync():
     fleet = normalize_fleet(report["result"]["fleet"])
     c6_pool = build_candidates(fleet, set(), 20.0, module="co2_6kg")
     assert all(u["uav_id"] == "E3" for u in c6_pool["ready_now"] + c6_pool["ready_after"])
+    # 载荷+补给门槛（评审问题2/§五）：空载机不得进 ready_now；库存可补才入 ready_after；
+    # 既无机上药剂又无库存可补的机整体不具备候选资格
+    gated = [
+        {"uav_id": "E5", "subgroup": "suppression", "status": "available", "soc": 90, "health": 100,
+         "payload_module": "water_20l", "agent_remaining": 0.0},
+        {"uav_id": "E6", "subgroup": "suppression", "status": "available", "soc": 90, "health": 100,
+         "payload_module": "water_20l", "agent_remaining": 20.0},
+    ]
+    with_stock = build_candidates(gated, set(), 20.0, module="water_20l",
+                                 inventory={"water_liters": 480, "water_modules_w20": 24})
+    assert [u["uav_id"] for u in with_stock["ready_now"]] == ["E6"]
+    assert [u["uav_id"] for u in with_stock["ready_after"]] == ["E5"]  # 无机上药剂但库存可补 → 补给一轮后出动
+    dry = build_candidates(gated, set(), 20.0, module="water_20l",
+                           inventory={"water_liters": 0, "water_modules_w20": 0, "water_sources": []})
+    # 库存干涸只拦"无机上药剂"的 E5；E6 机上带满剂不受补给条件影响
+    assert [u["uav_id"] for u in dry["ready_now"]] == ["E6"]
+    assert dry["ready_after"] == []
     # 故障机保持 fault（停止产生处置量）
     victim_drone = next(d for d in report["result"]["fleet"] if d.get("uav_id") == victim)
     assert victim_drone["status"] == "fault"
@@ -317,6 +334,12 @@ def test_7_approval_does_not_change_fire_growth():
     assert live_plan.get("growth_rate_per_hour") == rate_before
     assert live_plan.get("growth_baseline_flp") == before.get("growth_baseline_flp")
     assert "base_fire_load_flp" not in live_plan  # 审批不再改写增长分母
+    # 执行溯源（评审§二：记录提交版本/机群数量/模式；快照随 result 与 rounds 持久）
+    report_data = client.get(f"/api/tasks/{task_id}/report").json()["result"]
+    provenance = report_data.get("execution_provenance") or {}
+    assert provenance.get("backend_commit") not in (None, "", "unknown"), provenance
+    assert provenance.get("fleet_count") == len(report_data.get("fleet") or [])
+    assert provenance.get("environment_mode") == "offline"
 
 
 # ---------- 测试 8：2+6+4 完整场景 ----------
@@ -333,12 +356,14 @@ def test_8_fleet_2_6_4_full_scenario():
     assert "E3" not in plan["firefighting_uavs"]
     # 备选组合出现 5/6 架规模（逐数量枚举生效）
     assert max(len(a["selected_uavs"]) for a in plan["alternative_plan"]) > 4
-    # 资源诚实战线：600 FLP 超出净处置能力 → 不可控 + 有效 FLP 缺口，不强行成功
+    # 资源诚实战线：600 FLP 超出净处置能力 → 不可控 + 三态裁决 + 有效 FLP 缺口，不强行成功
     assert plan["can_control"] is False
+    assert plan["control_verdict"] in {"maintain_only", "cannot_control"}, plan["control_verdict"]
     assert any(gap.get("resource") == "effective_flp" and gap.get("resource_gap") for gap in plan["resource_gap"])
     # 小火仍然可控（J 评分时间权重主导，组合规模交由评分决定，不强行限定 ≤4）
     small = {"fire_type": "vegetation", "fire_area_m2": 300, "fire_load_flp": 30.0,
              "growth_flp_per_hour": 12.6, "growth_rate": 0.42, "wind_speed": 3.0}
     plan_small = deterministic_v1_dispatch(state, small, "absent", constraints={"max_drones": 8})
     assert plan_small["can_control"] is True
+    assert plan_small["control_verdict"] == "can_control"
     assert 1 <= len(plan_small["firefighting_uavs"]) <= 8

@@ -446,6 +446,8 @@ Query：`once`（可选，`1` = 仅推送当前事件快照后结束，供一次
 - 闭环监测回写的 `battery_plan` 条目为 `{uav_id, soc_after, status, agent_remaining, payload_module, outbound_minutes, phase_elapsed, phase_minutes}`（BE-13：携带相位进度，跨轮续接不再丢航程字段）；
 - `estimated_control_time` 为 `{earliest_minutes, latest_minutes, window_minutes, unit, simulated}`，不是 `{min, max}`；
 - 不可控时 `estimated_control_time.window_minutes=null`、`can_control=false`，并输出 `resource_gap`（不产出虚假时间窗口）。
+- `control_verdict`（BE-13e）：`can_control`（时限内可灭）/ `maintain_only`（平均压制追平增长——可维持不扩散但时限内灭不掉的「慢压」，加速需增援）/ `cannot_control`（压制追不上增长，必须增援）三态裁决，补齐单一 `can_control` 布尔量无法区分「慢压」与「完全压不住」的口径空缺（评审测试 8/§八）。
+- `execution_provenance`（BE-13e）：任务创建时记录 `{backend_commit, fleet_count, environment_mode, recorded_at}`（评审§二/第0步复现环境要求：每次测试记录提交版本与机群数量；机群/库存初始快照随 `result.fleet/inventory` 持久，每轮快照在 `rounds`）。
 - 增长参数与审批基线分离（BE-13，替代 BE-12 的 `base_fire_load_flp` 盖章）：方案携带 `growth_rate_per_hour`（比例增长率，只随新观测重规划更新）与 `growth_baseline_flp`（生成时点负荷）；approve/adjust 只盖 `replan_trigger_baseline_flp` 触发基线，闭环按「相对本方案批准时点的累计涨幅」触发 `fire_load_increase_over_20_percent`——**审批/重规划不得改变火势自然增长速度**。
 
 ## 8. 调度与闭环关键规则（契约级）
