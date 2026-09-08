@@ -345,7 +345,6 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
         module = required_module
     if module == "co2_6kg":
         quantity = 6.0
-    max_drones = max(1, min(max_drones, 4))
     kappa, _compatible = _agent_kappa(module, fire_type)
     fire_load = max(1.0, float(fire.get("fire_load_flp") or fire["fire_area_m2"] / 180.0))
     # BE-13（评审问题4）：比例增长率是场景/观测层参数（研判 growth_rate），只随「新观测
@@ -363,6 +362,12 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
     def _can_fight(u):
         uid = u.get("uav_id", "")
         return uid.startswith("E") or (uid.startswith("S") and u.get("multi_role"))
+
+    # BE-13（评审问题1）：解除写死的 4 架钳位——出动上限与本任务实际可参战的灭火机数
+    # 对齐（E1-E6 + multi_role S3/S4 = 8，S3/S4 计入灭火出动上限，前后端同口径）。
+    # 默认仍 4；逐数量枚举 1..上限不变，不默认全员出动。
+    capable_count = sum(1 for u in state["fleet"] if u.get("uav_id", "") not in disabled_uavs and _can_fight(u))
+    max_drones = max(1, min(max_drones, max(capable_count, 1)))
 
     # BE-13（评审问题5）：候选载荷兼容改双向——水任务只收 water_20l 机、C6 任务只收
     # co2_6kg 机。此前水任务不验载荷，装 C6 的机也能入选，执行时被按方案统一药剂扣减。

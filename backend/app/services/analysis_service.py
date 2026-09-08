@@ -187,7 +187,8 @@ class AnalysisService:
                 RECON.search_beat(item.analysis_id, (result.get("scene") or {}).get("fire_origin"), fire.get("level"))
                 RECON.finding(item.analysis_id, fire, people_label)
                 max_drones = int((request.constraints or {}).get("max_drones", 4) or 4)
-                strategy, strategy_source = SUPPRESSION.size_strategy(fire, min(max_drones, 4))
+                # BE-13（评审问题1）：解除 min(...,4) 钳位，协作消息按用户约束如实播报
+                strategy, strategy_source = SUPPRESSION.size_strategy(fire, max_drones)
                 SUPPRESSION.plan(item.analysis_id, dispatch, fire, strategy, strategy_source, max_drones)
                 SUPPORT.branch(item.analysis_id, request.people_status.value == "confirmed")
                 APPROVER.prepare(item.analysis_id, result)
