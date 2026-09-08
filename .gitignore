@@ -19,3 +19,4 @@ backend/data/
 data/vlm-testcases/_raw_images/
 data/vlm-testcases/CASE-*/images/
 data/audit_store.db
+e2e/_real_images/
