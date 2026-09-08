@@ -11,6 +11,37 @@ class BaseSkill:
     def __init__(self, registry: Optional[ToolRegistry] = None): self.registry = registry or build_registry()
     def run(self, context: Dict[str, Any]) -> Dict[str, Any]: raise NotImplementedError
 
+# VLM 视觉评估 → 火情参数映射(2026-09-08:火情由识别判断,地点固定紫金山)。
+# 真实 VLM 识别成功(mode=real)时,按模型的定性视觉判断映射火情规模与增长率,
+# 替代 fixture 预设;限流降级(mode!=real)时保持 fixture 不变(诚实降级)。
+# 映射由平台执行——VLM 按冻结契约不出数字,只出定性视觉判断。
+VLM_VISUAL_SCALE_AREA = {"small": 600.0, "medium": 1800.0, "large": 4500.0}
+VLM_SMOKE_DENSITY_GROWTH = {"none": 0.15, "light": 0.25, "medium": 0.42, "heavy": 0.7}
+
+
+def apply_vlm_fire_params(observation: Dict[str, Any], explanation: Dict[str, Any]) -> Dict[str, Any]:
+    """把真实 VLM 的定性视觉评估映射为火情参数(面积/增长率),返回新 observation。
+
+    仅当 explanation.mode == "real"(真实识别)时生效;映射表见模块常量。
+    visual_scale 缺失/not_determinable → 面积保持原值;smoke_density 同理。
+    """
+    if explanation.get("mode") != "real":
+        return observation
+    vlm_fire = explanation.get("fire_observation") or {}
+    vlm_smoke = explanation.get("smoke_trend") or {}
+    mapped_area = VLM_VISUAL_SCALE_AREA.get(vlm_fire.get("visual_scale") or "")
+    mapped_growth = VLM_SMOKE_DENSITY_GROWTH.get(vlm_smoke.get("smoke_density") or "")
+    out = dict(observation)
+    if mapped_area:
+        out["fire_area_m2"] = mapped_area
+    if mapped_growth:
+        out["growth_rate"] = mapped_growth
+    if mapped_area or mapped_growth:
+        out["fire_params_source"] = "vlm-visual-assessment"
+        out["fire_params_scale"] = vlm_fire.get("visual_scale")
+    return out
+
+
 class FirePerceptionSkill(BaseSkill):
     name = "fire_perception"
     def run(self, context):
@@ -49,7 +80,13 @@ class FirePerceptionSkill(BaseSkill):
                     explanation["degraded_reason"] = strict_error
                 except Exception:
                     explanation = {}
-        return {"observation": {"fire_area_m2": observation.get("fire_area_m2", metrics_data.get("fire_area_m2", 1800)), "smoke_area_m2": observation.get("smoke_area_m2", metrics_data.get("smoke_area_m2", 4200)), "growth_rate": observation.get("growth_rate", 0.42), "confidence": observation.get("confidence", 0.91), "fire_center": context.get("fire_center") or observation.get("fire_center") or {"latitude": 32.04, "longitude": 118.78}, "source": observation.get("source", "vision-observation-fixture"), "detector": result, "metrics": metrics}, "explanation": explanation, "vlm_used": bool(context.get("use_vlm", True))}
+            if explanation.get("mode") == "real":
+                observation = apply_vlm_fire_params(observation, explanation)
+        observation_out = {"fire_area_m2": observation.get("fire_area_m2", metrics_data.get("fire_area_m2", 1800)), "smoke_area_m2": observation.get("smoke_area_m2", metrics_data.get("smoke_area_m2", 4200)), "growth_rate": observation.get("growth_rate", 0.42), "confidence": observation.get("confidence", 0.91), "fire_center": context.get("fire_center") or observation.get("fire_center") or {"latitude": 32.04, "longitude": 118.78}, "source": observation.get("source", "vision-observation-fixture"), "detector": result, "metrics": metrics}
+        for provenance_key in ("fire_params_source", "fire_params_scale"):
+            if observation.get(provenance_key):
+                observation_out[provenance_key] = observation[provenance_key]
+        return {"observation": observation_out, "explanation": explanation, "vlm_used": bool(context.get("use_vlm", True))}
 class EnvironmentAssessmentSkill(BaseSkill):
     name = "environment_assessment"
     def run(self, context):

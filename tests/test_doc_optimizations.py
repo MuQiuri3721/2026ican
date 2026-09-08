@@ -143,3 +143,43 @@ def test_report_review_block():
     assert review["plan_version_count"] == 2
     assert review["approval_event_count"] == 2
     assert review["status"] == "completed"
+
+
+# ---------- VLM 视觉评估 → 火情参数映射(FE-46 扩编后续:火随图变) ----------
+
+def test_vlm_visual_assessment_maps_fire_params():
+    """真实 VLM 识别成功时,定性视觉判断映射为火情参数(火随图变,地点固定)。"""
+    from backend.app.skills.registry import apply_vlm_fire_params
+
+    observation = apply_vlm_fire_params(
+        {"fire_area_m2": 1800},
+        {"mode": "real",
+         "fire_observation": {"visual_scale": "large"},
+         "smoke_trend": {"smoke_density": "heavy"}})
+    assert observation["fire_area_m2"] == 4500.0
+    assert observation["growth_rate"] == 0.7
+    assert observation["fire_params_source"] == "vlm-visual-assessment"
+    assert observation["fire_params_scale"] == "large"
+
+
+def test_vlm_mapping_skipped_when_not_real():
+    """限流降级(mode!=real)时保持 fixture 不变——诚实降级,不用降级结果冒充识别。"""
+    from backend.app.skills.registry import apply_vlm_fire_params
+
+    observation = apply_vlm_fire_params(
+        {"fire_area_m2": 1800},
+        {"mode": "fallback", "fire_observation": {"visual_scale": "large"}})
+    assert observation["fire_area_m2"] == 1800
+    assert "fire_params_source" not in observation
+
+
+def test_vlm_mapping_tolerates_missing_scale():
+    from backend.app.skills.registry import apply_vlm_fire_params
+
+    observation = apply_vlm_fire_params(
+        {"fire_area_m2": 1800},
+        {"mode": "real", "fire_observation": {"visual_scale": "not_determinable"},
+         "smoke_trend": {"smoke_density": "light"}})
+    assert observation["fire_area_m2"] == 1800  # 无法判定规模 → 保持原值
+    assert observation["growth_rate"] == 0.25   # 烟雾稀疏 → 低增长率仍映射
+    assert observation["fire_params_source"] == "vlm-visual-assessment"
