@@ -292,12 +292,15 @@ class AnalysisService:
             self._persist_dispatch_report(analysis_id)
             return result
         if request.action == "approve":
-            # BE-12：方案生效瞬间记录火情基线，闭环按「相对本方案的累计涨幅」触发重规划
-            # （此前基线逐轮漂移，20% 阈值永远触不到——火翻倍仍恒 continue）
+            # BE-13（评审问题4）：审批基线与增长参数分离——批准时点只盖「重规划触发基线」
+            # replan_trigger_baseline_flp（趋势闸门/失控安全网用它判断相对本方案的累计涨幅），
+            # 不再改写增长分母（growth_rate_per_hour/growth_baseline_flp 只随新观测重规划更新）。
+            # 此前 approve 把 fire_load_flp 盖到 base_fire_load_flp 上，等于批准行为直接
+            # 加快或减慢了火势的自然增长速度。
             live = analysis_store.get(analysis_id)
             live_result = dict(live.result or {})
             live_plan = dict(live_result.get("dispatch_plan") or {})
-            live_plan["base_fire_load_flp"] = live_plan.get("fire_load_flp")
+            live_plan["replan_trigger_baseline_flp"] = live_plan.get("fire_load_flp")
             live_result["dispatch_plan"] = live_plan
             analysis_store.update(analysis_id, result=live_result)
         try:
@@ -340,9 +343,12 @@ class AnalysisService:
             fire["fire_load_flp"] = latest_flp
             # BE-12：面积按研判比率折算（area_per_flp 随场景 FLP 系数变化，禁硬编码 180）
             fire["fire_area_m2"] = round(latest_flp * float(fire.get("area_per_flp") or 180.0))
-        latest_growth = dispatch_now.get("growth_flp_per_hour")
-        if latest_growth is not None:
-            fire["growth_flp_per_hour"] = latest_growth
+        # BE-13（评审问题4）：重规划只携带「比例增长率」（观测未更新时保持不变），
+        # 绝对增长由新方案按当前负荷换算——此前携带绝对增长量，火被压小后重规划
+        # 会把增长率成倍放大。
+        latest_rate = dispatch_now.get("growth_rate_per_hour")
+        if latest_rate is not None:
+            fire["growth_rate_per_hour"] = latest_rate
         observed_wind = (result.get("environment") or {}).get("wind_speed")
         if observed_wind is not None:
             state["scene"]["wind_speed"] = observed_wind
@@ -452,8 +458,11 @@ class AnalysisService:
             triggers.append("resource_or_soc")
         # ---- 失控安全网（BE-12）：累计涨幅必须对比「本方案批准时的基线」——
         # 此前 20% 阈值只有逐轮比较（每轮 +4% 永远到不了线），火翻一倍系统仍恒
-        # continue 零触发器；approve 时 stamp 的 base_fire_load_flp 让失控可见。
-        base_flp = (current.result or {}).get("dispatch_plan", {}).get("base_fire_load_flp")
+        # continue 零触发器；approve 时 stamp 的触发基线让失控可见。
+        # BE-13（评审问题4）：改读 replan_trigger_baseline_flp（审批触发线），
+        # base_fire_load_flp 仅作旧档回退。
+        dispatch_now_round = (current.result or {}).get("dispatch_plan", {})
+        base_flp = dispatch_now_round.get("replan_trigger_baseline_flp") or dispatch_now_round.get("base_fire_load_flp")
         next_flp_now = monitor_data.get("next_fire_load_flp")
         # 绝对下限 20 FLP（≈3.6 ha）：余烬级清扫阶段的 ±3 FLP 波动即超相对阈值，
         # 曾在 6-12 FLP 时触发重规划风暴（每轮一个新方案版本）
@@ -630,17 +639,40 @@ class AnalysisService:
                          f"（当前出动 {roster}），无需单独补位。",
                          {"faulted": victim_id, "choice": "none", "round": round_number}, source="rules")
             return
-        candidates = backfill_mod.build_candidates(fleet, set(roster) | {victim_id}, 20.0)
+        candidates = backfill_mod.build_candidates(fleet, set(roster) | {victim_id}, 20.0, module=dispatch.get("material_module", "water_20l"))
         decision = backfill_mod.decide(candidates, {"faulted": [victim_id], "fire_load_flp": dispatch.get("fire_load_flp")})
         choice = decision.get("choice")
         rationale = str(decision.get("rationale", ""))[:120]
         if choice and choice != "none" and choice in {d.get("uav_id") for d in fleet}:
             # 原位替换 victim→choice（旧推导式先过滤 victim 再判 u==victim，choice 永远插不进名单）
             dispatch["selected_uavs"] = [choice if u == victim_id else u for u in roster]
-            dispatch["tasks"] = [dict(t, drone_id=choice) if t.get("drone_id") == victim_id else dict(t)
-                                 for t in dispatch.get("tasks", []) if t.get("drone_id") != victim_id]
+            # BE-13（评审问题2）：补位必须原子同步全部执行名单——monitor 优先读
+            # firefighting_uavs，battery_plan 携带跨轮相位进度；只换 selected_uavs 会出现
+            # 「消息说补位成功、执行名单仍是故障机」。
+            if victim_id in (dispatch.get("firefighting_uavs") or []):
+                dispatch["firefighting_uavs"] = [choice if u == victim_id else u for u in dispatch["firefighting_uavs"]]
+            elif choice not in (dispatch.get("firefighting_uavs") or []):
+                dispatch["firefighting_uavs"] = [*(dispatch.get("firefighting_uavs") or []), choice]
             fleet_by_id = {d.get("uav_id"): d for d in fleet}
             fleet_by_id[choice]["status"] = "assigned"
+            # 接替机航程按自身位置/速度重算，相位从零起步（补位机从头进入状态机）
+            import math
+            origin_pt = (result.get("scene") or {}).get("fire_origin") or {"x": 0, "y": 0}
+            for entry in dispatch.get("battery_plan", []):
+                if entry.get("uav_id") == victim_id:
+                    replacement = fleet_by_id[choice]
+                    pos = replacement.get("position") or origin_pt
+                    speed = max(float(replacement.get("speed_mps", 8)), 0.1)
+                    entry["uav_id"] = choice
+                    entry["status"] = "assigned"
+                    entry["soc_after"] = replacement.get("soc", entry.get("soc_after"))
+                    entry["agent_remaining"] = replacement.get("agent_remaining", entry.get("agent_remaining", 0))
+                    entry["payload_module"] = replacement.get("payload_module")
+                    entry["outbound_minutes"] = round(math.hypot(pos.get("x", 0) - origin_pt.get("x", 0), pos.get("y", 0) - origin_pt.get("y", 0)) / speed / 60, 2)
+                    entry["phase_elapsed"] = 0.0
+                    entry["phase_minutes"] = entry["outbound_minutes"]
+            dispatch["tasks"] = [dict(t, drone_id=choice) if t.get("drone_id") == victim_id else dict(t)
+                                 for t in dispatch.get("tasks", []) if t.get("drone_id") != victim_id]
             result["dispatch_plan"] = dispatch
             analysis_store.update(analysis_id, result=result)
             analysis_store.update_resources(analysis_id, fleet=fleet)

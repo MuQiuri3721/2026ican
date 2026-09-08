@@ -60,10 +60,11 @@ def rule_fallback(candidates: Dict[str, List[Dict[str, Any]]]) -> Dict[str, Any]
 
 
 def build_candidates(fleet: List[Dict[str, Any]], selected_ids: set, capacity: float,
-                     outbound_cost_soc: float = 25.0) -> Dict[str, List[Dict[str, Any]]]:
+                     outbound_cost_soc: float = 25.0, module: str | None = None) -> Dict[str, List[Dict[str, Any]]]:
     """规则引擎口径的两档补位候选（不选中、非故障、健康达标的 E 机）。
 
     ready_now：SOC 足够「出动+返航储备」；ready_after：SOC 够安全但需先换电（库存有包）。
+    BE-13（评审问题5）：传入 module 时候选必须装载同型药剂——换机不得混用水/C6。
     """
     packs = True  # 换电可行性由执行层在换电时刻按库存判定，这里只按 SOC 分档
     ready_now: List[Dict[str, Any]] = []
@@ -74,6 +75,8 @@ def build_candidates(fleet: List[Dict[str, Any]], selected_ids: set, capacity: f
         if uid in selected_ids or not is_fighter:
             continue
         if drone.get("status") in {"fault"} or drone.get("health", 100) < 60:
+            continue
+        if module is not None and drone.get("payload_module") != module:
             continue
         soc = float(drone.get("soc", 0))
         entry = {"uav_id": uid, "soc": round(soc, 1), "status": drone.get("status")}

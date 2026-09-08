@@ -353,7 +353,12 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
     max_drones = max(1, min(max_drones, 4))
     kappa, _compatible = _agent_kappa(module, fire_type)
     fire_load = max(1.0, float(fire.get("fire_load_flp") or fire["fire_area_m2"] / 180.0))
-    growth_flp_per_hour = float(fire.get("growth_flp_per_hour", fire_load * float(fire.get("growth_rate", 0.42))))
+    # BE-13（评审问题4）：比例增长率是场景/观测层参数（研判 growth_rate），只随「新观测
+    # 重规划」更新；方案同时落 growth_baseline_flp（生成时点负荷）。approve 盖章的
+    # replan_trigger_baseline_flp 只作重规划触发线，不再参与增长计算——审批/重规划
+    # 均不得改变火势自然增长速度。
+    growth_rate_per_hour = float(fire.get("growth_rate_per_hour") or fire.get("growth_rate", 0.42))
+    growth_flp_per_hour = fire_load * growth_rate_per_hour
     wind_speed = float(fire.get("wind_speed", scene.get("wind_speed", 0)))
     band = resolve_wind_band(wind_speed)
     origin = scene.get("fire_origin", {"x": 0, "y": 0})
@@ -364,7 +369,9 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
         uid = u.get("uav_id", "")
         return uid.startswith("E") or (uid.startswith("S") and u.get("multi_role"))
 
-    e_candidates = [u for u in state["fleet"] if u.get("uav_id", "") not in disabled_uavs and _can_fight(u) and u.get("status") in {"available", "assigned"} and u.get("health", 0) >= 60 and u.get("soc", 0) >= new_task_floor and (module == "water_20l" or u.get("payload_module") == module)]
+    # BE-13（评审问题5）：候选载荷兼容改双向——水任务只收 water_20l 机、C6 任务只收
+    # co2_6kg 机。此前水任务不验载荷，装 C6 的机也能入选，执行时被按方案统一药剂扣减。
+    e_candidates = [u for u in state["fleet"] if u.get("uav_id", "") not in disabled_uavs and _can_fight(u) and u.get("status") in {"available", "assigned"} and u.get("health", 0) >= 60 and u.get("soc", 0) >= new_task_floor and u.get("payload_module") == module]
     recon = [u for u in state["fleet"] if u.get("uav_id", "") not in disabled_uavs and u.get("uav_id", "").startswith("R") and u.get("status") in {"available", "assigned"} and u.get("health", 0) >= 60 and u.get("soc", 0) >= new_task_floor]
     support = [u for u in state["fleet"] if u.get("uav_id", "") not in disabled_uavs and u.get("uav_id", "").startswith("S") and u.get("status") in {"available", "assigned"} and u.get("health", 0) >= 60 and u.get("soc", 0) >= new_task_floor]
     if fire.get("wind_band"):
@@ -470,6 +477,8 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
         "material_module": module,
         "material_amount": round(simulation["material_used"], 2),
         "fire_load_flp": round(fire_load, 2),
+        "growth_rate_per_hour": round(growth_rate_per_hour, 4),
+        "growth_baseline_flp": round(fire_load, 2),
         "growth_flp_per_hour": round(growth_flp_per_hour, 2),
         "effective_flp": round(total_flp, 2),
         "resource_gap": ([time_gap] if time_gap else []) + gaps + ([{"resource": "hard_constraint", "gap": ";".join(errors), "resource_gap": True}] if errors else []),
@@ -496,6 +505,14 @@ def _pick_water_source(stock: Dict[str, Any], quantity: float) -> Optional[Dict[
     return sources[0] if sources else None
 
 
+def _module_agent(module: str) -> Tuple[float, float]:
+    """按模块读冻结喷洒参数（满载量，每分钟喷量）。W20 计升、C6 计千克，禁止混用。"""
+    spray = (v1_config().get("spray") or {}).get(module) or {}
+    default_quantity = 20.0 if module == "water_20l" else 6.0
+    default_rate = 4.0 if module == "water_20l" else 1.5
+    return float(spray.get("quantity", default_quantity)), float(spray.get("rate_per_minute", default_rate))
+
+
 def simulate_monitor(
     analysis: Dict[str, Any],
     elapsed_minutes: float,
@@ -512,47 +529,69 @@ def simulate_monitor(
     dispatch = analysis.get("dispatch_plan", {})
     total_minutes = max(1, int(round(float(elapsed_minutes))))
     module = dispatch.get("material_module", "water_20l")
-    capacity = 20.0 if module == "water_20l" else 6.0
-    spray_rate = 4.0 if module == "water_20l" else 1.5
-    kappa, _compatible = _agent_kappa(module, str(fire.get("fire_type", "vegetation")).lower())
+    fire_type = str(fire.get("fire_type", "vegetation")).lower()
+    kappa, _compatible = _agent_kappa(module, fire_type)
     band = resolve_wind_band(environment.get("wind_speed", 0))
     eta = 0.9 * (1.0 if band["band"] == 0 else 0.85 if band["band"] == 1 else 0.65)
     origin = analysis.get("scene", {}).get("fire_origin", {"x": 0, "y": 0})
     load_before = float(dispatch.get("fire_load_flp", max(1.0, fire.get("fire_area_m2", 1800) / 180.0)))
     fire_load = load_before
-    growth_flp_per_hour = float(dispatch.get("growth_flp_per_hour", load_before * float(fire.get("growth_rate", 0.42))))
-    # BE-12：growth_rate 是比例增长率（研判公式 growth = FLP × rate 即为此义）。
-    # monitor 曾把绝对增长当常数（压到 30 FLP 的余烬仍 +9/轮），小火永远压不死；
-    # 比率必须以「方案基线负荷」为参照（= 批准时的增长率语义）——若按每轮当前负荷
-    # 自参照，火压到接近 0 时比率爆炸（0.73 FLP 曾反弹 +9/轮），余烬永远复燃。
-    growth_base_flp = float(dispatch.get("base_fire_load_flp") or load_before)
-    growth_rate_per_hour = growth_flp_per_hour / max(growth_base_flp, 1e-6)
+    # BE-13（评审问题4）：增长参数与审批触发基线彻底分离。growth_rate_per_hour 是
+    # 场景/观测层的比例增长率，只随「新观测重规划」更新（replan 携带、approve 不碰）；
+    # approve 盖章的 replan_trigger_baseline_flp 只做重规划触发线（趋势闸门/失控安全网）。
+    # 旧档回退链：显式比率 → growth_flp_per_hour/growth_baseline_flp → 研判 growth_rate。
+    growth_rate_per_hour = float(
+        dispatch.get("growth_rate_per_hour")
+        or (float(dispatch.get("growth_flp_per_hour") or 0) / max(float(dispatch.get("growth_baseline_flp") or dispatch.get("base_fire_load_flp") or load_before), 1e-6))
+        or float(fire.get("growth_rate", 0.42))
+    )
+    growth_flp_per_hour = round(growth_rate_per_hour * load_before, 2)
     # 优先用方案里的灭火机清单（含多用途支援机）；旧信封回退 E 前缀口径
     selected_ids = set(dispatch.get("firefighting_uavs") or [u for u in dispatch.get("selected_uavs", []) if str(u).startswith("E")])
     plan_by_uav = {entry.get("uav_id"): entry for entry in dispatch.get("battery_plan", [])}
     spray_cap = float(extinguishing_liters) if extinguishing_liters else None
     consumed = 0.0
+    consumed_water = 0.0
+    consumed_co2 = 0.0
     suppression_total = 0.0
+    charging_cfg = v1_config().get("charging") or {}
+    swap_minutes = float(charging_cfg.get("battery_swap_minutes", 5))
+    module_swap_minutes = float(charging_cfg.get("module_swap_minutes", 5))
+    refill_minutes_cfg = v1_config().get("refill_minutes") or {}
+    base_refill_minutes = float(refill_minutes_cfg.get("base", 4))
+    onsite_refill_minutes = float(refill_minutes_cfg.get("onsite", 8))
     # 多用途支援机（multi_role）参战时计入可用灭火机数（架构纪要§五扩展）
     available_drones = sum(1 for drone in fleet if (drone.get("subgroup") == "suppression" or drone.get("multi_role")) and drone.get("soc", 0) >= 25 and drone.get("health", 0) >= 60)
 
     # 初始化执行态：被选中的 E 机按状态机进入 flying；R/S 维持监测/支援悬停。
-    # 上一轮已在途（flying/returning）的机组必须携带进度条，否则没有状态推进、永远停在原地掉电；
-    # 重规划换名单后不在新 selected_ids 的在途机视为携带旧任务，召回返航。
-    state_progress = {}
+    # BE-13（评审问题3）：相位进度（_phase_elapsed/_phase_minutes/_outbound_minutes）
+    # 直接挂在无人机记录上，与 _swap_left/_refill_left 同通道随机队快照跨轮持久——
+    # 此前进度存函数局部量 state_progress，每次调用归零，在途机下轮从头飞。
     for drone in fleet:
         uid = drone.get("uav_id")
         status = drone.get("status")
         plan = plan_by_uav.get(uid) or {}
         if uid in selected_ids and status in {"available", "assigned"}:
+            outbound = max(0.5, float(plan.get("outbound_minutes", 1.0)))
             drone["status"] = "flying"
-            state_progress[uid] = {"phase_elapsed": 0.0, "phase_minutes": max(0.5, float(plan.get("outbound_minutes", 1.0)))}
+            drone["_phase_elapsed"] = 0.0
+            drone["_phase_minutes"] = outbound
+            drone["_outbound_minutes"] = outbound
         elif status == "flying" and uid not in selected_ids:
+            # 重规划换名单后不在新 selected_ids 的在途机视为携带旧任务，召回返航
+            outbound = max(0.5, float(plan.get("outbound_minutes", 4.0)))
             drone["status"] = "returning"
-            state_progress[uid] = {"phase_elapsed": 0.0, "phase_minutes": max(0.5, float(plan.get("outbound_minutes", 4.0)))}
+            drone["_phase_elapsed"] = 0.0
+            drone["_phase_minutes"] = outbound
+            drone["_outbound_minutes"] = outbound
         elif status in {"flying", "returning"}:
-            default_minutes = 1.0 if status == "flying" else 4.0
-            state_progress[uid] = {"phase_elapsed": 0.0, "phase_minutes": max(0.5, float(plan.get("outbound_minutes", default_minutes)))}
+            # 上一轮已在途：续接既有进度，禁止归零重飞（旧档缺键时按当前状态补默认航程；
+            # battery_plan 已随每轮回写 outbound_minutes，正常路径不会再缺）。
+            default_outbound = 1.0 if status == "flying" else 4.0
+            outbound = max(0.5, float(plan.get("outbound_minutes", default_outbound)))
+            drone.setdefault("_outbound_minutes", outbound)
+            drone.setdefault("_phase_minutes", outbound)
+            drone.setdefault("_phase_elapsed", 0.0)
 
     stalled_agent = False
     soc_return_risk = False
@@ -560,33 +599,38 @@ def simulate_monitor(
     emergency_units: list = []
 
     def _relaunch_after_service(drone, uid):
-        """BE-12：补给/换电/充电完成的在册灭火机立即重新出动。
+        """BE-12/BE-13：补给/换电/充电完成的在册灭火机重新出动。
 
         此前置为 available 后干悬停到轮末（整轮浪费），周转被拉长到 4 轮、
         占空比掉到 25%，成为"压制 ≈ 增长、火情徘徊"的直接原因之一。
+        BE-13（评审测试5）：重新出动前必须过「空载检查」——机上无药剂时不得
+        空跑飞向火场，转待命并置 stalled_agent 触发补给。
         """
-        if uid in selected_ids:
-            plan = plan_by_uav.get(uid) or {}
+        nonlocal stalled_agent
+        if uid in selected_ids and float(drone.get("agent_remaining", 0)) > 0:
+            outbound = max(0.5, float(drone.get("_outbound_minutes") or (plan_by_uav.get(uid) or {}).get("outbound_minutes") or 1.0))
             drone["status"] = "flying"
-            state_progress[uid] = {"phase_elapsed": 0.0, "phase_minutes": max(0.5, float(plan.get("outbound_minutes", 1.0)))}
+            drone["_phase_elapsed"] = 0.0
+            drone["_phase_minutes"] = outbound
+            drone["_outbound_minutes"] = outbound
         else:
             drone["status"] = "available"
+            if uid in selected_ids and float(drone.get("agent_remaining", 0)) <= 0:
+                stalled_agent = True
 
     for _ in range(total_minutes):
         minute_suppression = 0.0
         for drone in fleet:
             uid = drone.get("uav_id", "")
-            progress = state_progress.get(uid)
             status = drone.get("status")
             rate = float(drone.get("energy_rate_percent_per_hour", 180))
             if status == "flying":
                 drone["soc"] = max(0.0, round(drone["soc"] - rate / 60, 2))
-                if progress:
-                    progress["phase_elapsed"] += 1
-                    if progress["phase_elapsed"] >= progress["phase_minutes"]:
-                        drone["status"] = "working"
-                        progress["phase_elapsed"] = 0.0
-                        progress["phase_minutes"] = 5.0
+                drone["_phase_elapsed"] = float(drone.get("_phase_elapsed", 0.0)) + 1
+                if drone["_phase_elapsed"] >= float(drone.get("_phase_minutes", 1.0)):
+                    drone["status"] = "working"
+                    drone["_phase_elapsed"] = 0.0
+                    drone["_phase_minutes"] = 5.0
             elif status == "working":
                 if spray_cap is not None and consumed >= spray_cap:
                     drone["status"] = "returning"
@@ -599,13 +643,24 @@ def simulate_monitor(
                 if agent <= 0:
                     drone["status"] = "returning"
                     continue
-                sprayed = min(spray_rate, agent, capacity)
+                # BE-13（评审问题5）：按各机自身 payload_module 计量——W20 用升（4 L/min）、
+                # C6 用千克（1.5 kg/min）；κ 按「本机模块 × 火型」查表（水打电气火 κ=0 无效）。
+                # 此前整场用方案统一药剂：C6 机的 6 kg 被按升口径扣、消耗日志也记成水。
+                dmod = str(drone.get("payload_module") or module)
+                dcap, drate = _module_agent(dmod)
+                dkappa, _dcompat = _agent_kappa(dmod, fire_type)
+                sprayed = min(drate, agent, dcap)
                 if spray_cap is not None:
                     sprayed = min(sprayed, max(0.0, spray_cap - consumed))
                 drone["agent_remaining"] = round(max(0.0, agent - sprayed), 2)
                 consumed += sprayed
-                suppression_total += sprayed * kappa * eta
-                minute_suppression += sprayed * kappa * eta
+                if dmod == "water_20l":
+                    consumed_water += sprayed
+                else:
+                    consumed_co2 += sprayed
+                gain = sprayed * dkappa * eta
+                suppression_total += gain
+                minute_suppression += gain
                 drone["soc"] = max(0.0, round(drone["soc"] - rate * 1.05 / 60, 2))
                 if drone["agent_remaining"] <= 0 or drone["soc"] < 25:
                     drone["status"] = "returning"
@@ -613,61 +668,70 @@ def simulate_monitor(
                         soc_return_risk = True
             elif status == "returning":
                 drone["soc"] = max(0.0, round(drone["soc"] - rate / 60, 2))
-                if progress:
-                    progress["phase_elapsed"] += 1
-                    if progress["phase_elapsed"] >= progress["phase_minutes"]:
-                        progress["phase_elapsed"] = 0.0
-                        progress["phase_minutes"] = 4.0
-                        drone["status"] = "servicing"
+                drone["_phase_elapsed"] = float(drone.get("_phase_elapsed", 0.0)) + 1
+                if drone["_phase_elapsed"] >= float(drone.get("_phase_minutes", 4.0)):
+                    drone["_phase_elapsed"] = 0.0
+                    drone["_phase_minutes"] = 4.0
+                    drone["status"] = "servicing"
             elif status == "servicing":
-                # BE-12：换电（§7，5 min）与就地装水（§5.3，8 min）的计时随无人机记录
-                # 跨轮持久（state_progress 是调用局部量，轮边界会丢）、两者并行计时，
-                # 全部完成立即重新出动——此前计时跨轮即失、装水期间换电串行白等 5 分钟。
-                if float(drone.get("_swap_left", 0) or 0) > 0 or float(drone.get("_refill_left", 0) or 0) > 0:
-                    drone["_swap_left"] = max(0.0, float(drone.get("_swap_left", 0) or 0) - 1)
-                    drone["_refill_left"] = max(0.0, float(drone.get("_refill_left", 0) or 0) - 1)
-                    if drone["_swap_left"] <= 0 and drone["_refill_left"] <= 0:
-                        drone.pop("_swap_left", None)
-                        drone.pop("_refill_left", None)
+                # BE-13（评审问题5）：补给按各机自身 payload_module 计量并分别计时——
+                # 基地补水 refill_minutes.base(4min)、就地取水 refill_minutes.onsite(8min)、
+                # C6 换模块 module_swap_minutes(5min)、换电 battery_swap_minutes(5min)；
+                # 全部计时器随机队记录跨轮持久（评审问题3），并行计时、全部完成才复飞。
+                dmod = str(drone.get("payload_module") or module)
+                dcap, _drate = _module_agent(dmod)
+                service_timers = ("_swap_left", "_refill_left", "_c6_left")
+                if any(float(drone.get(key, 0) or 0) > 0 for key in service_timers):
+                    for key in service_timers:
+                        left = float(drone.get(key, 0) or 0)
+                        if left > 0:
+                            drone[key] = max(0.0, left - 1)
+                    if all(float(drone.get(key, 0) or 0) <= 0 for key in service_timers):
+                        for key in service_timers:
+                            drone.pop(key, None)
                         _relaunch_after_service(drone, uid)
                     continue
-                if float(drone.get("agent_remaining", 0)) < capacity:
-                    if module == "water_20l":
-                        can_refill = stock.get("water_liters", 0) >= capacity and stock.get("water_modules_w20", 0) >= 1
-                        if can_refill:
-                            stock["water_liters"] = round(stock["water_liters"] - capacity, 2)
+                can_refill = True
+                if float(drone.get("agent_remaining", 0)) < dcap:
+                    if dmod == "water_20l":
+                        if stock.get("water_liters", 0) >= dcap and stock.get("water_modules_w20", 0) >= 1:
+                            stock["water_liters"] = round(stock["water_liters"] - dcap, 2)
                             stock["water_modules_w20"] = max(0, stock["water_modules_w20"] - 1)
+                            drone["agent_remaining"] = dcap
+                            drone["_refill_left"] = base_refill_minutes
+                        else:
+                            # 基地不足 → 就地取水（规则 V1 §5.3）：扣水源容量，装满后归队
+                            source = _pick_water_source(stock, dcap)
+                            if source is not None:
+                                source["capacity_liters"] = round(float(source.get("capacity_liters", 0)) - dcap, 2)
+                                drone["agent_remaining"] = dcap
+                                drone["_refill_left"] = onsite_refill_minutes
+                            else:
+                                can_refill = False
                     else:
-                        can_refill = stock.get("co2_modules_c6", 0) >= 1
-                        if can_refill:
+                        if stock.get("co2_modules_c6", 0) >= 1:
                             stock["co2_modules_c6"] = max(0, stock["co2_modules_c6"] - 1)
-                    if can_refill:
-                        drone["agent_remaining"] = capacity
-                    elif module == "water_20l":
-                        # 基地不足 → 就地取水（规则 V1 §5.3）：扣水源容量，装水 8 min 后归队
-                        source = _pick_water_source(stock, capacity)
-                        if source is not None:
-                            source["capacity_liters"] = round(float(source.get("capacity_liters", 0)) - capacity, 2)
-                            drone["agent_remaining"] = capacity
-                            drone["_refill_left"] = 8
-                            # 装水期间并行换电（串行曾白等 5 分钟）
-                            if drone["soc"] < 95.0 and stock.get("battery_packs", 0) >= 1:
-                                stock["battery_packs"] = max(0.0, round(stock["battery_packs"] - 1, 2))
-                                drone["soc"] = 95.0
-                                drone["_swap_left"] = 5
-                            continue
+                            drone["agent_remaining"] = dcap
+                            drone["_c6_left"] = module_swap_minutes
+                        else:
+                            can_refill = False
                     if not can_refill:
+                        # 空载禁止复飞（评审测试5）：无药剂可补只能待命/充电等补给，
+                        # 不得带着空药箱反复飞向火场空跑穿梭。
                         stalled_agent = True
-                        drone["status"] = "charging"
+                        drone["status"] = "charging" if drone["soc"] < 100.0 else "available"
                         continue
-                # 电池周转（规则 V1 §7）：优先换电（5 min → 95%），无备用电池才走慢速充电。
+                # 电池周转（规则 V1 §7）：优先换电（5 min → 95%），无备用电池才走慢速充电；
+                # 与药剂补给计时并行（串行曾白等 5 分钟）。
                 if drone["soc"] < 95.0 and stock.get("battery_packs", 0) >= 1:
                     stock["battery_packs"] = max(0.0, round(stock["battery_packs"] - 1, 2))
                     drone["soc"] = 95.0
-                    drone["_swap_left"] = 5
+                    drone["_swap_left"] = swap_minutes
                 elif drone["soc"] < 100.0:
                     drone["status"] = "charging"
-                else:
+                if any(float(drone.get(key, 0) or 0) > 0 for key in service_timers):
+                    continue
+                if drone["status"] == "servicing":
                     _relaunch_after_service(drone, uid)
             elif status == "charging":
                 drone["soc"] = round(min(100.0, drone["soc"] + 100.0 / 60), 2)
@@ -748,9 +812,22 @@ def simulate_monitor(
         "wind_band": band,
         "input": {"image_name": image_name if image_name is not None else analysis.get("source_image"), "fleet_snapshot": fleet, "inventory": stock},
         "availability": {"firefighting_drones": available_drones, "water_liters": water_now, "effective_flp": round(suppression_total, 2)},
-        "resource_consumed": {"water_liters": round(consumed, 2), "module": module},
+        # BE-13（评审问题5）：消耗按药剂单位分键——W20 记 water_liters（升）、C6 记
+        # co2_kg（千克），禁止再出现「C6 记成水」的混账。
+        "resource_consumed": {"water_liters": round(consumed_water, 2), "co2_kg": round(consumed_co2, 2), "module": module},
         "resource_gap": ([{"resource": "water_liters", "required": requested_liters, "available": water_now, "gap": requested_liters - water_now, "resource_gap": True}] if requested_liters > water_now else []),
-        "battery_plan": [{"uav_id": d["uav_id"], "soc_after": d["soc"], "status": d["status"], "agent_remaining": d.get("agent_remaining", 0)} for d in fleet if d.get("uav_id") in selected_ids],
+        # BE-13（评审问题3）：battery_plan 随轮回写相位进度与真实航程，跨轮续接不再丢失
+        # outbound_minutes（此前只回 4 个键，下轮航程退化成默认 1/4 分钟）。
+        "battery_plan": [
+            {
+                "uav_id": d["uav_id"], "soc_after": d["soc"], "status": d["status"],
+                "agent_remaining": d.get("agent_remaining", 0), "payload_module": d.get("payload_module"),
+                "outbound_minutes": round(float(d.get("_outbound_minutes", 0) or 0), 2),
+                "phase_elapsed": round(float(d.get("_phase_elapsed", 0) or 0), 2),
+                "phase_minutes": round(float(d.get("_phase_minutes", 0) or 0), 2),
+            }
+            for d in fleet if d.get("uav_id") in selected_ids
+        ],
         "emergency_units": emergency_units,
         "emergency_soc_percent": emergency_soc,
         "next_inventory": stock,
