@@ -125,7 +125,8 @@ def test_empty_http_200_counts_as_failure(vlm_env, tmp_path, monkeypatch):
 
     monkeypatch.setattr(vlm_client.requests, "post", fake_post)
     assert vlm_analyze_images([_write_png(tmp_path)], observation={}, environment={}) is None
-    assert vlm_client._FAILURES == 1
+    # 退避重试(15s/40s)后仍空响应 → 单次调用累计 3 次失败计数(P07)
+    assert vlm_client._FAILURES == 3
 
 
 def test_user_message_carries_task_info_and_multi_image_note(vlm_env, tmp_path, monkeypatch):
@@ -157,6 +158,11 @@ class _FakeResponse:
 
     def json(self):
         return {"choices": [{"message": {"content": self._content}}]}
+
+
+@pytest.fixture(autouse=True)
+def _fast_backoff(monkeypatch):
+    monkeypatch.setattr(vlm_client, "BACKOFF_DELAYS", (0.0, 0.0))
 
 
 @pytest.fixture

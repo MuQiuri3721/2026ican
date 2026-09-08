@@ -37,7 +37,8 @@ MAX_IMAGES = 4  # 手册 §5.3：首轮 1—3 张；时间对比 2—4 张
 _LOCK = threading.Lock()
 _FAILURES = 0
 _LAST_FAIL = 0.0
-DEGRADED_COOLDOWN_S = 300.0  # 连续失败 ≥2 进入降级，5 分钟冷却后放行试探调用（成功即复位，避免永久残废）
+BACKOFF_DELAYS = (15.0, 40.0)
+DEGRADED_COOLDOWN_S = 90.0  # 连续失败 ≥2 进入降级，90 秒冷却后放行试探调用（成功即复位；抖动期不会长时间锁死）
 
 
 class ImageUnreadable(Exception):
@@ -172,35 +173,46 @@ def vlm_analyze_images(
         {"role": "system", "content": SYSTEM_PROMPT_V4},
         {"role": "user", "content": [*image_parts, {"type": "text", "text": text}]},
     ]
-    raw = _post(messages)
-    if raw is None:
-        return None
-    parsed = extract_json(raw)
-    if parsed is None:
-        # 非法 JSON：一次"只修复 JSON 格式"重试（文本会话续接，不重传图片）
-        raw_retry = _post([
-            *messages,
-            {"role": "assistant", "content": raw[:2000]},
-            {"role": "user", "content": JSON_REPAIR_INSTRUCTION},
-        ])
-        parsed = extract_json(raw_retry) if raw_retry else None
+
+    def _attempt() -> Optional[Dict[str, Any]]:
+        raw = _post(messages)
+        if raw is None:
+            return None  # 网络/限流/空响应
+        parsed = extract_json(raw)
         if parsed is None:
-            return None  # 手册 §5.3：第二次仍非法即本批失败，走确定性回退
-    # 缺必填字段组（截断/格式修复后的常见残留，P01/P02）：定向补全一次；仍缺则原样上交，
-    # 由契约层判 vlm_contract_invalid（api-contract §10.2：五组必填字段必须全部出现）
-    if isinstance(parsed, dict) and parsed.get("schema_version") == SCHEMA_VERSION:
-        missing = _incomplete_groups(parsed)
-        if missing:
+            # 非法 JSON：一次"只修复 JSON 格式"重试（文本会话续接，不重传图片）
             raw_retry = _post([
                 *messages,
                 {"role": "assistant", "content": raw[:2000]},
-                {"role": "user", "content": MISSING_FIELDS_INSTRUCTION.format(missing="、".join(missing))},
+                {"role": "user", "content": JSON_REPAIR_INSTRUCTION},
             ])
-            parsed_retry = extract_json(raw_retry) if raw_retry else None
-            if isinstance(parsed_retry, dict) and parsed_retry.get("schema_version") == SCHEMA_VERSION \
-                    and not _incomplete_groups(parsed_retry):
-                parsed = parsed_retry
-    return parsed
+            parsed = extract_json(raw_retry) if raw_retry else None
+            if parsed is None:
+                return None  # 手册 §5.3：第二次仍非法即本批失败，走确定性回退
+        # 缺必填字段组（截断/格式修复后的常见残留，P01/P02）：定向补全一次；仍缺则原样上交，
+        # 由契约层判 vlm_contract_invalid（api-contract §10.2：五组必填字段必须全部出现）
+        if isinstance(parsed, dict) and parsed.get("schema_version") == SCHEMA_VERSION:
+            missing = _incomplete_groups(parsed)
+            if missing:
+                raw_retry = _post([
+                    *messages,
+                    {"role": "assistant", "content": raw[:2000]},
+                    {"role": "user", "content": MISSING_FIELDS_INSTRUCTION.format(missing="、".join(missing))},
+                ])
+                parsed_retry = extract_json(raw_retry) if raw_retry else None
+                if isinstance(parsed_retry, dict) and parsed_retry.get("schema_version") == SCHEMA_VERSION \
+                        and not _incomplete_groups(parsed_retry):
+                    parsed = parsed_retry
+        return parsed
+
+    parsed = _attempt()
+    # 限流退避重试（交付 §7-2）：真实结果优先于降级——429/瞬断时 15s/40s 各重试一次
+    for delay in (15.0, 40.0):
+        if parsed is not None:
+            break
+        time.sleep(delay)
+        parsed = _attempt()
+    return parsed if isinstance(parsed, dict) else None
 
 
 def _post(messages: List[Dict[str, Any]]) -> Optional[str]:
