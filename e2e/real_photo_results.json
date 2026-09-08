@@ -1,0 +1,135 @@
+{
+ "generated": "2026-09-08 18:02:42",
+ "cases": [
+  {
+   "image": "fire1.jpg",
+   "expect": "大规模山火航拍(火线+浓烟+水体)",
+   "expect_presence": "flame_observed",
+   "rate_limited_attempts": 0,
+   "vlm": {
+    "fire_presence": "flame_observed",
+    "visual_scale": "large",
+    "affected_layer": "mixed",
+    "smoke_density": "heavy",
+    "temporal_trend": "first_round_no_comparison",
+    "people_state": "not_observed",
+    "water_state": "water_candidate",
+    "conflicts": [],
+    "manual_review_required": false,
+    "human_summary": "画面中可见大规模火灾，有明显的明火和浓重烟雾，火焰涉及地面与树冠层，下方区域包含多个水体。未观察到人员、道路、建筑或电力设备等具体物体。",
+    "contract_complete": true
+   },
+   "mapped": null,
+   "verdict": "✅"
+  },
+  {
+   "image": "fire3.jpg",
+   "expect": "垂直航拍林中火点+烟+过火迹地",
+   "expect_presence": "flame_observed",
+   "rate_limited_attempts": 0,
+   "vlm": {
+    "fire_presence": "flame_observed",
+    "visual_scale": "small",
+    "affected_layer": "ground",
+    "smoke_density": "medium",
+    "temporal_trend": "first_round_no_comparison",
+    "people_state": "not_observed",
+    "water_state": "not_observed",
+    "conflicts": [],
+    "manual_review_required": false,
+    "human_summary": "图像显示森林区域有明火和烟雾，上方可见道路，未观察到人员，火焰主要在地面植被中，烟雾密度中等。",
+    "contract_complete": true
+   },
+   "mapped": null,
+   "verdict": "✅"
+  },
+  {
+   "image": "grassfire6.jpg",
+   "expect": "夜间火堆+人群剪影(人员识别)",
+   "expect_presence": "flame_observed",
+   "rate_limited_attempts": 1,
+   "vlm": {
+    "fire_presence": "flame_observed",
+    "visual_scale": "large",
+    "affected_layer": "mixed",
+    "smoke_density": "heavy",
+    "temporal_trend": "first_round_no_comparison",
+    "people_state": "observed",
+    "water_state": "not_observed",
+    "conflicts": [],
+    "manual_review_required": false,
+    "human_summary": "画面中可见明显火焰和浓烟，火焰涉及地面与树冠，烟雾密度大，底部有多个观察者剪影，树枝燃烧。",
+    "contract_complete": true
+   },
+   "mapped": null,
+   "verdict": "✅"
+  },
+  {
+   "image": "grassfire7.jpg",
+   "expect": "夜间草地大火(明火猛烈)",
+   "expect_presence": "flame_observed",
+   "rate_limited_attempts": 0,
+   "vlm": {
+    "fire_presence": "flame_observed",
+    "visual_scale": "large",
+    "affected_layer": "ground",
+    "smoke_density": "heavy",
+    "temporal_trend": "first_round_no_comparison",
+    "people_state": "not_observed",
+    "water_state": "not_observed",
+    "conflicts": [],
+    "manual_review_required": true,
+    "human_summary": "画面中可见明显火焰，为地面火，伴有大量烟雾，无人员、道路、建筑等可见，烟雾移动方向不明。",
+    "contract_complete": true
+   },
+   "mapped": null,
+   "verdict": "✅"
+  },
+  {
+   "image": "nofire1.jpg",
+   "expect": "真实无火林地航拍(T03 防误报)",
+   "expect_presence": "none_observed",
+   "rate_limited_attempts": 1,
+   "vlm": {
+    "fire_presence": "none_observed",
+    "visual_scale": "not_determinable",
+    "affected_layer": "not_determinable",
+    "smoke_density": "none",
+    "temporal_trend": "first_round_no_comparison",
+    "people_state": "not_observed",
+    "water_state": "not_observed",
+    "conflicts": [
+     "YOLO检测到火和烟，但视觉画面中未观察到明显火焰或烟雾"
+    ],
+    "manual_review_required": true,
+    "human_summary": "画面显示一片茂密森林，可见一条道路，无明火或烟雾可见。YOLO检测到火和烟，但视觉证据不支持。",
+    "contract_complete": true
+   },
+   "mapped": null,
+   "verdict": "✅"
+  },
+  {
+   "image": "nofire2.jpg",
+   "expect": "真实无火密林俯拍(T03 防误报)",
+   "expect_presence": "none_observed",
+   "rate_limited_attempts": 1,
+   "vlm": {
+    "fire_presence": "none_observed",
+    "visual_scale": "small",
+    "affected_layer": "not_determinable",
+    "smoke_density": "none",
+    "temporal_trend": "first_round_no_comparison",
+    "people_state": "not_observed",
+    "water_state": "not_observed",
+    "conflicts": [
+     "PWM-YOLO检测到火和烟雾，但画面中未见明显火焰或浓烟，存在检测与视觉观察的矛盾。"
+    ],
+    "manual_review_required": true,
+    "human_summary": "画面为茂密绿色森林，未见明显火焰或浓烟。PWM-YOLO检测到火和烟雾，但视觉上未观察到火或浓烟。人员、道路、建筑、电力设备、水体和障碍物均未观察到。",
+    "contract_complete": true
+   },
+   "mapped": null,
+   "verdict": "✅"
+  }
+ ]
+}
