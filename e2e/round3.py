@@ -40,16 +40,21 @@ def main() -> int:
         logs = session.page.locator(".logs").inner_text()
         ok &= report(3, "审批事件入日志", "方案审批" in logs or "approval" in logs, logs[:80].replace("\n", " "))
 
-        # 终止任务：原因必填（先验证空原因被拦截，再填原因终止）
-        session.page.get_by_role("button", name="终止任务").click()
-        session.page.get_by_text("驳回或终止必须在原因框中说明原因。").wait_for(timeout=5000)
-        ok &= report(3, "空原因拦截", True)
-        session.page.get_by_placeholder("驳回/终止原因（必填）").fill("处置完成，E2E 终止")
-        session.page.get_by_role("button", name="终止任务").click()
-        session.page.wait_for_function(
-            "document.querySelector('.task-badge')?.textContent?.includes('已终止')", timeout=30000
-        )
-        ok &= report(3, "终止→已终止", True)
+        # 终止任务：原因必填（先验证空原因被拦截，再填原因终止）。
+        # BE-13：小火可能一轮即扑灭归档（badge=已完成，终态禁止审批）——同 round11 口径，提前扑灭时跳过终止分支。
+        badge_text = session.page.locator(".task-badge").inner_text()
+        if "已完成" in badge_text:
+            ok &= report(3, "提前扑灭归档（跳过终止分支）", True)
+        else:
+            session.page.get_by_role("button", name="终止任务").click()
+            session.page.get_by_text("驳回或终止必须在原因框中说明原因。").wait_for(timeout=5000)
+            ok &= report(3, "空原因拦截", True)
+            session.page.get_by_placeholder("驳回/终止原因（必填）").fill("处置完成，E2E 终止")
+            session.page.get_by_role("button", name="终止任务").click()
+            session.page.wait_for_function(
+                "document.querySelector('.task-badge')?.textContent?.includes('已终止')", timeout=30000
+            )
+            ok &= report(3, "终止→已终止", True)
 
         session.assert_clean_console("round3")
         ok &= report(3, "控制台无错误", True)
