@@ -46,16 +46,21 @@ def create_simulation_state(
     """
     selected_ids = set(plan.get("firefighting_uavs") or [u for u in plan.get("selected_uavs", []) if str(u).startswith("E")])
     plan_by_uav = {entry.get("uav_id"): entry for entry in plan.get("battery_plan", [])}
+    empty_selected: List[str] = []
     for drone in fleet:
         uid = drone.get("uav_id")
         status = drone.get("status")
         entry = plan_by_uav.get(uid) or {}
-        if uid in selected_ids and status in {"available", "assigned"}:
+        if uid in selected_ids and status in {"available", "assigned"} and float(drone.get("agent_remaining", 0)) > 0:
             outbound = max(0.5, float(entry.get("outbound_minutes", 1.0)))
             drone["status"] = "flying"
             drone["_phase_elapsed"] = 0.0
             drone["_phase_minutes"] = outbound
             drone["_outbound_minutes"] = outbound
+        elif uid in selected_ids and status in {"available", "assigned"}:
+            # BE-13（评审测试5）：空载在册机轮界禁止复飞——此前初始化无条件把
+            # available 的选中机打入 flying，无药剂机每轮被重新派向火场空跑穿梭。
+            empty_selected.append(uid)
         elif status == "flying" and uid not in selected_ids:
             # 重规划换名单后不在新 selected_ids 的在途机视为携带旧任务，召回返航
             outbound = max(0.5, float(entry.get("outbound_minutes", 4.0)))
@@ -89,7 +94,8 @@ def create_simulation_state(
         "consumed": 0.0,
         "consumed_water": 0.0,
         "consumed_co2": 0.0,
-        "stalled_agent": False,
+        "stalled_agent": bool(empty_selected),
+        "empty_selected": empty_selected,
         "soc_return_risk": False,
         "battery_starved": False,
         "emergency_units": [],
@@ -98,21 +104,33 @@ def create_simulation_state(
         "module_swap_minutes": float(charging_cfg.get("module_swap_minutes", 5)),
         "base_refill_minutes": float(refill_cfg.get("base", 4)),
         "onsite_refill_minutes": float(refill_cfg.get("onsite", 8)),
+        "return_soc_percent": float(config.get("return_soc_percent", 25)),
     }
 
 
 def _relaunch(state: Dict[str, Any], drone: Dict[str, Any], uid: str) -> None:
-    """补给/换电/充电完成后的重新出动（评审测试5：空载禁止复飞）。"""
-    if uid in state["selected_ids"] and float(drone.get("agent_remaining", 0)) > 0:
+    """补给/换电/充电完成后的重新出动。
+
+    复飞双门槛（评审测试5 + 规则 §7/§4.2）：
+    - 药剂：机上无药剂不得空跑灭火（转待命并置 stalled 触发补给）；
+    - 电量：SOC 低于返航硬约束（25%）不得复飞——无备用电池时转慢充，
+      此前 12% SOC 的机被复飞冲进火场、当拍即触发返航，空耗一个往返。
+    """
+    soc_ok = float(drone.get("soc", 0)) >= state.get("return_soc_percent", 25.0)
+    agent_ok = float(drone.get("agent_remaining", 0)) > 0
+    if uid in state["selected_ids"] and agent_ok and soc_ok:
         outbound = max(0.5, float(drone.get("_outbound_minutes") or 1.0))
         drone["status"] = "flying"
         drone["_phase_elapsed"] = 0.0
         drone["_phase_minutes"] = outbound
         drone["_outbound_minutes"] = outbound
     else:
-        drone["status"] = "available"
-        if uid in state["selected_ids"] and float(drone.get("agent_remaining", 0)) <= 0:
+        if uid in state["selected_ids"] and not agent_ok:
             state["stalled_agent"] = True
+        if uid in state["selected_ids"] and not soc_ok:
+            drone["status"] = "charging"
+        else:
+            drone["status"] = "available"
 
 
 def advance_one_minute(state: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
@@ -234,13 +252,14 @@ def advance_one_minute(state: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str,
                     drone["status"] = "charging" if drone["soc"] < 100.0 else "available"
                     continue
             # 电池周转（规则 V1 §7）：优先换电（→95%），无备用电池才慢速充电；
-            # 与药剂补给计时并行（串行曾白等 5 分钟）。
+            # 与药剂补给计时并行（串行曾白等 5 分钟）。已置补给计时器时保持 servicing，
+            # 不得改判 charging——否则充电到 100% 提前复飞，药剂服务计时被缩短。
             if drone["soc"] < 95.0 and stock.get("battery_packs", 0) >= 1:
                 stock["battery_packs"] = max(0.0, round(stock["battery_packs"] - 1, 2))
                 drone["soc"] = 95.0
                 drone["_swap_left"] = state["swap_minutes"]
                 drone["_swap_count"] = int(drone.get("_swap_count", 0)) + 1
-            elif drone["soc"] < 100.0:
+            elif drone["soc"] < 100.0 and not any(float(drone.get(key, 0) or 0) > 0 for key in SERVICE_TIMERS):
                 if stock.get("battery_packs", 0) < 1:
                     state["battery_starved"] = True
                 drone["status"] = "charging"
