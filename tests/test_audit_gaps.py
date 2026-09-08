@@ -94,10 +94,11 @@ def test_multi_role_support_units_join_firefighting():
     from backend.app.main import app
 
     client = TestClient(app)
+    # BE-14：用 absent 口径验证「多用途支援机参战」本意——unknown 现按规则§9 限投（4 架可战只出 3）
     created = client.post("/api/analyze", json={
         "scene_id": "forest-demo-01", "image_name": "probe",
         "scenario": {"fire_origin": {"x": 150, "y": -150}, "fire_area_m2": 3000, "growth_rate": 0.5},
-        "people_status": "unknown", "environment_mode": "offline",
+        "people_status": "absent", "environment_mode": "offline",
         "constraints": {"disabled_uavs": ["E1", "E2", "E3", "E4"], "max_drones": 4},
     }, timeout=300)
     assert created.status_code == 200

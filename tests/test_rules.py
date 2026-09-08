@@ -227,7 +227,9 @@ def test_water_plan_evaluated_via_six_conditions():
     plan = deterministic_v1_dispatch(state, {"fire_load_flp": 40, "growth_flp_per_hour": 4, "fire_type": "vegetation", "wind_speed": 4})
     water_plan = plan["water_source_plan"]
     assert water_plan["mode"] in {"base", "onsite"}
-    assert "就地取水评估" in water_plan["reason"] or water_plan["mode"] == "onsite"
+    # BE-14：六条件真实评估后输出逐项判定；演示水源比基地远（saving<0）→ 基地胜出
+    assert "六条件" in water_plan["reason"] or water_plan["mode"] == "onsite"
+    assert water_plan.get("checks", {}).get("saving_ge_5min") is False or water_plan["mode"] == "onsite"
 
 
 def test_monitor_flags_emergency_units_below_15_percent():

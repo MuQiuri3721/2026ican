@@ -102,7 +102,9 @@ def build_candidates(fleet: List[Dict[str, Any]], selected_ids: set, capacity: f
         entry = {"uav_id": uid, "soc": round(soc, 1), "status": drone.get("status"), "agent_remaining": float(drone.get("agent_remaining", 0) or 0)}
         if soc - outbound_cost_soc >= 25 and has_agent:
             ready_now.append(entry)
-        elif soc >= 35:
+        elif soc >= 25.0:
+            # BE-14（规则1 §4.2 降级带）：SOC 25–35% 不作主任务机，但换电/补给一轮后
+            # 可作补位（此前 35% 一刀切，降级带整段浪费）。
             ready_after.append(entry)
     ready_now.sort(key=lambda c: -c["soc"])
     ready_after.sort(key=lambda c: -c["soc"])

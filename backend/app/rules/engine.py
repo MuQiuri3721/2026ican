@@ -299,32 +299,43 @@ def assess_fire(state: Dict[str, Any], fire_area: Optional[float] = None, smoke_
     }
 
 
-def _evaluate_water_plan(scene: Dict[str, Any], inventory: Dict[str, Any]) -> Dict[str, Any]:
-    """就地取水六条件评估（规则 V1 §5.3）：全条件通过才改为就地补给，否则基地补给。
+def _evaluate_water_plan(scene: Dict[str, Any], inventory: Dict[str, Any], base_distance_m: float = 0.0) -> Dict[str, Any]:
+    """就地取水六条件评估（规则 V1 §5.3）：六条件真实评估，全部通过才就地补给。
 
-    select_water_source 的判定：available、safe_access、capacity≥20L、路线安全、
-    取水循环后 SOC≥25%、比基地补给（4 min）至少节省 5 min。
+    BE-14：此前路线安全/循环 SOC/节省时间三项硬编码（saving = 4−(8+0) = −4 恒 <5），
+    六条件在规划层恒不通过、water_source_plan 永远输出基地补给——契约「六条件真实执行」
+    名不符实。现按真实值逐条判定：
+    ①可用 ②安全取水 ③容量≥20L（场景与库存给出）
+    ④路线安全：scene.water_route_safe（缺省 True，场景可钳位）
+    ⑤循环后 SOC：满载作业能耗率 270%/h ×1.05 折算「飞去+取水 8min」全程，≥返航线 25%
+    ⑥节省≥5min：基地往返架次(2×火点↔基地 + 补水4min) − 就地往返架次(2×火点↔水源 + 取水8min)
     """
-    source = (scene.get("water_sources") or [{}])[0]
-    evaluation = select_water_source(
-        sources=[{
-            "available": source.get("available", False),
-            "safe_access": source.get("safe", source.get("safe_access", False)),
-            "capacity_remaining": source.get("capacity_remaining", source.get("capacity_liters", 0)),
-            "fill_minutes": 8,
-            "distance_m": source.get("distance_m", 0),
-        }],
-        distance_m=source.get("distance_m", 0),
-        cycle_minutes=0,
-        base_fill_minutes=4,
-        soc_after_cycle=100,
-        route_safe=True,
-    )
-    if evaluation.get("selected") and evaluation.get("source"):
-        return {"mode": "onsite", "source_id": source.get("name"), "fill_minutes": 8,
-                "distance_m": source.get("distance_m", 0), "reason": "就地水源通过六条件评估且节省≥5分钟"}
-    return {"mode": "base", "fill_minutes": 4,
-            "reason": "优先基地补给；就地取水评估：" + evaluation.get("reason", "未通过")}
+    source = (inventory.get("water_sources") or scene.get("water_sources") or [{}])[0]
+    config = v1_config()
+    refill_cfg = config.get("refill_minutes") or {}
+    base_fill = float(refill_cfg.get("base", 4))
+    onsite_fill = float(refill_cfg.get("onsite", 8))
+    speed_mps = 8.0
+    distance_m = float(source.get("distance_m", 0) or 0)
+    onsite_fly_minutes = 2.0 * distance_m / speed_mps / 60.0
+    base_fly_minutes = 2.0 * float(base_distance_m or 0) / speed_mps / 60.0
+    saving_minutes = (base_fly_minutes + base_fill) - (onsite_fly_minutes + onsite_fill)
+    soc_after_cycle = 100.0 - 270.0 * 1.05 * (onsite_fly_minutes + onsite_fill) / 60.0
+    checks = {
+        "available": bool(source.get("available", False)),
+        "safe_access": bool(source.get("safe", source.get("safe_access", False))),
+        "capacity_ge_20l": float(source.get("capacity_remaining", source.get("capacity_liters", 0)) or 0) >= 20.0,
+        "route_safe": bool(scene.get("water_route_safe", True)),
+        "soc_after_cycle_ge_25": soc_after_cycle >= float(config.get("return_soc_percent", 25)),
+        "saving_ge_5min": saving_minutes >= 5.0,
+    }
+    detail = {"checks": checks, "saving_minutes": round(saving_minutes, 1), "soc_after_cycle": round(soc_after_cycle, 1)}
+    if all(checks.values()):
+        return {"mode": "onsite", "source_id": source.get("name"), "fill_minutes": onsite_fill,
+                "distance_m": distance_m, "reason": "就地水源通过六条件评估且节省≥5分钟", **detail}
+    failed = "、".join(name for name, ok in checks.items() if not ok)
+    return {"mode": "base", "fill_minutes": base_fill,
+            "reason": f"优先基地补给；就地取水六条件未全通过（{failed}）", **detail}
 
 
 def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], people_status: str = "unknown", constraints: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -356,6 +367,12 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
     wind_speed = float(fire.get("wind_speed", scene.get("wind_speed", 0)))
     band = resolve_wind_band(wind_speed)
     origin = scene.get("fire_origin", {"x": 0, "y": 0})
+    # 机群基地（驻防位置均值）到火点的航程，供就地取水六条件的「节省时间」实算
+    fleet_pts = [u.get("position") or origin for u in state["fleet"]]
+    base_distance_m = (
+        sum(math.hypot(p.get("x", 0) - origin.get("x", 0), p.get("y", 0) - origin.get("y", 0)) for p in fleet_pts) / len(fleet_pts)
+        if fleet_pts else 0.0
+    )
     # 规则 V1 §4.2：SOC<35% 不得新接远程任务（new_task_floor_soc_percent）；25% 仅为返航硬约束。
     new_task_floor = float(v1_config().get("new_task_floor_soc_percent", 35))
     # 多用途支援机（multi_role，架构纪要§五扩展）可携带灭火模块参与压制
@@ -372,6 +389,15 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
     # BE-13（评审问题5）：候选载荷兼容改双向——水任务只收 water_20l 机、C6 任务只收
     # co2_6kg 机。此前水任务不验载荷，装 C6 的机也能入选，执行时被按方案统一药剂扣减。
     e_candidates = [u for u in state["fleet"] if u.get("uav_id", "") not in disabled_uavs and _can_fight(u) and u.get("status") in {"available", "assigned"} and u.get("health", 0) >= 60 and u.get("soc", 0) >= new_task_floor and u.get("payload_module") == module]
+    # BE-14（规则1 §9）：人员不确定时不把全部可战灭火机投入远端火点——至少留 1 架机动。
+    if people_status == "unknown" and capable_count >= 2:
+        max_drones = min(max_drones, capable_count - 1)
+    # BE-14（规则1 §9）：有人分支保留 1 架 E（SOC 最低的可用机）作疏散通道保护，不投入
+    # 远端压制组合；候选不足 2 架时不保留（压制优先）。保留机仍在出动名单与任务表。
+    corridor_reserve = None
+    if people_status == "confirmed" and len(e_candidates) >= 2:
+        corridor_reserve = min(e_candidates, key=lambda u: float(u.get("soc", 0)))["uav_id"]
+        e_candidates = [u for u in e_candidates if u["uav_id"] != corridor_reserve]
     recon = [u for u in state["fleet"] if u.get("uav_id", "") not in disabled_uavs and u.get("uav_id", "").startswith("R") and u.get("status") in {"available", "assigned"} and u.get("health", 0) >= 60 and u.get("soc", 0) >= new_task_floor]
     support = [u for u in state["fleet"] if u.get("uav_id", "") not in disabled_uavs and u.get("uav_id", "").startswith("S") and u.get("status") in {"available", "assigned"} and u.get("health", 0) >= 60 and u.get("soc", 0) >= new_task_floor]
     if fire.get("wind_band"):
@@ -449,13 +475,29 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
     if not simulation["compatible"]:
         errors.append(f"药剂模块 {module} 与火情类型 {fire_type} 不兼容")
     selected_ids = [u["uav_id"] for u in selected]
-    r_ids = [recon[0]["uav_id"]] if recon else []
+    # BE-14（规则1 §2.2/§8.3）：R1 全程主监测；高风险（III 级+）时 R2 加入复核编组。
+    recon_ids = [u["uav_id"] for u in recon]
+    r_ids = recon_ids[:2] if (recon_ids and int(fire.get("level") or 1) >= 3) else recon_ids[:1]
     fighting_set = set(selected_ids)
+    # BE-14（规则1 §9）：S1/S2 双机分工——S1 朝前（广播/补给/中继），S2 复核/照明/后备；
+    # 被征用参战的多用途支援机不再占用支援席位。
     s_support_pool = [u["uav_id"] for u in support if u["uav_id"] not in fighting_set]
-    s_ids = s_support_pool[:1] if s_support_pool else []
+    s_ids = s_support_pool[:2] if s_support_pool else []
+
+    def _s_task(uid: str) -> str:
+        if people_status == "confirmed":
+            return "通信广播/疏散引导" if uid == "S1" else "照明与疏散路线复核"
+        if people_status == "absent":
+            return "物流补给/电池前送" if uid == "S1" else "通信中继与后备侦察"
+        return "复核人员与后备侦察" if uid == "S1" else "通信中继待命"
+
     tasks = [{"drone_id": r_ids[0], "task": "持续侦察", "branch": "reconnaissance"}] if r_ids else []
+    if len(r_ids) > 1:
+        tasks += [{"drone_id": r_ids[1], "task": "高风险复核侦察", "branch": "reconnaissance"}]
     tasks += [{"drone_id": u, "task": "支援灭火" if u.startswith("S") else "主力灭火", "module": module, "target_flp": round(fire_load / max(len(selected), 1), 2)} for u in selected_ids]
-    tasks += [{"drone_id": s_ids[0], "task": "通信广播/疏散引导" if people_status == "confirmed" else ("物流补给" if people_status == "absent" else "复核人员与后备侦察"), "branch": "support"}] if s_ids else []
+    tasks += [{"drone_id": uid, "task": _s_task(uid), "branch": "support"} for uid in s_ids]
+    if corridor_reserve:
+        tasks += [{"drone_id": corridor_reserve, "task": "疏散通道保护（不投入压制）", "branch": "corridor_guard"}]
     alternatives = sorted(
         (
             {
@@ -484,7 +526,7 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
         "control_verdict": control_verdict,
         "feasibility": ok and bool(r_ids) and bool(s_ids),
         "required_drones": max(1, math.ceil(fire_load / max(quantity * kappa * 0.9, 1))),
-        "selected_uavs": r_ids + selected_ids + s_ids,
+        "selected_uavs": r_ids + selected_ids + s_ids + ([corridor_reserve] if corridor_reserve else []),
         "recommended_material": "co2" if module == "co2_6kg" else "water",
         "material_module": module,
         "material_amount": round(simulation["material_used"], 2),
@@ -499,8 +541,8 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
         "fire_grid": fire.get("fire_grid"),
         "wind_band": band,
         "scoring": {"method": "J=0.40T+0.30B+0.15E+0.10M+0.05N", "lower_is_better": True, "chosen": chosen["score"], "simulation": {key: simulation[key] for key in ("controlled", "rounds_used", "stalled_reason", "swaps", "refills")}},
-        "water_source_plan": _evaluate_water_plan(scene, inventory),
-        "replan_trigger": ["fire_load_increase_over_20_percent", "wind_band_changed", "soc_below_return_threshold", "agent_insufficient", "people_status_changed"],
+        "water_source_plan": _evaluate_water_plan(scene, inventory, base_distance_m=base_distance_m),
+        "replan_trigger": ["fire_load_increase_over_20_percent", "wind_band_changed", "soc_below_return_threshold", "agent_insufficient", "people_status_changed", "signal_below_threshold"],
         "estimated_control_time": {"earliest_minutes": window[0] if window else None, "latest_minutes": window[1] if window else None, "window_minutes": window, "unit": "min", "simulated": simulation["controlled"]},
         "estimated_minutes": window[1] if window else None,
         "alternative_plan": alternatives,
@@ -627,6 +669,12 @@ def simulate_monitor(
         triggers.append("soc_below_return_threshold")
     if stalled_agent:
         triggers.append("agent_insufficient")
+    # BE-14（规则1 §10 关键事件）：任务机信号低于阈值（默认 60%）触发重规划评估——
+    # 此前 signal 字段只透传不判定，「通信低于阈值」事件从未存在。
+    comm_floor = float(v1_config().get("comm_signal_floor_percent", 60))
+    weak_comms = [d["uav_id"] for d in fleet if d.get("uav_id") in selected_ids and float(d.get("signal", 100)) < comm_floor]
+    if weak_comms:
+        triggers.append("signal_below_threshold")
     requested_liters = float(extinguishing_liters or 0)
     water_now = float(stock.get("water_liters", 0))
     # BE-12：缺口口径与 can_control 一致——计入可用且安全水源容量（§5.3 就地取水），

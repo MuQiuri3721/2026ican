@@ -20,6 +20,7 @@
     "scoring_refs": {"time_ref_minutes": 120, "energy_ref_per_uav": 100, "material_ref_liters": 80, "change_ref_rounds": 4},
     "charging": {"base_soc_per_hour": 100, "forward_soc_per_hour": 60, "battery_swap_minutes": 5, "battery_swap_soc": 95, "module_swap_minutes": 5},
     "return_soc_percent": 25, "emergency_soc_percent": 15, "new_task_floor_soc_percent": 35,
+    "comm_signal_floor_percent": 60,
     "spray": {"water_20l": {"quantity": 20.0, "rate_per_minute": 4.0, "minutes": 5}, "co2_6kg": {"quantity": 6.0, "rate_per_minute": 1.5, "minutes": 4}},
     "refill_minutes": {"base": 4, "onsite": 8},
     "evacuation": {"cell_meters": 20, "walk_speed_mps": 1.2},

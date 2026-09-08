@@ -105,6 +105,8 @@ def create_simulation_state(
         "base_refill_minutes": float(refill_cfg.get("base", 4)),
         "onsite_refill_minutes": float(refill_cfg.get("onsite", 8)),
         "return_soc_percent": float(config.get("return_soc_percent", 25)),
+        # BE-14：充电速率读冻结配置（基地 base_soc_per_hour；前向点 60%/h 留待前向补能流程）
+        "base_charge_per_minute": float(charging_cfg.get("base_soc_per_hour", 100)) / 60.0,
     }
 
 
@@ -204,6 +206,14 @@ def advance_one_minute(state: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str,
                 drone["_phase_elapsed"] = 0.0
                 drone["_phase_minutes"] = 4.0
                 drone["status"] = "servicing"
+                # BE-14（规则1 §5.2 Returned_unused）：落场余水回注库存——此前着陆余量
+                # 被整模块补给直接覆盖，机上剩 15L 也照扣 20L，库存账对不上喷洒量。
+                # C6 为整型模块（千克余量无法回注），余量随模块报废，见实现对照表。
+                leftover = float(drone.get("agent_remaining", 0) or 0)
+                landed_module = str(drone.get("payload_module") or state["module"])
+                if 0.0 < leftover < _module_agent(landed_module)[0] and landed_module == "water_20l":
+                    stock["water_liters"] = round(stock.get("water_liters", 0) + leftover, 2)
+                    drone["agent_remaining"] = 0.0
         elif status == "servicing":
             # 补给按各机自身模块计量并分别计时：基地补水/就地取水/C6 换模块/换电；
             # 全部计时器并行递减、随机队记录跨轮持久，全部完成才复飞。
@@ -268,7 +278,7 @@ def advance_one_minute(state: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str,
             if drone["status"] == "servicing":
                 _relaunch(state, drone, uid)
         elif status == "charging":
-            drone["soc"] = round(min(100.0, drone["soc"] + 100.0 / 60), 2)
+            drone["soc"] = round(min(100.0, drone["soc"] + state["base_charge_per_minute"]), 2)
             if drone["soc"] >= 100.0:
                 _relaunch(state, drone, uid)
         else:
@@ -277,7 +287,21 @@ def advance_one_minute(state: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str,
             drone["soc"] = max(0.0, round(drone["soc"] - drain, 2))
             drone["_soc_used"] = float(drone.get("_soc_used", 0.0)) + drain
             if drone["soc"] < 45.0:
-                drone["status"] = "charging"
+                if uid.startswith("R"):
+                    # BE-14（规则1 §8.3「全程至少 1 架 R 在线」）：有兄弟 R 正在充电/检修
+                    # 时不转充电；同分钟一起跌破 45% 时按编号串行（最小者先充），其余保持
+                    # 在线悬停。此前两架 R 同拍一起进充电，监测链出现真空。
+                    others = [o for o in fleet
+                              if o is not drone and str(o.get("uav_id", "")).startswith("R")]
+                    other_busy = any(o.get("status") in {"charging", "servicing"} for o in others)
+                    lowest_in_batch = not [
+                        o for o in others
+                        if o.get("status") == "available" and float(o.get("soc", 100)) < 45.0
+                        and o.get("uav_id", "") < uid]
+                    if not other_busy and lowest_in_batch:
+                        drone["status"] = "charging"
+                else:
+                    drone["status"] = "charging"
         if 0.0 < drone.get("soc", 0) < state["emergency_soc"] and uid not in state["emergency_units"]:
             state["emergency_units"].append(uid)
         drone["battery"] = drone["soc"]
