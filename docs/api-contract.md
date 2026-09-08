@@ -169,7 +169,7 @@ Query：`latitude`（默认 32.0725，紫金山主峰）、`longitude`（默认 
 
 ### 4.1 `GET /api/fleet?task_id=<可选>`
 
-- 不带 `task_id`：返回 `data/fleet.json` 归一化后的 2+4+2 全局快照。
+- 不带 `task_id`：返回 `data/fleet.json` 归一化后的 2+6+4 全局快照。
 - 带 `task_id`：返回该任务执行期间的任务内快照（含监测演化后的 SOC/状态/药剂），任务不存在 404。
 
 ```json
@@ -226,7 +226,7 @@ Query：`latitude`（默认 32.0725，紫金山主峰）、`longitude`（默认 
 | `metadata` | object/null | 透传到环境结果 |
 | `fire_type` | string，默认 `"vegetation"` | `electrical/oil/chemical` 触发 C6 |
 | `people_status` | `confirmed|absent|unknown`，默认 unknown | 人员分支 |
-| `constraints` | object/null | 支持 `max_drones`（1–4）、`disabled_uavs`、`material_module`、`target_minutes`（分钟硬时限：全部可控候选超时时判不可控并输出 `time_limit` 缺口） |
+| `constraints` | object/null | 支持 `max_drones`（默认 4；上限=本任务可参战灭火机数 E1-E6+多用途 S3/S4=8，BE-13 解除写死 4 架钳位）、`disabled_uavs`、`material_module`、`target_minutes`（分钟硬时限：全部可控候选超时时判不可控并输出 `time_limit` 缺口） |
 | `scenario` | object/null | 演训模拟随机火情（FE-18）：`{"fire_origin": {"x","y"}, "fire_area_m2", "growth_rate"}`；数值非法 422、越界钳位（x∈[-500,700]、y∈[-1000,800]、面积 200–12000、增长率 0.05–1.5）。存在时跳过影像识别，`fire_assessment`/`dispatch`/`result.scene.fire_origin(_gps)` 全部由场景驱动（GPS 锚点按紫霞湖基地反演） |
 
 成功响应：完整任务信封 `AnalysisEnvelope`，`status="awaiting_confirmation"`：
@@ -358,7 +358,7 @@ Form 字段（全部为 multipart 表单字段，显式 `Form(...)` 绑定）：
 
 请求体 `MonitorInput`：`elapsed_minutes`（默认 5）、`extinguishing_liters`（默认 40）、`image_name`、`fleet_snapshot`、`inventory`（后两者兼容保留，不覆盖任务快照）。
 
-行为与 §5.7 的底层监测一致：仅允许 `executing` 状态（否则 409）；旧 `extinguishing_liters` 仅在入口作为 W20 喷洒输入，不把旧面积口径写入领域模型。响应：`{**AnalysisEnvelope, "action": "continue|resupply|reinforce|return|finish"}`，监测细节在 `result.monitor`（含 `next_fire_load_flp`、`replan_triggers`、`resource_consumed`、`availability`、`battery_plan`、`next_fleet`、`next_inventory`）。
+行为与 §5.7 的底层监测一致：仅允许 `executing` 状态（否则 409）；旧 `extinguishing_liters` 仅在入口作为 W20 喷洒输入，不把旧面积口径写入领域模型。响应：`{**AnalysisEnvelope, "action": "continue|resupply|reinforce|return|finish"}`，监测细节在 `result.monitor`（含 `next_fire_load_flp`、`replan_triggers`、`resource_consumed`——BE-13 起按药剂单位分键 `{water_liters: 升, co2_kg: 千克, module}`、`availability`、`battery_plan`、`next_fleet`、`next_inventory`）。
 
 ### 5.10 `GET /api/tasks/{task_id}/events/stream`（SSE 事件流）
 
@@ -387,7 +387,7 @@ Query：`once`（可选，`1` = 仅推送当前事件快照后结束，供一次
 | 文件 | 角色 | 变更规则 |
 |---|---|---|
 | `data/scene.json` | 固定演示场景（风、坡度、燃料、火点、水源） | 视同契约（CONTRIBUTING 6.3） |
-| `data/fleet.json` | 2+4+2 初始机群 | 同上 |
+| `data/fleet.json` | 2+6+4 初始机群（R1–R2、E1–E6、S1–S4，S3/S4 multi_role） | 同上 |
 | `data/inventory.json` | 初始库存 | 同上 |
 | `data/vision_observations.json` | 视觉 fixture（default / small-fire） | YOLO 接入的字段对齐基准 |
 | `configs/simulation.json` | 规则参数（阈值、权重、κ、风档、评分权重、充换电、喷洒） | 同上 |
@@ -442,14 +442,15 @@ Query：`once`（可选，`1` = 仅推送当前事件快照后结束，供一次
 
 - 任务分配在 `tasks`（`drone_id/task/module/target_flp/branch`）；**没有** `agent_allocation` 字段；
 - **没有** `risk_level` 字段（风险由 `fire_assessment.level` 承载）；
-- `battery_plan` 条目为 `{uav_id, soc_before, soc_after_return, sortie_soc_cost, sorties, swaps, refills, reserve_percent, state, outbound_minutes}`，不是 `outbound_soc/task_soc/return_soc/reserve_soc`；
+- `battery_plan` 条目为 `{uav_id, soc_before, soc_after_return, sortie_soc_cost, soc_used, sorties, swaps, refills, reserve_percent, state, outbound_minutes}`（BE-13：`state` 取状态机相位 `flying/working/returning/servicing/charging/available`，能量用实测累计 `soc_used`），不是 `outbound_soc/task_soc/return_soc/reserve_soc`；
+- 闭环监测回写的 `battery_plan` 条目为 `{uav_id, soc_after, status, agent_remaining, payload_module, outbound_minutes, phase_elapsed, phase_minutes}`（BE-13：携带相位进度，跨轮续接不再丢航程字段）；
 - `estimated_control_time` 为 `{earliest_minutes, latest_minutes, window_minutes, unit, simulated}`，不是 `{min, max}`；
 - 不可控时 `estimated_control_time.window_minutes=null`、`can_control=false`，并输出 `resource_gap`（不产出虚假时间窗口）。
-- `base_fire_load_flp`（BE-12）：方案批准瞬间由服务端记录的火情基线，闭环监测按「相对本方案的累计涨幅」触发 `fire_load_increase_over_20_percent`（此前与逐轮漂移的上轮值比较，每轮 +4% 永远触不到 20% 线，火翻倍系统仍恒 continue）。
+- 增长参数与审批基线分离（BE-13，替代 BE-12 的 `base_fire_load_flp` 盖章）：方案携带 `growth_rate_per_hour`（比例增长率，只随新观测重规划更新）与 `growth_baseline_flp`（生成时点负荷）；approve/adjust 只盖 `replan_trigger_baseline_flp` 触发基线，闭环按「相对本方案批准时点的累计涨幅」触发 `fire_load_increase_over_20_percent`——**审批/重规划不得改变火势自然增长速度**。
 
 ## 8. 调度与闭环关键规则（契约级）
 
-- 候选生成：E 子群枚举 1–4 架组合（受 `constraints.max_drones`、`disabled_uavs` 限制），硬约束过滤（status ∈ available/assigned、health≥60、**SOC≥35% 新任务底线**（`new_task_floor_soc_percent`，25% 仅为返航阈值）、模块与火情类型兼容）→ 5 分钟离散仿真 → `J = 0.40T + 0.30B + 0.15E + 0.10M + 0.05N`（越小越优）→ 最优 + 备选（≤8 个）。
+- 候选生成：可参战灭火机（E 子群 + multi_role 支援机 S3/S4）枚举 1..min(`max_drones`,可参战数) 组合，硬约束过滤（status ∈ available/assigned、health≥60、**SOC≥35% 新任务底线**（`new_task_floor_soc_percent`，25% 仅为返航阈值）、**载荷模块双向匹配**：水任务只收 water_20l 机、C6 任务只收 co2_6kg 机）→ 统一分钟推进核心在状态副本上仿真（BE-13 第二批：预测与执行同一套 `advance_one_minute` 规则）→ `J = 0.40T + 0.30B + 0.15E + 0.10M + 0.05N`（越小越优）→ 最优 + 备选（≤8 个）。
 - 就地取水六条件评估（`select_water_source`）真实执行：available、safe_access、容量≥20L、路线安全、循环后 SOC≥25%、比基地节省≥5 分钟；不通过则 `water_source_plan.mode=base` 并在 reason 记录评估结论。
 - 硬时限：`constraints.target_minutes` 剔除全部超时可控方案；全超时时判不可控并输出 `time_limit` 缺口（`estimated_control_time` 置空，见 §7）。
 - 闭环监测输出 `emergency_units`（SOC<`emergency_soc_percent`(15%) 的任务机，规则 V1 §4.2 应急回收标记）。
