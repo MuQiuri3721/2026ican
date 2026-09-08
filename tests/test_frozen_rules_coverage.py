@@ -201,3 +201,22 @@ def test_degraded_soc_band_eligible_for_ready_after():
     assert [u["uav_id"] for u in pool["ready_after"]] == ["E5"]  # 降级带可补给一轮后补位
     below = build_candidates([dict(gated[0], soc=20.0)], set(), 20.0, module="water_20l")
     assert below["ready_now"] == [] and below["ready_after"] == []  # <25% 返航线，两档都不收
+
+
+# ---------- BE-15 场景面积分层（前端/后端同口径 40/45/15） ----------
+
+def test_scenario_area_layered_distribution():
+    import random as _random
+    from backend.app.domain.scenarios import layered_area_m2
+    rng = _random.Random(20260908)
+    draws = [layered_area_m2(rng) for _ in range(4000)]
+    small = sum(1 for a in draws if a < 900)
+    mid = sum(1 for a in draws if 900 <= a < 2500)
+    large = sum(1 for a in draws if a >= 2500)
+    total = len(draws)
+    assert abs(small / total - 0.40) < 0.03, small / total
+    assert abs(mid / total - 0.45) < 0.03, mid / total
+    assert abs(large / total - 0.15) < 0.03, large / total
+    assert 300 <= min(draws) and max(draws) <= 6000
+    # rng 注入：同种子可复现（评审§二可复现口径）
+    assert layered_area_m2(_random.Random(1)) == layered_area_m2(_random.Random(1))

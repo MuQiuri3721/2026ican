@@ -1525,11 +1525,11 @@ function generateScenario() {
   const distance = 800 + Math.random() * 1700
   const angle = ((-25 + Math.random() * 100) * Math.PI) / 180
   const fireOrigin = { x: Math.round(base.x + Math.cos(angle) * distance), y: Math.round(base.y + Math.sin(angle) * distance) }
-  // FE-43：面积分层抽样——编队持续压制 ≈13 FLP/轮，300-6000 均匀分布下大多数随机火
-  // 超出能力（可胜区 ≤~900m²），「生成→扑灭」演示主流程应当多数落在可胜区间；
-  // 大火保留 10% 概率供失控/增援演练，重摇即可遇到
+  // FE-43：面积分层抽样——编队持续压制 ≈13 FLP/轮，「生成→扑灭」演示主流程应当多数
+  // 落在可胜区间；BE-15：40% 小 / 45% 中 / 15% 大——中火占比上调让多机协同的场面更常见
+  // （与后端 /api/scenarios/random 同口径），大火保留 15% 供失控/增援演练
   const sizeRoll = Math.random()
-  const areaM2 = Math.round(sizeRoll < 0.6 ? 300 + Math.random() * 600 : sizeRoll < 0.9 ? 900 + Math.random() * 1600 : 2500 + Math.random() * 3500)
+  const areaM2 = Math.round(sizeRoll < 0.4 ? 300 + Math.random() * 600 : sizeRoll < 0.85 ? 900 + Math.random() * 1600 : 2500 + Math.random() * 3500)
   const growthRate = Math.round((0.2 + Math.random() * 0.4) * 100) / 100
   const people = ['confirmed', 'absent', 'unknown'][Math.floor(Math.random() * 3)]
   const metersPerLng = 111320 * Math.cos((ZIXIAHU_BASE_GPS.latitude * Math.PI) / 180)

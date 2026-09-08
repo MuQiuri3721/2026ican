@@ -1,9 +1,25 @@
 """随机演训场景生成（FE-18 下沉后端）：紫金山范围内随机火情，基地恒为紫霞湖。"""
+import math
 import random
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 ZIXIAHU_BASE_GPS = {"latitude": 32.062229, "longitude": 118.839016}
 METERS_PER_LAT = 111320.0
+
+# 面积分层（BE-15，与前端演示生成器同口径）：40% 小 / 45% 中 / 15% 大。
+# 小火保证"扑灭成功"主路径常见，中火让多机协同成为常态，大火保留"请求增援"演示；
+# 此前 API 路径是 300–6000 均匀分布（audit 记录：分层只在前端，口径不一）。
+AREA_LAYERS = ((0.40, 300, 600), (0.85, 900, 1600), (1.00, 2500, 3500))
+
+
+def layered_area_m2(rng: Optional[random.Random] = None) -> int:
+    """按 40/45/15 分层抽火情面积：小 300–900 / 中 900–2500 / 大 2500–6000 m²。"""
+    rng = rng or random
+    roll = rng.random()
+    for bound, base, span in AREA_LAYERS:
+        if roll < bound:
+            return round(base + rng.random() * span)
+    return round(2500 + rng.random() * 3500)
 
 
 def random_scenario() -> Dict[str, Any]:
@@ -19,7 +35,7 @@ def random_scenario() -> Dict[str, Any]:
         "x": min(700.0, max(-500.0, round(base["x"] + math.cos(angle) * distance))),
         "y": min(800.0, max(-1000.0, round(base["y"] + math.sin(angle) * distance))),
     }
-    area_m2 = round(300 + random.random() * 5700)
+    area_m2 = layered_area_m2()
     growth_rate = round((0.2 + random.random() * 0.4), 2)
     people = random.choice(["confirmed", "absent", "unknown"])
     meters_per_lng = METERS_PER_LAT * math.cos(ZIXIAHU_BASE_GPS["latitude"] * math.pi / 180)

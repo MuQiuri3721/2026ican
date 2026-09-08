@@ -53,15 +53,59 @@ class EnvironmentTool(BaseTool):
                 latitude, longitude = float(latitude), float(longitude)
                 if not -90 <= latitude <= 90 or not -180 <= longitude <= 180:
                     return self._fallback(scene_id, "invalid_coordinates", "经纬度超出有效范围")
-                from ..services import environment_service
+                # BE-15：sys.modules 优先解析——`from 包 import 模块` 走包属性会绕过
+                # 测试对 sys.modules 的注入（契约测试的假服务因此失效、退化成真联网）。
+                import sys as _sys_mod
+                environment_service = _sys_mod.modules.get("backend.app.services.environment_service")
+                if environment_service is None:
+                    from ..services import environment_service
                 fn = environment_service.get_environment
-                fn_marker = f"{getattr(getattr(fn, '__code__', None), 'co_filename', '')}:{getattr(getattr(fn, '__code__', None), 'co_firstlineno', '')}:{id(fn)}"
+                # BE-15：缓存键标记改用「module.qualname」而非 id(fn)——id 在对象被回收后
+                # 会被新对象复用，测试注入的假服务与真实服务曾因此撞键（真缓存灌进假测试）。
+                # qualname 对真实服务稳定、对不同测试的注入点天然唯一。
+                fn_marker = f"{getattr(fn, '__module__', '')}.{getattr(fn, '__qualname__', '')}"
                 cache_key = f"{latitude:.6f}:{longitude:.6f}:{water_radius_m}:{road_radius_m}:{fn_marker}"
-                cached, stale = environment_cache.get_with_stale(cache_key)
-                if cached is not None and not stale:
+                cached, is_stale = environment_cache.get_with_stale(cache_key)
+                if cached is not None and not is_stale:
                     result = dict(cached)
                     if metadata:
                         result["metadata"] = metadata
+                    return result
+                # BE-15（B-7 缓存失效补齐）：TTL 过期先回陈旧值（标 stale）+ 后台单飞刷新——
+                # 上游限流时一次冷抓最坏 2 分钟+（Overpass 30s×2 重试×多模块），交互路径
+                # 不再干等；只有「完全无缓存」的首次抓取仍同步等待。
+                if cached is not None and is_stale:
+                    stale_value = cached
+                    spawn = False
+                    with _inflight_guard:
+                        if cache_key not in _inflight:
+                            _inflight[cache_key] = threading.Event()
+                            spawn = True
+                    result = dict(stale_value)
+                    result["status"] = "stale"
+                    result["stale"] = True
+                    result["fallback"] = {"code": "environment_stale", "message": "缓存已过期，后台刷新中"}
+                    if metadata:
+                        result["metadata"] = metadata
+
+                    def _background_refresh():
+                        try:
+                            raw = environment_service.get_environment(
+                                latitude, longitude, water_radius_m=water_radius_m, road_radius_m=road_radius_m)
+                            if raw.get("status") == "ok":
+                                data = self._normalize(scene_id, raw, mode="real", source="environment_service")
+                                data["location"] = raw.get("location", {"latitude": latitude, "longitude": longitude})
+                                environment_cache.set(cache_key, data)
+                        except Exception:
+                            pass  # 刷新失败保留陈旧值：下次请求继续服务 stale 并再次尝试
+                        finally:
+                            with _inflight_guard:
+                                done = _inflight.pop(cache_key, None)
+                            if done is not None:
+                                done.set()
+
+                    if spawn:
+                        threading.Thread(target=_background_refresh, daemon=True).start()
                     return result
                 leader = False
                 wait_event: Optional[threading.Event] = None
