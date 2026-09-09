@@ -21,8 +21,9 @@ const props = defineProps({
   mission: { type: Object, default: null },
   scenarioPreview: { type: Object, default: null },
   defaultCenter: { type: Object, default: () => ({ latitude: 32.0725, longitude: 118.8415 }) },
+  pickMode: { type: Boolean, default: false },
 })
-const emit = defineEmits(['select-marker', 'coords', 'ready', 'fallback'])
+const emit = defineEmits(['select-marker', 'coords', 'ready', 'fallback', 'pick-coords'])
 
 const containerEl = shallowRef(null)
 const map = shallowRef(null)
@@ -33,6 +34,23 @@ const markerIndex = new Map()
 // 无人机渲染位置平滑插值（FE-20，firepatrol 式 lerp）：吸收相位校准/重渲染带来的跳变
 const animPos = new Map()
 let pulseTimer = null
+// 选点（模拟发现火情）：容器原生 mouseup 选点，见 init 内注释
+let pickDownPos = null
+function onPickMouseDown(event) {
+  if (event.button === 0) pickDownPos = { x: event.clientX, y: event.clientY }
+}
+function onPickMouseUp(event) {
+  const down = pickDownPos
+  pickDownPos = null
+  if (!props.pickMode || event.button !== 0 || !down || !AMapNS.value || !map.value) return
+  if (Math.hypot(event.clientX - down.x, event.clientY - down.y) > 4) return
+  const rect = containerEl.value.getBoundingClientRect()
+  const pixel = new AMapNS.value.Pixel(event.clientX - rect.left, event.clientY - rect.top)
+  const lnglat = map.value.containerToLngLat(pixel)
+  if (!lnglat) return
+  const wgs = gcj2wgs(lnglat.getLat(), lnglat.getLng())
+  emit('pick-coords', { latitude: wgs.lat, longitude: wgs.lng })
+}
 
 // 子群配色（与 App.vue SUBGROUP_COLORS / 指挥大屏同源口径）
 const SUBGROUP_COLOR = { reconnaissance: '#4f8dff', suppression: '#ff7a45', support: '#2fbd8b' }
@@ -629,6 +647,9 @@ watch(() => [props.activeMarkerId, props.hoveredDroneId, props.hoveredWaterId], 
 watch(() => props.focusPulse, (id) => { if (id) pulseMarker(id) })
 watch(() => props.mission, () => restartMissionClock(), { deep: false })
 watch(() => props.scenarioPreview, () => { if (map.value) renderScenarioPreview() })
+watch(() => props.pickMode, (on) => {
+  if (containerEl.value) containerEl.value.style.cursor = on ? 'crosshair' : ''
+})
 
 onMounted(async () => {
   const key = import.meta.env.VITE_AMAP_KEY
@@ -655,6 +676,11 @@ onMounted(async () => {
       const wgs = gcj2wgs(event.lnglat.getLat(), event.lnglat.getLng())
       emit('coords', { latitude: wgs.lat, longitude: wgs.lng })
     })
+    // 选点模式（模拟发现火情）：不用地图实例 click——marker(等高线标签等)会拦截且
+    // AMap 对 mousedown preventDefault 会抑制原生 click；改用容器原生 mouseup +
+    // containerToLngLat 换算，mousedown/up 位移 ≤4px 才算选点（拖动地图不触发）。
+    containerEl.value.addEventListener('mousedown', onPickMouseDown)
+    containerEl.value.addEventListener('mouseup', onPickMouseUp)
     instance.on('zoomend', applyWaterZoom)
     renderAll()
     applyWaterZoom()
@@ -669,6 +695,10 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   clearTimeout(pulseTimer)
   stopFirePulse()
+  if (containerEl.value) {
+    containerEl.value.removeEventListener('mousedown', onPickMouseDown)
+    containerEl.value.removeEventListener('mouseup', onPickMouseUp)
+  }
   if (missionRaf) cancelAnimationFrame(missionRaf)
   if (missionFallbackTimer) clearInterval(missionFallbackTimer)
   clearAll()

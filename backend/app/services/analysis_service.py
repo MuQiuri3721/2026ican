@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional
 
 import json
+import math
 import time
 from functools import lru_cache
 from uuid import uuid4
@@ -8,12 +9,15 @@ from datetime import datetime
 from pathlib import Path
 
 from ..domain.schemas import AnalysisInput, MonitorInput, TaskEvent, FeedbackRoundInput, ReplanRequest
+from ..domain.scenarios import ZIXIAHU_BASE_GPS, fleet_average_position
 from ..domain.store import analysis_store
 from ..agents import APPROVER, COMMANDER, RECON, SIMULATOR, SUPPORT, SUPPRESSION
+from ..tools.exif_gps import read_exif_gps
 from ..agents.blackboard import post_message
 from ..pipeline import run_demo_analysis, simulate_monitor
 from ..skills.orchestrator import SkillExecutionError, SkillOrchestrator
 from ..tools.core import analyze_with_vlm, resolve_wind_band
+from ..tools.exif_gps import read_exif_gps
 
 ROOT = Path(__file__).resolve().parents[3]
 REPORTS_DIR = ROOT / "data" / "reports"
@@ -122,6 +126,33 @@ class AnalysisService:
         )
         try:
             scenario = _normalize_scenario(request.scenario)
+            # EXIF GPS(2026-09-08):真实无人机照片自带拍摄位置,无显式坐标时
+            # 以 EXIF GPS 作为火点位置(优先级:显式坐标 > EXIF > 场景默认紫金山)。
+            exif_gps = None
+            if request.latitude is None and request.image_path:
+                exif_gps = read_exif_gps(request.image_path)
+            # 指定坐标(2026-09-09):操作员经纬度模拟发现火情,与 EXIF 统一为管线前前置定位——
+            # 50km 护栏内相对框架原点正向锚定迁移,网格 FLP 与调度距离按真实火点计算;
+            # GPS 锚点恒记录(超护栏仅不迁移相对框架,防止框架爆逸)。
+            fire_gps = ({"latitude": request.latitude, "longitude": request.longitude}
+                        if request.latitude is not None and request.longitude is not None else exif_gps)
+            fire_origin_override = None
+            fire_origin_source = None
+            if fire_gps:
+                fire_origin_source = "operator-gps" if request.latitude is not None and request.longitude is not None else "exif-gps"
+                base_xy = fleet_average_position()
+                base_lat = ZIXIAHU_BASE_GPS["latitude"]
+                base_lng = ZIXIAHU_BASE_GPS["longitude"]
+                dist_m = math.hypot((fire_gps["latitude"] - base_lat) * 111320.0,
+                                    (fire_gps["longitude"] - base_lng) * 111320.0 * math.cos(math.radians(base_lat)))
+                if dist_m <= 50000:
+                    m_lat = 111320.0
+                    m_lng = m_lat * math.cos(math.radians(base_lat))
+                    fire_origin_override = {
+                        "x": round(base_xy["x"] + (fire_gps["longitude"] - base_lng) * m_lng, 1),
+                        "y": round(base_xy["y"] + (fire_gps["latitude"] - base_lat) * m_lat, 1),
+                        "gps": {"latitude": fire_gps["latitude"], "longitude": fire_gps["longitude"]},
+                    }
             # 多帧序列：frames 为早前帧，主文件自动作为最新一帧（api-contract §5.2）；同一序列供 VLM 时间对比（手册 §4.1）
             sequence_paths = ([*frame_paths, request.image_path] if request.image_path else list(frame_paths)) if frame_paths else []
             # 单图上传也必须进 VLM 图片序列（BE-11：二级直连要求有可读图片，空序列会静默跳到规则回退）；
@@ -146,9 +177,11 @@ class AnalysisService:
                 "people_status": request.people_status.value,
                 "constraints": request.constraints,
                 "strict_real": request.environment_mode == "real",
-                "fire_center": ({"latitude": request.latitude, "longitude": request.longitude} if request.latitude is not None and request.longitude is not None else None),
+                "fire_center": ({"latitude": request.latitude, "longitude": request.longitude} if request.latitude is not None and request.longitude is not None else ({"latitude": exif_gps["latitude"], "longitude": exif_gps["longitude"]} if exif_gps else None)),
             }
             people_label = {"confirmed": "在场", "absent": "不在场", "unknown": "情况不明"}.get(request.people_status.value, "情况不明")
+            if exif_gps:
+                context["exif_gps"] = exif_gps
             image_label = request.image_name or request.image_path or ("随机演训火情" if request.scenario else "未命名输入")
             try:
                 COMMANDER.intake(item.analysis_id, image_label, people_label)
@@ -190,6 +223,7 @@ class AnalysisService:
                 constraints=request.constraints,
                 dispatch_override=chain.get("candidate_generation", {}).get("v1_dispatch"),
                 scenario=scenario,
+                fire_origin_override=fire_origin_override,
             )
             self._merge_agent_result(result, agent)
             # ---- Agent 协作层（AG-1）：角色消息 + LLM advisory，任何失败不阻塞主管线 ----
@@ -226,6 +260,15 @@ class AnalysisService:
                 "recorded_at": datetime.now().isoformat(timespec="seconds"),
             }
             analysis_store.update_resources(item.analysis_id, result.get("fleet"), result.get("inventory"))
+            if fire_origin_source:
+                # 火点定位来源标注：管线内已按 fire_origin_override 迁移原点并写入 GPS 锚点；
+                # 此处补盖来源与海拔（超 50km 护栏时兜底回写 GPS 锚点，相对框架保持场景默认）。
+                scene_block = result.setdefault("scene", {})
+                scene_block["fire_origin_gps"] = {"latitude": fire_gps["latitude"], "longitude": fire_gps["longitude"]}
+                if fire_gps.get("altitude_m") is not None:
+                    scene_block["altitude"] = fire_gps["altitude_m"]
+                scene_block["fire_origin_source"] = fire_origin_source
+                result["scene"] = scene_block
             analysis_store.update(
                 item.analysis_id,
                 status="awaiting_confirmation",

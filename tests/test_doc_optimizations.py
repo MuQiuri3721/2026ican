@@ -173,6 +173,37 @@ def test_vlm_mapping_skipped_when_not_real():
     assert "fire_params_source" not in observation
 
 
+def test_vlm_mapping_skipped_when_no_fire_observed():
+    """模型明确没看到火(none_observed/uncertain)时不得驱动火情参数——
+    防雾景/水汽误报被映射放大(2026-09-09 webfire 套件发现)。"""
+    from backend.app.skills.registry import apply_vlm_fire_params
+
+    for presence in ("none_observed", "uncertain"):
+        observation = apply_vlm_fire_params(
+            {"fire_area_m2": 1800, "growth_rate": 0.42},
+            {"mode": "real",
+             "fire_observation": {"fire_presence": presence, "visual_scale": "large"},
+             "smoke_trend": {"smoke_density": "heavy"}})
+        assert observation["fire_area_m2"] == 1800
+        assert observation["growth_rate"] == 0.42
+        assert "fire_params_source" not in observation
+
+
+def test_vlm_smoke_only_mapping_flagged():
+    """仅烟(smoke_only)仍映射(烟是林火主要遥感信号),但带 presence 标注供前端展示。"""
+    from backend.app.skills.registry import apply_vlm_fire_params
+
+    observation = apply_vlm_fire_params(
+        {"fire_area_m2": 1800},
+        {"mode": "real",
+         "fire_observation": {"fire_presence": "smoke_only", "visual_scale": "medium"},
+         "smoke_trend": {"smoke_density": "medium"}})
+    assert observation["fire_area_m2"] == 1800.0
+    assert observation["growth_rate"] == 0.42
+    assert observation["fire_params_source"] == "vlm-visual-assessment"
+    assert observation["fire_params_presence"] == "smoke_only"
+
+
 def test_vlm_mapping_tolerates_missing_scale():
     from backend.app.skills.registry import apply_vlm_fire_params
 

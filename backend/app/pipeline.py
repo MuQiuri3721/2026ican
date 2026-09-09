@@ -64,20 +64,31 @@ def calculate_dispatch(state: Dict[str, Any], fire: Dict[str, Any]) -> Dict[str,
 
 
 
-def run_demo_analysis(scene_id: str, image_name: Optional[str], fire_override: Optional[Dict[str, Any]] = None, fire_type: Optional[str] = None, people_status: str = "unknown", constraints: Optional[Dict[str, Any]] = None, dispatch_override: Optional[Dict[str, Any]] = None, scenario: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def _anchor_fire_origin(state: Dict[str, Any], origin_xy: Dict[str, float], gps: Optional[Dict[str, float]] = None) -> Dict[str, float]:
+    """火点前置迁移（管线计算前）：覆盖相对框架原点并按紫霞湖基地反演真实 GPS 锚点，
+    保证机群停靠位在真实世界恒为紫霞湖，而框架内距离（出动时间）随火点位置变化。
+    网格 FLP、调度距离都在迁移后的原点上计算。gps 缺省时由相对坐标反演。"""
+    state["scene"]["fire_origin"] = {"x": origin_xy["x"], "y": origin_xy["y"]}
+    positions = [uav.get("position") or {"x": 0, "y": 0} for uav in state["fleet"]]
+    avg_x = sum(p["x"] for p in positions) / max(len(positions), 1)
+    avg_y = sum(p["y"] for p in positions) / max(len(positions), 1)
+    if gps is None:
+        lat = ZIXIAHU_BASE_GPS[0] + (origin_xy["y"] - avg_y) / 111320
+        # 余弦参考统一用基地纬度（与 scenarios.random_scenario 同源），避免末位舍入抖动
+        lng = ZIXIAHU_BASE_GPS[1] + (origin_xy["x"] - avg_x) / (111320 * math.cos(math.radians(ZIXIAHU_BASE_GPS[0])))
+        gps = {"latitude": round(lat, 6), "longitude": round(lng, 6)}
+    state["scene"]["fire_origin_gps"] = {"latitude": gps["latitude"], "longitude": gps["longitude"]}
+    return state["scene"]["fire_origin_gps"]
+
+
+def run_demo_analysis(scene_id: str, image_name: Optional[str], fire_override: Optional[Dict[str, Any]] = None, fire_type: Optional[str] = None, people_status: str = "unknown", constraints: Optional[Dict[str, Any]] = None, dispatch_override: Optional[Dict[str, Any]] = None, scenario: Optional[Dict[str, Any]] = None, fire_origin_override: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     state = load_demo_state(scene_id)
     if scenario and scenario.get("fire_origin"):
-        # 演训模拟（FE-18）：随机火点覆盖相对框架原点，并按紫霞湖基地反演真实 GPS 锚点，
-        # 保证机群停靠位在真实世界恒为紫霞湖，而框架内距离（出动时间）随火点位置变化。
-        state["scene"]["fire_origin"] = {"x": scenario["fire_origin"]["x"], "y": scenario["fire_origin"]["y"]}
-        positions = [uav.get("position") or {"x": 0, "y": 0} for uav in state["fleet"]]
-        avg_x = sum(p["x"] for p in positions) / max(len(positions), 1)
-        avg_y = sum(p["y"] for p in positions) / max(len(positions), 1)
-        lat = ZIXIAHU_BASE_GPS[0] + (scenario["fire_origin"]["y"] - avg_y) / 111320
-        # 余弦参考统一用基地纬度（与 scenarios.random_scenario 同源），避免末位舍入抖动
-        lng = ZIXIAHU_BASE_GPS[1] + (scenario["fire_origin"]["x"] - avg_x) / (111320 * math.cos(math.radians(ZIXIAHU_BASE_GPS[0])))
-        state["scene"]["fire_origin_gps"] = {"latitude": round(lat, 6), "longitude": round(lng, 6)}
-        scenario["fire_origin_gps"] = state["scene"]["fire_origin_gps"]
+        # 演训模拟（FE-18）：随机火点驱动原点迁移
+        scenario["fire_origin_gps"] = _anchor_fire_origin(state, scenario["fire_origin"])
+    elif fire_origin_override:
+        # 指定坐标/EXIF GPS（显式坐标 > EXIF > 场景默认）： {"x","y","gps"} 由调用方正向锚定
+        _anchor_fire_origin(state, fire_origin_override, fire_origin_override.get("gps"))
     fire = RECON.assess(state, fire_override)
     if fire_type:
         fire["fire_type"] = fire_type

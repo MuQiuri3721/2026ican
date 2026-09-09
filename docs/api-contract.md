@@ -220,7 +220,7 @@ Query：`latitude`（默认 32.0725，紫金山主峰）、`longitude`（默认 
 | `image_name` / `image_path` / `file_id` | string/null | 影像标识；`small` 命中 fixture 小火观测 |
 | `use_vlm` | bool，默认 false | 是否调用 VLM 解释 |
 | `fleet_snapshot` | string，默认 `"default"` | 兼容保留 |
-| `latitude` / `longitude` | float/null | 范围 ±90 / ±180 |
+| `latitude` / `longitude` | float/null | 范围 ±90 / ±180。显式指定时作为操作员标定火点（模拟发现火情）：优先级 **显式坐标 > 照片 EXIF GPS > 场景默认紫金山**；距紫霞湖基地 ≤50km 时相对框架原点在管线计算**前**正向锚定迁移（网格 FLP、调度距离按真实火点位置计算），结果标注 `scene.fire_origin_source="operator-gps"`；超 50km 仅记录 `fire_origin_gps` 不迁移相对框架。EXIF 路径同规则标注 `"exif-gps"`（2026-09-09 起 EXIF 也为管线前置定位，此前为结果后盖） |
 | `environment_mode` | string/null | `demo|real|auto|offline` |
 | `water_search_radius_m` / `road_search_radius_m` | int，默认 5000（别名 `water_radius_m`/`road_radius_m`） | 1–50000 |
 | `metadata` | object/null | 透传到环境结果 |

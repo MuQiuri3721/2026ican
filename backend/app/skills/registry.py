@@ -23,11 +23,15 @@ def apply_vlm_fire_params(observation: Dict[str, Any], explanation: Dict[str, An
     """把真实 VLM 的定性视觉评估映射为火情参数(面积/增长率),返回新 observation。
 
     仅当 explanation.mode == "real"(真实识别)时生效;映射表见模块常量。
+    fire_presence 为 none_observed/uncertain 时整体不映射——模型明确没看到火时,
+    其烟密度不得驱动增长率(防雾景/水汽误报被放大成火情参数)。
     visual_scale 缺失/not_determinable → 面积保持原值;smoke_density 同理。
     """
     if explanation.get("mode") != "real":
         return observation
     vlm_fire = explanation.get("fire_observation") or {}
+    if vlm_fire.get("fire_presence") in ("none_observed", "uncertain"):
+        return observation
     vlm_smoke = explanation.get("smoke_trend") or {}
     mapped_area = VLM_VISUAL_SCALE_AREA.get(vlm_fire.get("visual_scale") or "")
     mapped_growth = VLM_SMOKE_DENSITY_GROWTH.get(vlm_smoke.get("smoke_density") or "")
@@ -39,6 +43,8 @@ def apply_vlm_fire_params(observation: Dict[str, Any], explanation: Dict[str, An
     if mapped_area or mapped_growth:
         out["fire_params_source"] = "vlm-visual-assessment"
         out["fire_params_scale"] = vlm_fire.get("visual_scale")
+        if vlm_fire.get("fire_presence") == "smoke_only":
+            out["fire_params_presence"] = "smoke_only"
     return out
 
 

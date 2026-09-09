@@ -61,6 +61,13 @@
 - [x] 按实现差异审计兑现剩余项：帧序列火点位移 center_delta_m、输入 hash 溯源 input_provenance、轮次 next_action 前端展示（QA-2）
 - [x] E-2 交付包验收入库（docs/vlm-delivery + data/vlm-testcases + scripts）；E-1 对接文档 docs/YOLO队员交付说明.md；演示脚本 docs/demo-script.md + 开播自检 e2e/demo_readiness.py
 
+## 2026-09-08 ~ 09-09 批次摘要（明细见修改追踪清单）
+
+- [x] VLM 火情参数映射（用户指令：火情由识别判断而非随机生成）：VLM 定性判断（visual_scale/smoke_density）平台侧映射为面积 600/1800/4500 m² 与增长率 0.15/0.25/0.42/0.7，`fire_params_source=vlm-visual-assessment` 全链透传；真实照片 6/6 检验（火焰识别/无火防误报/夜间人员/矛盾上报）（BE-45）
+- [x] EXIF GPS 火点定位：真实照片拍摄位置→火点 GPS 锚点+相对框架迁移，50km 护栏（BE-45）
+- [x] 指定坐标模拟发现火情（用户指令：指定坐标发现火情→上传图片 VLM 判火情→下一步）：显式坐标>EXIF>默认三级定位，火点在管线计算前迁移（网格 FLP/调度距离按真实火点算），`fire_origin_source` 来源标注（BE-48）；前端地图「指定火点」选点模式+上传面板坐标提示（FE-49）。实测：指定 (32.10,118.90)+fire3.jpg VLM→600m²@0.42，审批后 4 轮压制至 352m²
+- [x] 测试资产：pytest 161 项（+test_fire_origin_gps 4 项；修复裸 pytest 误收集 e2e/*_test.py 模块级执行体导致的全套件假挂死，e2e/conftest.py collect_ignore_glob）；E2E R1-R17（+round17 选点联动）
+
 ## 当前为演示实现
 
 - [x] `AnalysisStore` 仅存在内存，重启后任务、锁、事件和报告索引丢失。（已由 SQLite 写穿持久化替代，见已完成 2026-09-04 条目）

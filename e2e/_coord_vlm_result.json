@@ -1,0 +1,5171 @@
+{
+ "analysis_id": "analysis-0924c3f4f66a",
+ "status": "awaiting_confirmation",
+ "created_at": "2026-09-09T15:02:47",
+ "updated_at": "2026-09-09T15:04:28",
+ "input": {
+  "scene_id": "forest-demo-01",
+  "image_path": "E:\\开发\\2026ican\\backend\\uploads\\ea08c6506516-fire3.jpg",
+  "image_name": "fire3.jpg",
+  "file_id": null,
+  "use_vlm": true,
+  "fleet_snapshot": "default",
+  "latitude": 32.1,
+  "longitude": 118.9,
+  "environment_mode": "real",
+  "water_search_radius_m": 5000,
+  "road_search_radius_m": 5000,
+  "metadata": null,
+  "fire_type": "vegetation",
+  "people_status": "unknown",
+  "constraints": null,
+  "scenario": null
+ },
+ "result": {
+  "fire_assessment": {
+   "level": 2,
+   "label": "II 级 · 中等火情",
+   "fire_area_m2": 600.0,
+   "smoke_area_m2": 4200,
+   "confidence": 0.91,
+   "risk_score": 0.383,
+   "growth_rate": 0.42,
+   "spread_direction": "西北",
+   "fire_type": "vegetation",
+   "fire_load_flp": 144.0,
+   "growth_flp_per_hour": 60.48,
+   "area_per_flp": 3.3333,
+   "fire_grid": {
+    "cell_area_m2": 100.0,
+    "cell_count": 6,
+    "intensity": 2,
+    "k_fuel": 1.0,
+    "k_wind": 1.2,
+    "k_slope": 1.0,
+    "fuel_type": "general_forest"
+   },
+   "wind_band": {
+    "band": 2,
+    "label": "6–8 m/s",
+    "k_wind": 1.5,
+    "wind_speed": 6.5
+   },
+   "slope_deg": 12.0,
+   "fire_params_source": "vlm-visual-assessment",
+   "fire_params_scale": "small"
+  },
+  "scene": {
+   "fire_origin": {
+    "x": 5505.9,
+    "y": 3524.8
+   },
+   "fire_origin_gps": {
+    "latitude": 32.1,
+    "longitude": 118.9
+   },
+   "fire_origin_source": "operator-gps"
+  },
+  "environment": {
+   "wind_speed": 4.96,
+   "wind_direction": "S",
+   "altitude": 20.0,
+   "terrain": {
+    "status": "ok",
+    "elevation_m": 20.0,
+    "slope_deg": 0.47,
+    "downslope_deg": 112.0,
+    "downslope_direction": "E",
+    "upslope_deg": 292.0,
+    "upslope_direction": "W"
+   },
+   "nearest_water_distance_m": 484.5,
+   "mode": "real",
+   "status": "ok",
+   "source": "environment_service",
+   "wind_direction_deg": 199.0,
+   "water_sources": [
+    {
+     "name": "月亮湾",
+     "type": "water",
+     "latitude": 32.102895,
+     "longitude": 118.903845,
+     "distance_m": 484.5
+    },
+    {
+     "name": "未命名水体",
+     "type": "water",
+     "latitude": 32.102851,
+     "longitude": 118.905341,
+     "distance_m": 594.6
+    },
+    {
+     "name": "未命名水体",
+     "type": "water",
+     "latitude": 32.094662,
+     "longitude": 118.897534,
+     "distance_m": 637.4
+    },
+    {
+     "name": "未命名水体",
+     "type": "basin",
+     "latitude": 32.094138,
+     "longitude": 118.903924,
+     "distance_m": 749.4
+    },
+    {
+     "name": "未命名水体",
+     "type": "water",
+     "latitude": 32.103469,
+     "longitude": 118.907123,
+     "distance_m": 773.9
+    },
+    {
+     "name": "喷泉",
+     "type": "water",
+     "latitude": 32.104632,
+     "longitude": 118.906586,
+     "distance_m": 806.3
+    },
+    {
+     "name": "未命名水体",
+     "type": "water",
+     "latitude": 32.098357,
+     "longitude": 118.890582,
+     "distance_m": 905.8
+    },
+    {
+     "name": "未命名水体",
+     "type": "water",
+     "latitude": 32.103883,
+     "longitude": 118.908663,
+     "distance_m": 923.2
+    },
+    {
+     "name": "未命名水体",
+     "type": "basin",
+     "latitude": 32.109627,
+     "longitude": 118.89944,
+     "distance_m": 1071.7
+    },
+    {
+     "name": "未命名池塘",
+     "type": "pond",
+     "latitude": 32.09509,
+     "longitude": 118.910009,
+     "distance_m": 1089.5
+    },
+    {
+     "name": "未命名湖泊",
+     "type": "lake",
+     "latitude": 32.106865,
+     "longitude": 118.908302,
+     "distance_m": 1092.8
+    },
+    {
+     "name": "未命名水库",
+     "type": "reservoir",
+     "latitude": 32.1035,
+     "longitude": 118.911005,
+     "distance_m": 1107.2
+    },
+    {
+     "name": "饮露池",
+     "type": "water",
+     "latitude": 32.109082,
+     "longitude": 118.905836,
+     "distance_m": 1149.7
+    },
+    {
+     "name": "南财小池塘",
+     "type": "pond",
+     "latitude": 32.104145,
+     "longitude": 118.912987,
+     "distance_m": 1307.2
+    },
+    {
+     "name": "采月湖(情人湖)",
+     "type": "water",
+     "latitude": 32.110012,
+     "longitude": 118.9081,
+     "distance_m": 1349.6
+    },
+    {
+     "name": "未命名水体",
+     "type": "water",
+     "latitude": 32.091488,
+     "longitude": 118.91113,
+     "distance_m": 1412.5
+    },
+    {
+     "name": "未命名河流",
+     "type": "river",
+     "latitude": 32.092904,
+     "longitude": 118.912508,
+     "distance_m": 1418.0
+    },
+    {
+     "name": "未命名水体",
+     "type": "water",
+     "latitude": 32.091196,
+     "longitude": 118.911523,
+     "distance_m": 1461.7
+    },
+    {
+     "name": "未命名水体",
+     "type": "water",
+     "latitude": 32.090835,
+     "longitude": 118.911654,
+     "distance_m": 1498.0
+    },
+    {
+     "name": "未命名水体",
+     "type": "basin",
+     "latitude": 32.090809,
+     "longitude": 118.887858,
+     "distance_m": 1533.9
+    }
+   ],
+   "nearest_water": {
+    "name": "月亮湾",
+    "type": "water",
+    "latitude": 32.102895,
+    "longitude": 118.903845,
+    "distance_m": 484.5
+   },
+   "preferred_water": {
+    "name": "未命名池塘",
+    "type": "pond",
+    "latitude": 32.09509,
+    "longitude": 118.910009,
+    "distance_m": 1089.5
+   },
+   "road_context": {
+    "status": "ok",
+    "found": true,
+    "road_count": 4626,
+    "nearest_transport": {
+     "name": "未命名服务道路",
+     "highway": "service",
+     "surface": null,
+     "access": null,
+     "motor_vehicle": null,
+     "distance_m": 38.3,
+     "nearest_point": {
+      "latitude": 32.100323,
+      "longitude": 118.899855
+     }
+    },
+    "nearest_vehicle_access_candidate": {
+     "name": "未命名服务道路",
+     "highway": "service",
+     "surface": null,
+     "access": null,
+     "motor_vehicle": null,
+     "distance_m": 38.3,
+     "nearest_point": {
+      "latitude": 32.100323,
+      "longitude": 118.899855
+     }
+    }
+   },
+   "landcover": {
+    "status": "ok",
+    "center_class": "Tree Cover",
+    "dominant_class": "Tree Cover",
+    "burnable_ratio": 0.777,
+    "fuel_possible": true
+   },
+   "raw": {
+    "status": "ok",
+    "location": {
+     "latitude": 32.1,
+     "longitude": 118.9
+    },
+    "terrain": {
+     "status": "ok",
+     "elevation_m": 20.0,
+     "slope_deg": 0.47,
+     "downslope_deg": 112.0,
+     "downslope_direction": "E",
+     "upslope_deg": 292.0,
+     "upslope_direction": "W"
+    },
+    "weather": {
+     "status": "ok",
+     "time": "2026-09-09T15:00",
+     "temperature_c": 24.9,
+     "relative_humidity_pct": 57,
+     "precipitation_mm": 0.0,
+     "wind_speed_m_s": 4.96,
+     "wind_from_deg": 19,
+     "wind_from_direction": "N",
+     "wind_to_deg": 199.0,
+     "wind_to_direction": "S",
+     "wind_gust_m_s": 10.8,
+     "timezone": "Asia/Shanghai"
+    },
+    "landcover": {
+     "status": "ok",
+     "center_class": "Tree Cover",
+     "dominant_class": "Tree Cover",
+     "burnable_ratio": 0.777,
+     "fuel_possible": true
+    },
+    "water": {
+     "status": "ok",
+     "found": true,
+     "feature_count": 246,
+     "features": [
+      {
+       "name": "月亮湾",
+       "type": "water",
+       "latitude": 32.102895,
+       "longitude": 118.903845,
+       "distance_m": 484.5
+      },
+      {
+       "name": "未命名水体",
+       "type": "water",
+       "latitude": 32.102851,
+       "longitude": 118.905341,
+       "distance_m": 594.6
+      },
+      {
+       "name": "未命名水体",
+       "type": "water",
+       "latitude": 32.094662,
+       "longitude": 118.897534,
+       "distance_m": 637.4
+      },
+      {
+       "name": "未命名水体",
+       "type": "basin",
+       "latitude": 32.094138,
+       "longitude": 118.903924,
+       "distance_m": 749.4
+      },
+      {
+       "name": "未命名水体",
+       "type": "water",
+       "latitude": 32.103469,
+       "longitude": 118.907123,
+       "distance_m": 773.9
+      },
+      {
+       "name": "喷泉",
+       "type": "water",
+       "latitude": 32.104632,
+       "longitude": 118.906586,
+       "distance_m": 806.3
+      },
+      {
+       "name": "未命名水体",
+       "type": "water",
+       "latitude": 32.098357,
+       "longitude": 118.890582,
+       "distance_m": 905.8
+      },
+      {
+       "name": "未命名水体",
+       "type": "water",
+       "latitude": 32.103883,
+       "longitude": 118.908663,
+       "distance_m": 923.2
+      },
+      {
+       "name": "未命名水体",
+       "type": "basin",
+       "latitude": 32.109627,
+       "longitude": 118.89944,
+       "distance_m": 1071.7
+      },
+      {
+       "name": "未命名池塘",
+       "type": "pond",
+       "latitude": 32.09509,
+       "longitude": 118.910009,
+       "distance_m": 1089.5
+      },
+      {
+       "name": "未命名湖泊",
+       "type": "lake",
+       "latitude": 32.106865,
+       "longitude": 118.908302,
+       "distance_m": 1092.8
+      },
+      {
+       "name": "未命名水库",
+       "type": "reservoir",
+       "latitude": 32.1035,
+       "longitude": 118.911005,
+       "distance_m": 1107.2
+      },
+      {
+       "name": "饮露池",
+       "type": "water",
+       "latitude": 32.109082,
+       "longitude": 118.905836,
+       "distance_m": 1149.7
+      },
+      {
+       "name": "南财小池塘",
+       "type": "pond",
+       "latitude": 32.104145,
+       "longitude": 118.912987,
+       "distance_m": 1307.2
+      },
+      {
+       "name": "采月湖(情人湖)",
+       "type": "water",
+       "latitude": 32.110012,
+       "longitude": 118.9081,
+       "distance_m": 1349.6
+      },
+      {
+       "name": "未命名水体",
+       "type": "water",
+       "latitude": 32.091488,
+       "longitude": 118.91113,
+       "distance_m": 1412.5
+      },
+      {
+       "name": "未命名河流",
+       "type": "river",
+       "latitude": 32.092904,
+       "longitude": 118.912508,
+       "distance_m": 1418.0
+      },
+      {
+       "name": "未命名水体",
+       "type": "water",
+       "latitude": 32.091196,
+       "longitude": 118.911523,
+       "distance_m": 1461.7
+      },
+      {
+       "name": "未命名水体",
+       "type": "water",
+       "latitude": 32.090835,
+       "longitude": 118.911654,
+       "distance_m": 1498.0
+      },
+      {
+       "name": "未命名水体",
+       "type": "basin",
+       "latitude": 32.090809,
+       "longitude": 118.887858,
+       "distance_m": 1533.9
+      }
+     ],
+     "nearest": {
+      "name": "月亮湾",
+      "type": "water",
+      "latitude": 32.102895,
+      "longitude": 118.903845,
+      "distance_m": 484.5
+     },
+     "preferred": {
+      "name": "未命名池塘",
+      "type": "pond",
+      "latitude": 32.09509,
+      "longitude": 118.910009,
+      "distance_m": 1089.5
+     },
+     "distance_note": "到 OSM 水体代表点的近似距离"
+    },
+    "road": {
+     "status": "ok",
+     "found": true,
+     "road_count": 4626,
+     "nearest_transport": {
+      "name": "未命名服务道路",
+      "highway": "service",
+      "surface": null,
+      "access": null,
+      "motor_vehicle": null,
+      "distance_m": 38.3,
+      "nearest_point": {
+       "latitude": 32.100323,
+       "longitude": 118.899855
+      }
+     },
+     "nearest_vehicle_access_candidate": {
+      "name": "未命名服务道路",
+      "highway": "service",
+      "surface": null,
+      "access": null,
+      "motor_vehicle": null,
+      "distance_m": 38.3,
+      "nearest_point": {
+       "latitude": 32.100323,
+       "longitude": 118.899855
+      }
+     }
+    },
+    "sources": {
+     "terrain": "NASA SRTM",
+     "weather": "Open-Meteo",
+     "landcover": "ESA WorldCover / Microsoft Planetary Computer",
+     "water": "OpenStreetMap / Overpass API",
+     "road": "OpenStreetMap / Overpass API"
+    }
+   },
+   "location": {
+    "latitude": 32.1,
+    "longitude": 118.9
+   }
+  },
+  "dispatch_plan": {
+   "schema_version": "uav-dispatch-v1",
+   "fleet_shape": {
+    "reconnaissance": 2,
+    "suppression": 6,
+    "support": 4
+   },
+   "firefighting_uavs": [
+    "E1",
+    "E2",
+    "E4",
+    "E5"
+   ],
+   "can_control": true,
+   "control_verdict": "can_control",
+   "feasibility": true,
+   "required_drones": 8,
+   "selected_uavs": [
+    "R1",
+    "E1",
+    "E2",
+    "E4",
+    "E5",
+    "S1",
+    "S2"
+   ],
+   "recommended_material": "water",
+   "material_module": "water_20l",
+   "material_amount": 224.0,
+   "fire_load_flp": 144.0,
+   "growth_rate_per_hour": 0.42,
+   "growth_baseline_flp": 144.0,
+   "growth_flp_per_hour": 60.48,
+   "effective_flp": 171.36,
+   "resource_gap": [],
+   "battery_plan": [
+    {
+     "uav_id": "E1",
+     "soc_before": 92.0,
+     "soc_after_return": 67.12,
+     "sortie_soc_cost": 46.05,
+     "sorties": 3,
+     "swaps": 2,
+     "refills": 2,
+     "reserve_percent": 25,
+     "state": "working",
+     "outbound_minutes": 1.75
+    },
+    {
+     "uav_id": "E2",
+     "soc_before": 86.0,
+     "soc_after_return": 67.12,
+     "sortie_soc_cost": 46.05,
+     "sorties": 3,
+     "swaps": 2,
+     "refills": 2,
+     "reserve_percent": 25,
+     "state": "working",
+     "outbound_minutes": 1.78
+    },
+    {
+     "uav_id": "E4",
+     "soc_before": 74.0,
+     "soc_after_return": 67.12,
+     "sortie_soc_cost": 46.05,
+     "sorties": 3,
+     "swaps": 2,
+     "refills": 2,
+     "reserve_percent": 25,
+     "state": "working",
+     "outbound_minutes": 1.82
+    },
+    {
+     "uav_id": "E5",
+     "soc_before": 90.0,
+     "soc_after_return": 67.12,
+     "sortie_soc_cost": 46.05,
+     "sorties": 3,
+     "swaps": 2,
+     "refills": 2,
+     "reserve_percent": 25,
+     "state": "working",
+     "outbound_minutes": 1.79
+    }
+   ],
+   "people_branch": "unknown",
+   "fire_grid": {
+    "cell_area_m2": 100.0,
+    "cell_count": 6,
+    "intensity": 2,
+    "k_fuel": 1.0,
+    "k_wind": 1.2,
+    "k_slope": 1.0,
+    "fuel_type": "general_forest"
+   },
+   "wind_band": {
+    "band": 1,
+    "label": "4–6 m/s",
+    "k_wind": 1.2,
+    "wind_speed": 4.96
+   },
+   "scoring": {
+    "method": "J=0.40T+0.30B+0.15E+0.10M+0.05N",
+    "lower_is_better": true,
+    "chosen": {
+     "score": 0.44,
+     "lower_is_better": true,
+     "parts": {
+      "time": 0.35,
+      "residual": 0.0,
+      "energy": 1,
+      "material": 1,
+      "change": 1
+     }
+    },
+    "simulation": {
+     "controlled": true,
+     "rounds_used": 9,
+     "stalled_reason": null,
+     "swaps": 8,
+     "refills": 8
+    }
+   },
+   "water_source_plan": {
+    "mode": "base",
+    "fill_minutes": 4.0,
+    "reason": "优先基地补给；就地取水六条件未全通过（saving_ge_5min）",
+    "checks": {
+     "available": true,
+     "safe_access": true,
+     "capacity_ge_20l": true,
+     "route_safe": true,
+     "soc_after_cycle_ge_25": true,
+     "saving_ge_5min": false
+    },
+    "saving_minutes": -5.4,
+    "soc_after_cycle": 39.2
+   },
+   "replan_trigger": [
+    "fire_load_increase_over_20_percent",
+    "wind_band_changed",
+    "soc_below_return_threshold",
+    "agent_insufficient",
+    "people_status_changed",
+    "signal_below_threshold"
+   ],
+   "estimated_control_time": {
+    "earliest_minutes": 42,
+    "latest_minutes": 47,
+    "window_minutes": [
+     42,
+     47
+    ],
+    "unit": "min",
+    "simulated": true
+   },
+   "estimated_minutes": 47,
+   "alternative_plan": [
+    {
+     "selected_uavs": [
+      "E1",
+      "E2",
+      "E4",
+      "E6"
+     ],
+     "feasibility": true,
+     "effective_flp": 171.36,
+     "score": 0.44,
+     "control_minutes": 42
+    },
+    {
+     "selected_uavs": [
+      "E1",
+      "E2",
+      "E4",
+      "S3"
+     ],
+     "feasibility": true,
+     "effective_flp": 171.36,
+     "score": 0.44,
+     "control_minutes": 42
+    },
+    {
+     "selected_uavs": [
+      "E1",
+      "E2",
+      "E4",
+      "S4"
+     ],
+     "feasibility": true,
+     "effective_flp": 171.36,
+     "score": 0.44,
+     "control_minutes": 42
+    },
+    {
+     "selected_uavs": [
+      "E1",
+      "E2",
+      "E5",
+      "E6"
+     ],
+     "feasibility": true,
+     "effective_flp": 171.36,
+     "score": 0.44,
+     "control_minutes": 42
+    },
+    {
+     "selected_uavs": [
+      "E1",
+      "E2",
+      "E5",
+      "S3"
+     ],
+     "feasibility": true,
+     "effective_flp": 171.36,
+     "score": 0.44,
+     "control_minutes": 42
+    },
+    {
+     "selected_uavs": [
+      "E1",
+      "E2",
+      "E5",
+      "S4"
+     ],
+     "feasibility": true,
+     "effective_flp": 171.36,
+     "score": 0.44,
+     "control_minutes": 42
+    },
+    {
+     "selected_uavs": [
+      "E1",
+      "E2",
+      "E6",
+      "S3"
+     ],
+     "feasibility": true,
+     "effective_flp": 171.36,
+     "score": 0.44,
+     "control_minutes": 42
+    },
+    {
+     "selected_uavs": [
+      "E1",
+      "E2",
+      "E6",
+      "S4"
+     ],
+     "feasibility": true,
+     "effective_flp": 171.36,
+     "score": 0.44,
+     "control_minutes": 42
+    }
+   ],
+   "tasks": [
+    {
+     "drone_id": "R1",
+     "task": "持续侦察",
+     "branch": "reconnaissance"
+    },
+    {
+     "drone_id": "E1",
+     "task": "主力灭火",
+     "module": "water_20l",
+     "target_flp": 36.0
+    },
+    {
+     "drone_id": "E2",
+     "task": "主力灭火",
+     "module": "water_20l",
+     "target_flp": 36.0
+    },
+    {
+     "drone_id": "E4",
+     "task": "主力灭火",
+     "module": "water_20l",
+     "target_flp": 36.0
+    },
+    {
+     "drone_id": "E5",
+     "task": "主力灭火",
+     "module": "water_20l",
+     "target_flp": 36.0
+    },
+    {
+     "drone_id": "S1",
+     "task": "复核人员与后备侦察",
+     "branch": "support"
+    },
+    {
+     "drone_id": "S2",
+     "task": "通信中继待命",
+     "branch": "support"
+    }
+   ],
+   "reason": "V1 离散仿真可控，按 J 评分选出最优组合"
+  },
+  "source_image": "fire3.jpg",
+  "data_mode": "demo-stub + rules",
+  "pipeline_stages": [
+   {
+    "id": "ingest",
+    "label": "影像接入",
+    "status": "completed",
+    "source": "上传文件"
+   },
+   {
+    "id": "vision",
+    "label": "视觉识别",
+    "status": "demo",
+    "source": "PWM-YOLO 适配器待接入"
+   },
+   {
+    "id": "environment",
+    "label": "环境融合",
+    "status": "completed",
+    "source": "固定场景数据"
+   },
+   {
+    "id": "assessment",
+    "label": "网格 FLP 评估",
+    "status": "completed",
+    "source": "规则引擎"
+   },
+   {
+    "id": "dispatch",
+    "label": "离散仿真调度",
+    "status": "completed",
+    "source": "规则引擎"
+   }
+  ],
+  "fleet": [
+   {
+    "uav_id": "R1",
+    "id": "R1",
+    "subgroup": "reconnaissance",
+    "role": "reconnaissance",
+    "status": "available",
+    "position": {
+     "x": -254,
+     "y": -671,
+     "z": 0
+    },
+    "soc": 92.0,
+    "battery": 92.0,
+    "payload_capacity_kg": 2.5,
+    "payload_module": "none",
+    "payload": 0.0,
+    "agent_remaining": 0.0,
+    "agent_unit": "kg",
+    "speed_mps": 12.0,
+    "energy_rate_percent_per_hour": 90.0,
+    "signal": 96.0,
+    "health": 100.0,
+    "assigned_task": null,
+    "last_updated": "2026-09-03T10:00:00Z"
+   },
+   {
+    "uav_id": "R2",
+    "id": "R2",
+    "subgroup": "reconnaissance",
+    "role": "reconnaissance",
+    "status": "available",
+    "position": {
+     "x": -228,
+     "y": -663,
+     "z": 0
+    },
+    "soc": 88.0,
+    "battery": 88.0,
+    "payload_capacity_kg": 2.5,
+    "payload_module": "none",
+    "payload": 0.0,
+    "agent_remaining": 0.0,
+    "agent_unit": "kg",
+    "speed_mps": 12.0,
+    "energy_rate_percent_per_hour": 90.0,
+    "signal": 94.0,
+    "health": 98.0,
+    "assigned_task": null,
+    "last_updated": "2026-09-03T10:00:00Z"
+   },
+   {
+    "uav_id": "E1",
+    "id": "E1",
+    "subgroup": "suppression",
+    "role": "firefighting",
+    "status": "available",
+    "position": {
+     "x": -242,
+     "y": -689,
+     "z": 0
+    },
+    "soc": 92.0,
+    "battery": 92.0,
+    "payload_capacity_kg": 25.0,
+    "payload_module": "water_20l",
+    "payload": 20.0,
+    "agent_remaining": 20.0,
+    "agent_unit": "L",
+    "speed_mps": 8.0,
+    "energy_rate_percent_per_hour": 270.0,
+    "signal": 90.0,
+    "health": 100.0,
+    "assigned_task": null,
+    "last_updated": "2026-09-03T10:00:00Z"
+   },
+   {
+    "uav_id": "E2",
+    "id": "E2",
+    "subgroup": "suppression",
+    "role": "firefighting",
+    "status": "available",
+    "position": {
+     "x": -268,
+     "y": -693,
+     "z": 0
+    },
+    "soc": 86.0,
+    "battery": 86.0,
+    "payload_capacity_kg": 25.0,
+    "payload_module": "water_20l",
+    "payload": 20.0,
+    "agent_remaining": 20.0,
+    "agent_unit": "L",
+    "speed_mps": 8.0,
+    "energy_rate_percent_per_hour": 270.0,
+    "signal": 88.0,
+    "health": 100.0,
+    "assigned_task": null,
+    "last_updated": "2026-09-03T10:00:00Z"
+   },
+   {
+    "uav_id": "E3",
+    "id": "E3",
+    "subgroup": "suppression",
+    "role": "firefighting",
+    "status": "available",
+    "position": {
+     "x": -224,
+     "y": -701,
+     "z": 0
+    },
+    "soc": 79.0,
+    "battery": 79.0,
+    "payload_capacity_kg": 25.0,
+    "payload_module": "co2_6kg",
+    "payload": 6.0,
+    "agent_remaining": 6.0,
+    "agent_unit": "kg",
+    "speed_mps": 8.0,
+    "energy_rate_percent_per_hour": 270.0,
+    "signal": 86.0,
+    "health": 97.0,
+    "assigned_task": null,
+    "last_updated": "2026-09-03T10:00:00Z"
+   },
+   {
+    "uav_id": "E4",
+    "id": "E4",
+    "subgroup": "suppression",
+    "role": "firefighting",
+    "status": "available",
+    "position": {
+     "x": -282,
+     "y": -705,
+     "z": 0
+    },
+    "soc": 74.0,
+    "battery": 74.0,
+    "payload_capacity_kg": 25.0,
+    "payload_module": "water_20l",
+    "payload": 20.0,
+    "agent_remaining": 20.0,
+    "agent_unit": "L",
+    "speed_mps": 8.0,
+    "energy_rate_percent_per_hour": 270.0,
+    "signal": 84.0,
+    "health": 96.0,
+    "assigned_task": null,
+    "last_updated": "2026-09-03T10:00:00Z"
+   },
+   {
+    "uav_id": "S1",
+    "id": "S1",
+    "subgroup": "support",
+    "role": "support",
+    "status": "available",
+    "position": {
+     "x": -214,
+     "y": -657,
+     "z": 0
+    },
+    "soc": 95.0,
+    "battery": 95.0,
+    "payload_capacity_kg": 10.0,
+    "payload_module": "sup_10",
+    "payload": 10.0,
+    "agent_remaining": 10.0,
+    "agent_unit": "kg",
+    "speed_mps": 12.0,
+    "energy_rate_percent_per_hour": 90.0,
+    "signal": 98.0,
+    "health": 100.0,
+    "assigned_task": null,
+    "last_updated": "2026-09-03T10:00:00Z"
+   },
+   {
+    "uav_id": "S2",
+    "id": "S2",
+    "subgroup": "support",
+    "role": "support",
+    "status": "available",
+    "position": {
+     "x": -262,
+     "y": -645,
+     "z": 0
+    },
+    "soc": 90.0,
+    "battery": 90.0,
+    "payload_capacity_kg": 10.0,
+    "payload_module": "sup_10",
+    "payload": 10.0,
+    "agent_remaining": 10.0,
+    "agent_unit": "kg",
+    "speed_mps": 12.0,
+    "energy_rate_percent_per_hour": 90.0,
+    "signal": 95.0,
+    "health": 99.0,
+    "assigned_task": null,
+    "last_updated": "2026-09-03T10:00:00Z"
+   },
+   {
+    "uav_id": "E5",
+    "id": "E5",
+    "subgroup": "suppression",
+    "role": "firefighting",
+    "status": "available",
+    "position": {
+     "x": -232,
+     "y": -712,
+     "z": 0
+    },
+    "soc": 90.0,
+    "battery": 90.0,
+    "payload_capacity_kg": 25.0,
+    "payload_module": "water_20l",
+    "payload": 20.0,
+    "agent_remaining": 20.0,
+    "agent_unit": "L",
+    "speed_mps": 8.0,
+    "energy_rate_percent_per_hour": 270.0,
+    "signal": 91.0,
+    "health": 100.0,
+    "assigned_task": null,
+    "last_updated": "2026-09-03T10:00:00Z"
+   },
+   {
+    "uav_id": "E6",
+    "id": "E6",
+    "subgroup": "suppression",
+    "role": "firefighting",
+    "status": "available",
+    "position": {
+     "x": -276,
+     "y": -716,
+     "z": 0
+    },
+    "soc": 84.0,
+    "battery": 84.0,
+    "payload_capacity_kg": 25.0,
+    "payload_module": "water_20l",
+    "payload": 20.0,
+    "agent_remaining": 20.0,
+    "agent_unit": "L",
+    "speed_mps": 8.0,
+    "energy_rate_percent_per_hour": 270.0,
+    "signal": 87.0,
+    "health": 98.0,
+    "assigned_task": null,
+    "last_updated": "2026-09-03T10:00:00Z"
+   },
+   {
+    "uav_id": "S3",
+    "id": "S3",
+    "subgroup": "support",
+    "role": "support",
+    "status": "available",
+    "position": {
+     "x": -200,
+     "y": -668,
+     "z": 0
+    },
+    "soc": 93.0,
+    "battery": 93.0,
+    "payload_capacity_kg": 25.0,
+    "payload_module": "water_20l",
+    "payload": 20.0,
+    "agent_remaining": 20.0,
+    "agent_unit": "L",
+    "speed_mps": 10.0,
+    "energy_rate_percent_per_hour": 270.0,
+    "signal": 96.0,
+    "health": 100.0,
+    "assigned_task": null,
+    "last_updated": "2026-09-03T10:00:00Z",
+    "multi_role": true
+   },
+   {
+    "uav_id": "S4",
+    "id": "S4",
+    "subgroup": "support",
+    "role": "support",
+    "status": "available",
+    "position": {
+     "x": -286,
+     "y": -638,
+     "z": 0
+    },
+    "soc": 88.0,
+    "battery": 88.0,
+    "payload_capacity_kg": 25.0,
+    "payload_module": "water_20l",
+    "payload": 20.0,
+    "agent_remaining": 20.0,
+    "agent_unit": "L",
+    "speed_mps": 10.0,
+    "energy_rate_percent_per_hour": 270.0,
+    "signal": 93.0,
+    "health": 99.0,
+    "assigned_task": null,
+    "last_updated": "2026-09-03T10:00:00Z",
+    "multi_role": true
+   }
+  ],
+  "inventory": {
+   "schema_version": "inventory-v1",
+   "water_liters": 480,
+   "water_modules_w20": 24,
+   "co2_modules_c6": 4,
+   "support_boxes_sup10": 6,
+   "battery_packs": 48,
+   "forward_supply_points": [
+    {
+     "id": "base",
+     "name": "北侧前置补给点",
+     "position": {
+      "x": 100,
+      "y": 60
+     },
+     "available": true
+    }
+   ],
+   "water_sources": [
+    {
+     "id": "reservoir-zixiahu",
+     "name": "紫霞湖水库",
+     "available": true,
+     "capacity_liters": 1200,
+     "distance_m": 1166,
+     "safe": true
+    }
+   ],
+   "dry_powder_kg": 60,
+   "nearby_water_available": true,
+   "last_updated": "2026-09-03T10:00:00Z"
+  },
+  "explanation": "画面中可见地面火焰和浓烟，上方有一条土路，植被部分区域已燃烧，部分仍为绿色。火焰位于右下角，烟雾向右侧扩散。",
+  "agent": {
+   "skill_chain": {
+    "fire_perception": {
+     "observation": {
+      "fire_area_m2": 600.0,
+      "smoke_area_m2": 4200,
+      "growth_rate": 0.42,
+      "confidence": 0.91,
+      "fire_center": {
+       "latitude": 32.1,
+       "longitude": 118.9
+      },
+      "source": "vision-observation-fixture",
+      "detector": {
+       "ok": true,
+       "tool": "detect_fire",
+       "source": "rules",
+       "data": {
+        "fire_area_m2": 1800,
+        "smoke_area_m2": 4200,
+        "growth_rate": 0.42,
+        "confidence": 0.91,
+        "fire_center": {
+         "latitude": 32.04,
+         "longitude": 118.78
+        },
+        "image_width": 1920,
+        "image_height": 1080,
+        "detections": [
+         {
+          "class_name": "fire",
+          "confidence": 0.93,
+          "box": [
+           820,
+           410,
+           1130,
+           760
+          ]
+         },
+         {
+          "class_name": "smoke",
+          "confidence": 0.89,
+          "box": [
+           650,
+           180,
+           1420,
+           820
+          ]
+         }
+        ],
+        "image_name": "fire3.jpg",
+        "image_path": "E:\\开发\\2026ican\\backend\\uploads\\ea08c6506516-fire3.jpg",
+        "mode": "demo",
+        "source": "vision-observation-fixture"
+       }
+      },
+      "metrics": {
+       "ok": true,
+       "tool": "calculate_fire_metrics",
+       "source": "rules",
+       "data": {
+        "fire_area_m2": 1953.0,
+        "smoke_area_m2": 8870.4,
+        "fire_pixels": 108500,
+        "smoke_pixels": 492800,
+        "fire_ratio": 0.0523,
+        "smoke_ratio": 0.2377,
+        "source": "demo-metric"
+       }
+      },
+      "fire_params_source": "vlm-visual-assessment",
+      "fire_params_scale": "small"
+     },
+     "explanation": {
+      "schema_version": "vlm-analysis-v1",
+      "task_id": "analysis-0924c3f4f66a",
+      "round_index": 1,
+      "image_ids": [
+       "ea08c6506516-fire3.jpg"
+      ],
+      "prompt_version": "v4",
+      "image_quality": {
+       "usable": true,
+       "quality_level": "good",
+       "problems": [
+        "none"
+       ],
+       "missing_inputs": []
+      },
+      "fire_observation": {
+       "fire_presence": "flame_observed",
+       "affected_layer": "ground",
+       "canopy_involvement": "not_observed",
+       "visual_scale": "small"
+      },
+      "smoke_trend": {
+       "smoke_density": "medium",
+       "image_plane_drift": "uncertain",
+       "temporal_trend": "first_round_no_comparison"
+      },
+      "object_clues": {
+       "people": {
+        "state": "not_observed",
+        "evidence": ""
+       },
+       "road": {
+        "state": "observed",
+        "evidence": "图片上方可见一条土路"
+       },
+       "building": {
+        "state": "not_observed",
+        "evidence": ""
+       },
+       "power_equipment": {
+        "state": "not_observed",
+        "evidence": ""
+       },
+       "water": {
+        "state": "not_observed",
+        "evidence": ""
+       },
+       "obstacle": {
+        "state": "observed",
+        "evidence": "植被中有烧焦区域和未燃尽的植被"
+       }
+      },
+      "review": {
+       "conflicts": [],
+       "manual_review_required": true,
+       "human_summary": "画面中可见地面火焰和浓烟，上方有一条土路，植被部分区域已燃烧，部分仍为绿色。火焰位于右下角，烟雾向右侧扩散。"
+      },
+      "usable": true,
+      "quality_level": "good",
+      "problems": [
+       "none"
+      ],
+      "missing_inputs": [],
+      "fire_presence": "flame_observed",
+      "affected_layer": "ground",
+      "canopy_involvement": "not_observed",
+      "visual_scale": "small",
+      "smoke_density": "medium",
+      "image_plane_drift": "uncertain",
+      "temporal_trend": "first_round_no_comparison",
+      "people": {
+       "state": "not_observed",
+       "evidence": ""
+      },
+      "conflicts": [],
+      "manual_review_required": true,
+      "human_summary": "画面中可见地面火焰和浓烟，上方有一条土路，植被部分区域已燃烧，部分仍为绿色。火焰位于右下角，烟雾向右侧扩散。",
+      "source": "vlm-glm-4.6v-flash",
+      "mode": "real",
+      "summary": "画面中可见地面火焰和浓烟，上方有一条土路，植被部分区域已燃烧，部分仍为绿色。火焰位于右下角，烟雾向右侧扩散。"
+     },
+     "vlm_used": true
+    },
+    "environment_assessment": {
+     "environment": {
+      "scene_id": "forest-demo-01",
+      "mode": "real",
+      "status": "ok",
+      "source": "environment_service",
+      "collected_at": "2026-09-09T15:04:26",
+      "wind_speed": 4.96,
+      "wind_direction": "S",
+      "wind_direction_deg": 199.0,
+      "temperature_c": 24.9,
+      "relative_humidity_pct": 57,
+      "precipitation_mm": 0.0,
+      "altitude": 20.0,
+      "terrain": {
+       "status": "ok",
+       "elevation_m": 20.0,
+       "slope_deg": 0.47,
+       "downslope_deg": 112.0,
+       "downslope_direction": "E",
+       "upslope_deg": 292.0,
+       "upslope_direction": "W"
+      },
+      "water_sources": [
+       {
+        "name": "月亮湾",
+        "type": "water",
+        "latitude": 32.102895,
+        "longitude": 118.903845,
+        "distance_m": 484.5
+       },
+       {
+        "name": "未命名水体",
+        "type": "water",
+        "latitude": 32.102851,
+        "longitude": 118.905341,
+        "distance_m": 594.6
+       },
+       {
+        "name": "未命名水体",
+        "type": "water",
+        "latitude": 32.094662,
+        "longitude": 118.897534,
+        "distance_m": 637.4
+       },
+       {
+        "name": "未命名水体",
+        "type": "basin",
+        "latitude": 32.094138,
+        "longitude": 118.903924,
+        "distance_m": 749.4
+       },
+       {
+        "name": "未命名水体",
+        "type": "water",
+        "latitude": 32.103469,
+        "longitude": 118.907123,
+        "distance_m": 773.9
+       },
+       {
+        "name": "喷泉",
+        "type": "water",
+        "latitude": 32.104632,
+        "longitude": 118.906586,
+        "distance_m": 806.3
+       },
+       {
+        "name": "未命名水体",
+        "type": "water",
+        "latitude": 32.098357,
+        "longitude": 118.890582,
+        "distance_m": 905.8
+       },
+       {
+        "name": "未命名水体",
+        "type": "water",
+        "latitude": 32.103883,
+        "longitude": 118.908663,
+        "distance_m": 923.2
+       },
+       {
+        "name": "未命名水体",
+        "type": "basin",
+        "latitude": 32.109627,
+        "longitude": 118.89944,
+        "distance_m": 1071.7
+       },
+       {
+        "name": "未命名池塘",
+        "type": "pond",
+        "latitude": 32.09509,
+        "longitude": 118.910009,
+        "distance_m": 1089.5
+       },
+       {
+        "name": "未命名湖泊",
+        "type": "lake",
+        "latitude": 32.106865,
+        "longitude": 118.908302,
+        "distance_m": 1092.8
+       },
+       {
+        "name": "未命名水库",
+        "type": "reservoir",
+        "latitude": 32.1035,
+        "longitude": 118.911005,
+        "distance_m": 1107.2
+       },
+       {
+        "name": "饮露池",
+        "type": "water",
+        "latitude": 32.109082,
+        "longitude": 118.905836,
+        "distance_m": 1149.7
+       },
+       {
+        "name": "南财小池塘",
+        "type": "pond",
+        "latitude": 32.104145,
+        "longitude": 118.912987,
+        "distance_m": 1307.2
+       },
+       {
+        "name": "采月湖(情人湖)",
+        "type": "water",
+        "latitude": 32.110012,
+        "longitude": 118.9081,
+        "distance_m": 1349.6
+       },
+       {
+        "name": "未命名水体",
+        "type": "water",
+        "latitude": 32.091488,
+        "longitude": 118.91113,
+        "distance_m": 1412.5
+       },
+       {
+        "name": "未命名河流",
+        "type": "river",
+        "latitude": 32.092904,
+        "longitude": 118.912508,
+        "distance_m": 1418.0
+       },
+       {
+        "name": "未命名水体",
+        "type": "water",
+        "latitude": 32.091196,
+        "longitude": 118.911523,
+        "distance_m": 1461.7
+       },
+       {
+        "name": "未命名水体",
+        "type": "water",
+        "latitude": 32.090835,
+        "longitude": 118.911654,
+        "distance_m": 1498.0
+       },
+       {
+        "name": "未命名水体",
+        "type": "basin",
+        "latitude": 32.090809,
+        "longitude": 118.887858,
+        "distance_m": 1533.9
+       }
+      ],
+      "nearest_water": {
+       "name": "月亮湾",
+       "type": "water",
+       "latitude": 32.102895,
+       "longitude": 118.903845,
+       "distance_m": 484.5
+      },
+      "preferred_water": {
+       "name": "未命名池塘",
+       "type": "pond",
+       "latitude": 32.09509,
+       "longitude": 118.910009,
+       "distance_m": 1089.5
+      },
+      "road_context": {
+       "status": "ok",
+       "found": true,
+       "road_count": 4626,
+       "nearest_transport": {
+        "name": "未命名服务道路",
+        "highway": "service",
+        "surface": null,
+        "access": null,
+        "motor_vehicle": null,
+        "distance_m": 38.3,
+        "nearest_point": {
+         "latitude": 32.100323,
+         "longitude": 118.899855
+        }
+       },
+       "nearest_vehicle_access_candidate": {
+        "name": "未命名服务道路",
+        "highway": "service",
+        "surface": null,
+        "access": null,
+        "motor_vehicle": null,
+        "distance_m": 38.3,
+        "nearest_point": {
+         "latitude": 32.100323,
+         "longitude": 118.899855
+        }
+       }
+      },
+      "landcover": {
+       "status": "ok",
+       "center_class": "Tree Cover",
+       "dominant_class": "Tree Cover",
+       "burnable_ratio": 0.777,
+       "fuel_possible": true
+      },
+      "raw": {
+       "status": "ok",
+       "location": {
+        "latitude": 32.1,
+        "longitude": 118.9
+       },
+       "terrain": {
+        "status": "ok",
+        "elevation_m": 20.0,
+        "slope_deg": 0.47,
+        "downslope_deg": 112.0,
+        "downslope_direction": "E",
+        "upslope_deg": 292.0,
+        "upslope_direction": "W"
+       },
+       "weather": {
+        "status": "ok",
+        "time": "2026-09-09T15:00",
+        "temperature_c": 24.9,
+        "relative_humidity_pct": 57,
+        "precipitation_mm": 0.0,
+        "wind_speed_m_s": 4.96,
+        "wind_from_deg": 19,
+        "wind_from_direction": "N",
+        "wind_to_deg": 199.0,
+        "wind_to_direction": "S",
+        "wind_gust_m_s": 10.8,
+        "timezone": "Asia/Shanghai"
+       },
+       "landcover": {
+        "status": "ok",
+        "center_class": "Tree Cover",
+        "dominant_class": "Tree Cover",
+        "burnable_ratio": 0.777,
+        "fuel_possible": true
+       },
+       "water": {
+        "status": "ok",
+        "found": true,
+        "feature_count": 246,
+        "features": [
+         {
+          "name": "月亮湾",
+          "type": "water",
+          "latitude": 32.102895,
+          "longitude": 118.903845,
+          "distance_m": 484.5
+         },
+         {
+          "name": "未命名水体",
+          "type": "water",
+          "latitude": 32.102851,
+          "longitude": 118.905341,
+          "distance_m": 594.6
+         },
+         {
+          "name": "未命名水体",
+          "type": "water",
+          "latitude": 32.094662,
+          "longitude": 118.897534,
+          "distance_m": 637.4
+         },
+         {
+          "name": "未命名水体",
+          "type": "basin",
+          "latitude": 32.094138,
+          "longitude": 118.903924,
+          "distance_m": 749.4
+         },
+         {
+          "name": "未命名水体",
+          "type": "water",
+          "latitude": 32.103469,
+          "longitude": 118.907123,
+          "distance_m": 773.9
+         },
+         {
+          "name": "喷泉",
+          "type": "water",
+          "latitude": 32.104632,
+          "longitude": 118.906586,
+          "distance_m": 806.3
+         },
+         {
+          "name": "未命名水体",
+          "type": "water",
+          "latitude": 32.098357,
+          "longitude": 118.890582,
+          "distance_m": 905.8
+         },
+         {
+          "name": "未命名水体",
+          "type": "water",
+          "latitude": 32.103883,
+          "longitude": 118.908663,
+          "distance_m": 923.2
+         },
+         {
+          "name": "未命名水体",
+          "type": "basin",
+          "latitude": 32.109627,
+          "longitude": 118.89944,
+          "distance_m": 1071.7
+         },
+         {
+          "name": "未命名池塘",
+          "type": "pond",
+          "latitude": 32.09509,
+          "longitude": 118.910009,
+          "distance_m": 1089.5
+         },
+         {
+          "name": "未命名湖泊",
+          "type": "lake",
+          "latitude": 32.106865,
+          "longitude": 118.908302,
+          "distance_m": 1092.8
+         },
+         {
+          "name": "未命名水库",
+          "type": "reservoir",
+          "latitude": 32.1035,
+          "longitude": 118.911005,
+          "distance_m": 1107.2
+         },
+         {
+          "name": "饮露池",
+          "type": "water",
+          "latitude": 32.109082,
+          "longitude": 118.905836,
+          "distance_m": 1149.7
+         },
+         {
+          "name": "南财小池塘",
+          "type": "pond",
+          "latitude": 32.104145,
+          "longitude": 118.912987,
+          "distance_m": 1307.2
+         },
+         {
+          "name": "采月湖(情人湖)",
+          "type": "water",
+          "latitude": 32.110012,
+          "longitude": 118.9081,
+          "distance_m": 1349.6
+         },
+         {
+          "name": "未命名水体",
+          "type": "water",
+          "latitude": 32.091488,
+          "longitude": 118.91113,
+          "distance_m": 1412.5
+         },
+         {
+          "name": "未命名河流",
+          "type": "river",
+          "latitude": 32.092904,
+          "longitude": 118.912508,
+          "distance_m": 1418.0
+         },
+         {
+          "name": "未命名水体",
+          "type": "water",
+          "latitude": 32.091196,
+          "longitude": 118.911523,
+          "distance_m": 1461.7
+         },
+         {
+          "name": "未命名水体",
+          "type": "water",
+          "latitude": 32.090835,
+          "longitude": 118.911654,
+          "distance_m": 1498.0
+         },
+         {
+          "name": "未命名水体",
+          "type": "basin",
+          "latitude": 32.090809,
+          "longitude": 118.887858,
+          "distance_m": 1533.9
+         }
+        ],
+        "nearest": {
+         "name": "月亮湾",
+         "type": "water",
+         "latitude": 32.102895,
+         "longitude": 118.903845,
+         "distance_m": 484.5
+        },
+        "preferred": {
+         "name": "未命名池塘",
+         "type": "pond",
+         "latitude": 32.09509,
+         "longitude": 118.910009,
+         "distance_m": 1089.5
+        },
+        "distance_note": "到 OSM 水体代表点的近似距离"
+       },
+       "road": {
+        "status": "ok",
+        "found": true,
+        "road_count": 4626,
+        "nearest_transport": {
+         "name": "未命名服务道路",
+         "highway": "service",
+         "surface": null,
+         "access": null,
+         "motor_vehicle": null,
+         "distance_m": 38.3,
+         "nearest_point": {
+          "latitude": 32.100323,
+          "longitude": 118.899855
+         }
+        },
+        "nearest_vehicle_access_candidate": {
+         "name": "未命名服务道路",
+         "highway": "service",
+         "surface": null,
+         "access": null,
+         "motor_vehicle": null,
+         "distance_m": 38.3,
+         "nearest_point": {
+          "latitude": 32.100323,
+          "longitude": 118.899855
+         }
+        }
+       },
+       "sources": {
+        "terrain": "NASA SRTM",
+        "weather": "Open-Meteo",
+        "landcover": "ESA WorldCover / Microsoft Planetary Computer",
+        "water": "OpenStreetMap / Overpass API",
+        "road": "OpenStreetMap / Overpass API"
+       }
+      },
+      "location": {
+       "latitude": 32.1,
+       "longitude": 118.9
+      }
+     },
+     "environment_source": {
+      "mode": "real",
+      "source": "environment_service",
+      "status": "ok",
+      "stale": false,
+      "location": {
+       "latitude": 32.1,
+       "longitude": 118.9
+      }
+     },
+     "water_sources": {
+      "ok": true,
+      "data": {
+       "sources": [
+        {
+         "name": "月亮湾",
+         "type": "water",
+         "latitude": 32.102895,
+         "longitude": 118.903845,
+         "distance_m": 484.5
+        },
+        {
+         "name": "未命名水体",
+         "type": "water",
+         "latitude": 32.102851,
+         "longitude": 118.905341,
+         "distance_m": 594.6
+        },
+        {
+         "name": "未命名水体",
+         "type": "water",
+         "latitude": 32.094662,
+         "longitude": 118.897534,
+         "distance_m": 637.4
+        },
+        {
+         "name": "未命名水体",
+         "type": "basin",
+         "latitude": 32.094138,
+         "longitude": 118.903924,
+         "distance_m": 749.4
+        },
+        {
+         "name": "未命名水体",
+         "type": "water",
+         "latitude": 32.103469,
+         "longitude": 118.907123,
+         "distance_m": 773.9
+        },
+        {
+         "name": "喷泉",
+         "type": "water",
+         "latitude": 32.104632,
+         "longitude": 118.906586,
+         "distance_m": 806.3
+        },
+        {
+         "name": "未命名水体",
+         "type": "water",
+         "latitude": 32.098357,
+         "longitude": 118.890582,
+         "distance_m": 905.8
+        },
+        {
+         "name": "未命名水体",
+         "type": "water",
+         "latitude": 32.103883,
+         "longitude": 118.908663,
+         "distance_m": 923.2
+        },
+        {
+         "name": "未命名水体",
+         "type": "basin",
+         "latitude": 32.109627,
+         "longitude": 118.89944,
+         "distance_m": 1071.7
+        },
+        {
+         "name": "未命名池塘",
+         "type": "pond",
+         "latitude": 32.09509,
+         "longitude": 118.910009,
+         "distance_m": 1089.5
+        },
+        {
+         "name": "未命名湖泊",
+         "type": "lake",
+         "latitude": 32.106865,
+         "longitude": 118.908302,
+         "distance_m": 1092.8
+        },
+        {
+         "name": "未命名水库",
+         "type": "reservoir",
+         "latitude": 32.1035,
+         "longitude": 118.911005,
+         "distance_m": 1107.2
+        },
+        {
+         "name": "饮露池",
+         "type": "water",
+         "latitude": 32.109082,
+         "longitude": 118.905836,
+         "distance_m": 1149.7
+        },
+        {
+         "name": "南财小池塘",
+         "type": "pond",
+         "latitude": 32.104145,
+         "longitude": 118.912987,
+         "distance_m": 1307.2
+        },
+        {
+         "name": "采月湖(情人湖)",
+         "type": "water",
+         "latitude": 32.110012,
+         "longitude": 118.9081,
+         "distance_m": 1349.6
+        },
+        {
+         "name": "未命名水体",
+         "type": "water",
+         "latitude": 32.091488,
+         "longitude": 118.91113,
+         "distance_m": 1412.5
+        },
+        {
+         "name": "未命名河流",
+         "type": "river",
+         "latitude": 32.092904,
+         "longitude": 118.912508,
+         "distance_m": 1418.0
+        },
+        {
+         "name": "未命名水体",
+         "type": "water",
+         "latitude": 32.091196,
+         "longitude": 118.911523,
+         "distance_m": 1461.7
+        },
+        {
+         "name": "未命名水体",
+         "type": "water",
+         "latitude": 32.090835,
+         "longitude": 118.911654,
+         "distance_m": 1498.0
+        },
+        {
+         "name": "未命名水体",
+         "type": "basin",
+         "latitude": 32.090809,
+         "longitude": 118.887858,
+         "distance_m": 1533.9
+        }
+       ]
+      },
+      "source": "environment_service"
+     },
+     "wind_vector": {
+      "ok": true,
+      "tool": "calculate_wind_vector",
+      "source": "rules",
+      "data": {
+       "x": -4.6898,
+       "y": -1.6148
+      }
+     },
+     "spread": {
+      "ok": true,
+      "tool": "predict_spread",
+      "source": "rules",
+      "data": {
+       "center": {
+        "x": -2.3449,
+        "y": -0.8074
+       },
+       "direction_vector": {
+        "x": -4.6898,
+        "y": -1.6148
+       },
+       "elapsed_minutes": 5
+      }
+     },
+     "nearest_water_distance_m": 484.5
+    },
+    "fire_assessment": {
+     "status": "rules",
+     "assessment": {
+      "ok": true,
+      "tool": "assess_fire_level",
+      "source": "rules",
+      "data": {
+       "level": 2,
+       "label": "II 级 · 中等火情",
+       "fire_area_m2": 600.0,
+       "smoke_area_m2": 4200,
+       "growth_rate": 0.42,
+       "risk_score": 0.383,
+       "confidence": 0.91,
+       "source": "rules"
+      }
+     }
+    },
+    "people_assessment": {
+     "status": "unknown",
+     "confirmed": false,
+     "requires_confirmation": true,
+     "source": "user-or-fallback"
+    },
+    "candidate_generation": {
+     "v1_dispatch": {
+      "schema_version": "uav-dispatch-v1",
+      "fleet_shape": {
+       "reconnaissance": 2,
+       "suppression": 6,
+       "support": 4
+      },
+      "firefighting_uavs": [
+       "E1",
+       "E2",
+       "E4",
+       "E5"
+      ],
+      "can_control": true,
+      "control_verdict": "can_control",
+      "feasibility": true,
+      "required_drones": 8,
+      "selected_uavs": [
+       "R1",
+       "E1",
+       "E2",
+       "E4",
+       "E5",
+       "S1",
+       "S2"
+      ],
+      "recommended_material": "water",
+      "material_module": "water_20l",
+      "material_amount": 224.0,
+      "fire_load_flp": 144.0,
+      "growth_rate_per_hour": 0.42,
+      "growth_baseline_flp": 144.0,
+      "growth_flp_per_hour": 60.48,
+      "effective_flp": 171.36,
+      "resource_gap": [],
+      "battery_plan": [
+       {
+        "uav_id": "E1",
+        "soc_before": 92.0,
+        "soc_after_return": 67.12,
+        "sortie_soc_cost": 46.05,
+        "sorties": 3,
+        "swaps": 2,
+        "refills": 2,
+        "reserve_percent": 25,
+        "state": "working",
+        "outbound_minutes": 1.75
+       },
+       {
+        "uav_id": "E2",
+        "soc_before": 86.0,
+        "soc_after_return": 67.12,
+        "sortie_soc_cost": 46.05,
+        "sorties": 3,
+        "swaps": 2,
+        "refills": 2,
+        "reserve_percent": 25,
+        "state": "working",
+        "outbound_minutes": 1.78
+       },
+       {
+        "uav_id": "E4",
+        "soc_before": 74.0,
+        "soc_after_return": 67.12,
+        "sortie_soc_cost": 46.05,
+        "sorties": 3,
+        "swaps": 2,
+        "refills": 2,
+        "reserve_percent": 25,
+        "state": "working",
+        "outbound_minutes": 1.82
+       },
+       {
+        "uav_id": "E5",
+        "soc_before": 90.0,
+        "soc_after_return": 67.12,
+        "sortie_soc_cost": 46.05,
+        "sorties": 3,
+        "swaps": 2,
+        "refills": 2,
+        "reserve_percent": 25,
+        "state": "working",
+        "outbound_minutes": 1.79
+       }
+      ],
+      "people_branch": "unknown",
+      "fire_grid": {
+       "cell_area_m2": 100.0,
+       "cell_count": 6,
+       "intensity": 2,
+       "k_fuel": 1.0,
+       "k_wind": 1.2,
+       "k_slope": 1.0,
+       "fuel_type": "general_forest"
+      },
+      "wind_band": {
+       "band": 1,
+       "label": "4–6 m/s",
+       "k_wind": 1.2,
+       "wind_speed": 4.96
+      },
+      "scoring": {
+       "method": "J=0.40T+0.30B+0.15E+0.10M+0.05N",
+       "lower_is_better": true,
+       "chosen": {
+        "score": 0.44,
+        "lower_is_better": true,
+        "parts": {
+         "time": 0.35,
+         "residual": 0.0,
+         "energy": 1,
+         "material": 1,
+         "change": 1
+        }
+       },
+       "simulation": {
+        "controlled": true,
+        "rounds_used": 9,
+        "stalled_reason": null,
+        "swaps": 8,
+        "refills": 8
+       }
+      },
+      "water_source_plan": {
+       "mode": "base",
+       "fill_minutes": 4.0,
+       "reason": "优先基地补给；就地取水六条件未全通过（saving_ge_5min）",
+       "checks": {
+        "available": true,
+        "safe_access": true,
+        "capacity_ge_20l": true,
+        "route_safe": true,
+        "soc_after_cycle_ge_25": true,
+        "saving_ge_5min": false
+       },
+       "saving_minutes": -5.4,
+       "soc_after_cycle": 39.2
+      },
+      "replan_trigger": [
+       "fire_load_increase_over_20_percent",
+       "wind_band_changed",
+       "soc_below_return_threshold",
+       "agent_insufficient",
+       "people_status_changed",
+       "signal_below_threshold"
+      ],
+      "estimated_control_time": {
+       "earliest_minutes": 42,
+       "latest_minutes": 47,
+       "window_minutes": [
+        42,
+        47
+       ],
+       "unit": "min",
+       "simulated": true
+      },
+      "estimated_minutes": 47,
+      "alternative_plan": [
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E4",
+         "E6"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E4",
+         "S3"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E4",
+         "S4"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E5",
+         "E6"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E5",
+         "S3"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E5",
+         "S4"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E6",
+         "S3"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E6",
+         "S4"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       }
+      ],
+      "tasks": [
+       {
+        "drone_id": "R1",
+        "task": "持续侦察",
+        "branch": "reconnaissance"
+       },
+       {
+        "drone_id": "E1",
+        "task": "主力灭火",
+        "module": "water_20l",
+        "target_flp": 36.0
+       },
+       {
+        "drone_id": "E2",
+        "task": "主力灭火",
+        "module": "water_20l",
+        "target_flp": 36.0
+       },
+       {
+        "drone_id": "E4",
+        "task": "主力灭火",
+        "module": "water_20l",
+        "target_flp": 36.0
+       },
+       {
+        "drone_id": "E5",
+        "task": "主力灭火",
+        "module": "water_20l",
+        "target_flp": 36.0
+       },
+       {
+        "drone_id": "S1",
+        "task": "复核人员与后备侦察",
+        "branch": "support"
+       },
+       {
+        "drone_id": "S2",
+        "task": "通信中继待命",
+        "branch": "support"
+       }
+      ],
+      "reason": "V1 离散仿真可控，按 J 评分选出最优组合"
+     },
+     "fire_origin": {
+      "x": 140,
+      "y": 60
+     },
+     "resource_matching": {
+      "need": {
+       "data": {
+        "total_liters": 224.0
+       }
+      },
+      "source": "v1-dispatch"
+     },
+     "drone_dispatch": {
+      "fleet": {
+       "data": {
+        "fleet": [
+         {
+          "uav_id": "R1",
+          "id": "R1",
+          "subgroup": "reconnaissance",
+          "role": "reconnaissance",
+          "status": "available",
+          "position": {
+           "x": -254,
+           "y": -671,
+           "z": 0
+          },
+          "soc": 92.0,
+          "battery": 92.0,
+          "payload_capacity_kg": 2.5,
+          "payload_module": "none",
+          "payload": 0.0,
+          "agent_remaining": 0.0,
+          "agent_unit": "kg",
+          "speed_mps": 12.0,
+          "energy_rate_percent_per_hour": 90.0,
+          "signal": 96.0,
+          "health": 100.0,
+          "assigned_task": null,
+          "last_updated": "2026-09-03T10:00:00Z"
+         },
+         {
+          "uav_id": "R2",
+          "id": "R2",
+          "subgroup": "reconnaissance",
+          "role": "reconnaissance",
+          "status": "available",
+          "position": {
+           "x": -228,
+           "y": -663,
+           "z": 0
+          },
+          "soc": 88.0,
+          "battery": 88.0,
+          "payload_capacity_kg": 2.5,
+          "payload_module": "none",
+          "payload": 0.0,
+          "agent_remaining": 0.0,
+          "agent_unit": "kg",
+          "speed_mps": 12.0,
+          "energy_rate_percent_per_hour": 90.0,
+          "signal": 94.0,
+          "health": 98.0,
+          "assigned_task": null,
+          "last_updated": "2026-09-03T10:00:00Z"
+         },
+         {
+          "uav_id": "E1",
+          "id": "E1",
+          "subgroup": "suppression",
+          "role": "firefighting",
+          "status": "available",
+          "position": {
+           "x": -242,
+           "y": -689,
+           "z": 0
+          },
+          "soc": 92.0,
+          "battery": 92.0,
+          "payload_capacity_kg": 25.0,
+          "payload_module": "water_20l",
+          "payload": 20.0,
+          "agent_remaining": 20.0,
+          "agent_unit": "L",
+          "speed_mps": 8.0,
+          "energy_rate_percent_per_hour": 270.0,
+          "signal": 90.0,
+          "health": 100.0,
+          "assigned_task": null,
+          "last_updated": "2026-09-03T10:00:00Z"
+         },
+         {
+          "uav_id": "E2",
+          "id": "E2",
+          "subgroup": "suppression",
+          "role": "firefighting",
+          "status": "available",
+          "position": {
+           "x": -268,
+           "y": -693,
+           "z": 0
+          },
+          "soc": 86.0,
+          "battery": 86.0,
+          "payload_capacity_kg": 25.0,
+          "payload_module": "water_20l",
+          "payload": 20.0,
+          "agent_remaining": 20.0,
+          "agent_unit": "L",
+          "speed_mps": 8.0,
+          "energy_rate_percent_per_hour": 270.0,
+          "signal": 88.0,
+          "health": 100.0,
+          "assigned_task": null,
+          "last_updated": "2026-09-03T10:00:00Z"
+         },
+         {
+          "uav_id": "E3",
+          "id": "E3",
+          "subgroup": "suppression",
+          "role": "firefighting",
+          "status": "available",
+          "position": {
+           "x": -224,
+           "y": -701,
+           "z": 0
+          },
+          "soc": 79.0,
+          "battery": 79.0,
+          "payload_capacity_kg": 25.0,
+          "payload_module": "co2_6kg",
+          "payload": 6.0,
+          "agent_remaining": 6.0,
+          "agent_unit": "kg",
+          "speed_mps": 8.0,
+          "energy_rate_percent_per_hour": 270.0,
+          "signal": 86.0,
+          "health": 97.0,
+          "assigned_task": null,
+          "last_updated": "2026-09-03T10:00:00Z"
+         },
+         {
+          "uav_id": "E4",
+          "id": "E4",
+          "subgroup": "suppression",
+          "role": "firefighting",
+          "status": "available",
+          "position": {
+           "x": -282,
+           "y": -705,
+           "z": 0
+          },
+          "soc": 74.0,
+          "battery": 74.0,
+          "payload_capacity_kg": 25.0,
+          "payload_module": "water_20l",
+          "payload": 20.0,
+          "agent_remaining": 20.0,
+          "agent_unit": "L",
+          "speed_mps": 8.0,
+          "energy_rate_percent_per_hour": 270.0,
+          "signal": 84.0,
+          "health": 96.0,
+          "assigned_task": null,
+          "last_updated": "2026-09-03T10:00:00Z"
+         },
+         {
+          "uav_id": "S1",
+          "id": "S1",
+          "subgroup": "support",
+          "role": "support",
+          "status": "available",
+          "position": {
+           "x": -214,
+           "y": -657,
+           "z": 0
+          },
+          "soc": 95.0,
+          "battery": 95.0,
+          "payload_capacity_kg": 10.0,
+          "payload_module": "sup_10",
+          "payload": 10.0,
+          "agent_remaining": 10.0,
+          "agent_unit": "kg",
+          "speed_mps": 12.0,
+          "energy_rate_percent_per_hour": 90.0,
+          "signal": 98.0,
+          "health": 100.0,
+          "assigned_task": null,
+          "last_updated": "2026-09-03T10:00:00Z"
+         },
+         {
+          "uav_id": "S2",
+          "id": "S2",
+          "subgroup": "support",
+          "role": "support",
+          "status": "available",
+          "position": {
+           "x": -262,
+           "y": -645,
+           "z": 0
+          },
+          "soc": 90.0,
+          "battery": 90.0,
+          "payload_capacity_kg": 10.0,
+          "payload_module": "sup_10",
+          "payload": 10.0,
+          "agent_remaining": 10.0,
+          "agent_unit": "kg",
+          "speed_mps": 12.0,
+          "energy_rate_percent_per_hour": 90.0,
+          "signal": 95.0,
+          "health": 99.0,
+          "assigned_task": null,
+          "last_updated": "2026-09-03T10:00:00Z"
+         },
+         {
+          "uav_id": "E5",
+          "id": "E5",
+          "subgroup": "suppression",
+          "role": "firefighting",
+          "status": "available",
+          "position": {
+           "x": -232,
+           "y": -712,
+           "z": 0
+          },
+          "soc": 90.0,
+          "battery": 90.0,
+          "payload_capacity_kg": 25.0,
+          "payload_module": "water_20l",
+          "payload": 20.0,
+          "agent_remaining": 20.0,
+          "agent_unit": "L",
+          "speed_mps": 8.0,
+          "energy_rate_percent_per_hour": 270.0,
+          "signal": 91.0,
+          "health": 100.0,
+          "assigned_task": null,
+          "last_updated": "2026-09-03T10:00:00Z"
+         },
+         {
+          "uav_id": "E6",
+          "id": "E6",
+          "subgroup": "suppression",
+          "role": "firefighting",
+          "status": "available",
+          "position": {
+           "x": -276,
+           "y": -716,
+           "z": 0
+          },
+          "soc": 84.0,
+          "battery": 84.0,
+          "payload_capacity_kg": 25.0,
+          "payload_module": "water_20l",
+          "payload": 20.0,
+          "agent_remaining": 20.0,
+          "agent_unit": "L",
+          "speed_mps": 8.0,
+          "energy_rate_percent_per_hour": 270.0,
+          "signal": 87.0,
+          "health": 98.0,
+          "assigned_task": null,
+          "last_updated": "2026-09-03T10:00:00Z"
+         },
+         {
+          "uav_id": "S3",
+          "id": "S3",
+          "subgroup": "support",
+          "role": "support",
+          "status": "available",
+          "position": {
+           "x": -200,
+           "y": -668,
+           "z": 0
+          },
+          "soc": 93.0,
+          "battery": 93.0,
+          "payload_capacity_kg": 25.0,
+          "payload_module": "water_20l",
+          "payload": 20.0,
+          "agent_remaining": 20.0,
+          "agent_unit": "L",
+          "speed_mps": 10.0,
+          "energy_rate_percent_per_hour": 270.0,
+          "signal": 96.0,
+          "health": 100.0,
+          "assigned_task": null,
+          "last_updated": "2026-09-03T10:00:00Z",
+          "multi_role": true
+         },
+         {
+          "uav_id": "S4",
+          "id": "S4",
+          "subgroup": "support",
+          "role": "support",
+          "status": "available",
+          "position": {
+           "x": -286,
+           "y": -638,
+           "z": 0
+          },
+          "soc": 88.0,
+          "battery": 88.0,
+          "payload_capacity_kg": 25.0,
+          "payload_module": "water_20l",
+          "payload": 20.0,
+          "agent_remaining": 20.0,
+          "agent_unit": "L",
+          "speed_mps": 10.0,
+          "energy_rate_percent_per_hour": 270.0,
+          "signal": 93.0,
+          "health": 99.0,
+          "assigned_task": null,
+          "last_updated": "2026-09-03T10:00:00Z",
+          "multi_role": true
+         }
+        ]
+       }
+      },
+      "count": {
+       "data": {
+        "required_drones": 8
+       }
+      },
+      "assignment": {
+       "data": {
+        "tasks": [
+         {
+          "drone_id": "R1",
+          "task": "持续侦察",
+          "branch": "reconnaissance"
+         },
+         {
+          "drone_id": "E1",
+          "task": "主力灭火",
+          "module": "water_20l",
+          "target_flp": 36.0
+         },
+         {
+          "drone_id": "E2",
+          "task": "主力灭火",
+          "module": "water_20l",
+          "target_flp": 36.0
+         },
+         {
+          "drone_id": "E4",
+          "task": "主力灭火",
+          "module": "water_20l",
+          "target_flp": 36.0
+         },
+         {
+          "drone_id": "E5",
+          "task": "主力灭火",
+          "module": "water_20l",
+          "target_flp": 36.0
+         },
+         {
+          "drone_id": "S1",
+          "task": "复核人员与后备侦察",
+          "branch": "support"
+         },
+         {
+          "drone_id": "S2",
+          "task": "通信中继待命",
+          "branch": "support"
+         }
+        ]
+       }
+      },
+      "validation": {
+       "data": {
+        "valid": true,
+        "errors": []
+       }
+      },
+      "v1_plan": {
+       "schema_version": "uav-dispatch-v1",
+       "fleet_shape": {
+        "reconnaissance": 2,
+        "suppression": 6,
+        "support": 4
+       },
+       "firefighting_uavs": [
+        "E1",
+        "E2",
+        "E4",
+        "E5"
+       ],
+       "can_control": true,
+       "control_verdict": "can_control",
+       "feasibility": true,
+       "required_drones": 8,
+       "selected_uavs": [
+        "R1",
+        "E1",
+        "E2",
+        "E4",
+        "E5",
+        "S1",
+        "S2"
+       ],
+       "recommended_material": "water",
+       "material_module": "water_20l",
+       "material_amount": 224.0,
+       "fire_load_flp": 144.0,
+       "growth_rate_per_hour": 0.42,
+       "growth_baseline_flp": 144.0,
+       "growth_flp_per_hour": 60.48,
+       "effective_flp": 171.36,
+       "resource_gap": [],
+       "battery_plan": [
+        {
+         "uav_id": "E1",
+         "soc_before": 92.0,
+         "soc_after_return": 67.12,
+         "sortie_soc_cost": 46.05,
+         "sorties": 3,
+         "swaps": 2,
+         "refills": 2,
+         "reserve_percent": 25,
+         "state": "working",
+         "outbound_minutes": 1.75
+        },
+        {
+         "uav_id": "E2",
+         "soc_before": 86.0,
+         "soc_after_return": 67.12,
+         "sortie_soc_cost": 46.05,
+         "sorties": 3,
+         "swaps": 2,
+         "refills": 2,
+         "reserve_percent": 25,
+         "state": "working",
+         "outbound_minutes": 1.78
+        },
+        {
+         "uav_id": "E4",
+         "soc_before": 74.0,
+         "soc_after_return": 67.12,
+         "sortie_soc_cost": 46.05,
+         "sorties": 3,
+         "swaps": 2,
+         "refills": 2,
+         "reserve_percent": 25,
+         "state": "working",
+         "outbound_minutes": 1.82
+        },
+        {
+         "uav_id": "E5",
+         "soc_before": 90.0,
+         "soc_after_return": 67.12,
+         "sortie_soc_cost": 46.05,
+         "sorties": 3,
+         "swaps": 2,
+         "refills": 2,
+         "reserve_percent": 25,
+         "state": "working",
+         "outbound_minutes": 1.79
+        }
+       ],
+       "people_branch": "unknown",
+       "fire_grid": {
+        "cell_area_m2": 100.0,
+        "cell_count": 6,
+        "intensity": 2,
+        "k_fuel": 1.0,
+        "k_wind": 1.2,
+        "k_slope": 1.0,
+        "fuel_type": "general_forest"
+       },
+       "wind_band": {
+        "band": 1,
+        "label": "4–6 m/s",
+        "k_wind": 1.2,
+        "wind_speed": 4.96
+       },
+       "scoring": {
+        "method": "J=0.40T+0.30B+0.15E+0.10M+0.05N",
+        "lower_is_better": true,
+        "chosen": {
+         "score": 0.44,
+         "lower_is_better": true,
+         "parts": {
+          "time": 0.35,
+          "residual": 0.0,
+          "energy": 1,
+          "material": 1,
+          "change": 1
+         }
+        },
+        "simulation": {
+         "controlled": true,
+         "rounds_used": 9,
+         "stalled_reason": null,
+         "swaps": 8,
+         "refills": 8
+        }
+       },
+       "water_source_plan": {
+        "mode": "base",
+        "fill_minutes": 4.0,
+        "reason": "优先基地补给；就地取水六条件未全通过（saving_ge_5min）",
+        "checks": {
+         "available": true,
+         "safe_access": true,
+         "capacity_ge_20l": true,
+         "route_safe": true,
+         "soc_after_cycle_ge_25": true,
+         "saving_ge_5min": false
+        },
+        "saving_minutes": -5.4,
+        "soc_after_cycle": 39.2
+       },
+       "replan_trigger": [
+        "fire_load_increase_over_20_percent",
+        "wind_band_changed",
+        "soc_below_return_threshold",
+        "agent_insufficient",
+        "people_status_changed",
+        "signal_below_threshold"
+       ],
+       "estimated_control_time": {
+        "earliest_minutes": 42,
+        "latest_minutes": 47,
+        "window_minutes": [
+         42,
+         47
+        ],
+        "unit": "min",
+        "simulated": true
+       },
+       "estimated_minutes": 47,
+       "alternative_plan": [
+        {
+         "selected_uavs": [
+          "E1",
+          "E2",
+          "E4",
+          "E6"
+         ],
+         "feasibility": true,
+         "effective_flp": 171.36,
+         "score": 0.44,
+         "control_minutes": 42
+        },
+        {
+         "selected_uavs": [
+          "E1",
+          "E2",
+          "E4",
+          "S3"
+         ],
+         "feasibility": true,
+         "effective_flp": 171.36,
+         "score": 0.44,
+         "control_minutes": 42
+        },
+        {
+         "selected_uavs": [
+          "E1",
+          "E2",
+          "E4",
+          "S4"
+         ],
+         "feasibility": true,
+         "effective_flp": 171.36,
+         "score": 0.44,
+         "control_minutes": 42
+        },
+        {
+         "selected_uavs": [
+          "E1",
+          "E2",
+          "E5",
+          "E6"
+         ],
+         "feasibility": true,
+         "effective_flp": 171.36,
+         "score": 0.44,
+         "control_minutes": 42
+        },
+        {
+         "selected_uavs": [
+          "E1",
+          "E2",
+          "E5",
+          "S3"
+         ],
+         "feasibility": true,
+         "effective_flp": 171.36,
+         "score": 0.44,
+         "control_minutes": 42
+        },
+        {
+         "selected_uavs": [
+          "E1",
+          "E2",
+          "E5",
+          "S4"
+         ],
+         "feasibility": true,
+         "effective_flp": 171.36,
+         "score": 0.44,
+         "control_minutes": 42
+        },
+        {
+         "selected_uavs": [
+          "E1",
+          "E2",
+          "E6",
+          "S3"
+         ],
+         "feasibility": true,
+         "effective_flp": 171.36,
+         "score": 0.44,
+         "control_minutes": 42
+        },
+        {
+         "selected_uavs": [
+          "E1",
+          "E2",
+          "E6",
+          "S4"
+         ],
+         "feasibility": true,
+         "effective_flp": 171.36,
+         "score": 0.44,
+         "control_minutes": 42
+        }
+       ],
+       "tasks": [
+        {
+         "drone_id": "R1",
+         "task": "持续侦察",
+         "branch": "reconnaissance"
+        },
+        {
+         "drone_id": "E1",
+         "task": "主力灭火",
+         "module": "water_20l",
+         "target_flp": 36.0
+        },
+        {
+         "drone_id": "E2",
+         "task": "主力灭火",
+         "module": "water_20l",
+         "target_flp": 36.0
+        },
+        {
+         "drone_id": "E4",
+         "task": "主力灭火",
+         "module": "water_20l",
+         "target_flp": 36.0
+        },
+        {
+         "drone_id": "E5",
+         "task": "主力灭火",
+         "module": "water_20l",
+         "target_flp": 36.0
+        },
+        {
+         "drone_id": "S1",
+         "task": "复核人员与后备侦察",
+         "branch": "support"
+        },
+        {
+         "drone_id": "S2",
+         "task": "通信中继待命",
+         "branch": "support"
+        }
+       ],
+       "reason": "V1 离散仿真可控，按 J 评分选出最优组合"
+      }
+     },
+     "candidates": [
+      {
+       "drone_id": "R1",
+       "task": "持续侦察",
+       "branch": "reconnaissance"
+      },
+      {
+       "drone_id": "E1",
+       "task": "主力灭火",
+       "module": "water_20l",
+       "target_flp": 36.0
+      },
+      {
+       "drone_id": "E2",
+       "task": "主力灭火",
+       "module": "water_20l",
+       "target_flp": 36.0
+      },
+      {
+       "drone_id": "E4",
+       "task": "主力灭火",
+       "module": "water_20l",
+       "target_flp": 36.0
+      },
+      {
+       "drone_id": "E5",
+       "task": "主力灭火",
+       "module": "water_20l",
+       "target_flp": 36.0
+      },
+      {
+       "drone_id": "S1",
+       "task": "复核人员与后备侦察",
+       "branch": "support"
+      },
+      {
+       "drone_id": "S2",
+       "task": "通信中继待命",
+       "branch": "support"
+      }
+     ],
+     "selected_uavs": [
+      "R1",
+      "E1",
+      "E2",
+      "E4",
+      "E5",
+      "S1",
+      "S2"
+     ],
+     "source": "deterministic-v1"
+    },
+    "resource_matching": {
+     "need": {
+      "data": {
+       "total_liters": 224.0
+      }
+     },
+     "source": "v1-dispatch"
+    },
+    "drone_dispatch": {
+     "fleet": {
+      "data": {
+       "fleet": [
+        {
+         "uav_id": "R1",
+         "id": "R1",
+         "subgroup": "reconnaissance",
+         "role": "reconnaissance",
+         "status": "available",
+         "position": {
+          "x": -254,
+          "y": -671,
+          "z": 0
+         },
+         "soc": 92.0,
+         "battery": 92.0,
+         "payload_capacity_kg": 2.5,
+         "payload_module": "none",
+         "payload": 0.0,
+         "agent_remaining": 0.0,
+         "agent_unit": "kg",
+         "speed_mps": 12.0,
+         "energy_rate_percent_per_hour": 90.0,
+         "signal": 96.0,
+         "health": 100.0,
+         "assigned_task": null,
+         "last_updated": "2026-09-03T10:00:00Z"
+        },
+        {
+         "uav_id": "R2",
+         "id": "R2",
+         "subgroup": "reconnaissance",
+         "role": "reconnaissance",
+         "status": "available",
+         "position": {
+          "x": -228,
+          "y": -663,
+          "z": 0
+         },
+         "soc": 88.0,
+         "battery": 88.0,
+         "payload_capacity_kg": 2.5,
+         "payload_module": "none",
+         "payload": 0.0,
+         "agent_remaining": 0.0,
+         "agent_unit": "kg",
+         "speed_mps": 12.0,
+         "energy_rate_percent_per_hour": 90.0,
+         "signal": 94.0,
+         "health": 98.0,
+         "assigned_task": null,
+         "last_updated": "2026-09-03T10:00:00Z"
+        },
+        {
+         "uav_id": "E1",
+         "id": "E1",
+         "subgroup": "suppression",
+         "role": "firefighting",
+         "status": "available",
+         "position": {
+          "x": -242,
+          "y": -689,
+          "z": 0
+         },
+         "soc": 92.0,
+         "battery": 92.0,
+         "payload_capacity_kg": 25.0,
+         "payload_module": "water_20l",
+         "payload": 20.0,
+         "agent_remaining": 20.0,
+         "agent_unit": "L",
+         "speed_mps": 8.0,
+         "energy_rate_percent_per_hour": 270.0,
+         "signal": 90.0,
+         "health": 100.0,
+         "assigned_task": null,
+         "last_updated": "2026-09-03T10:00:00Z"
+        },
+        {
+         "uav_id": "E2",
+         "id": "E2",
+         "subgroup": "suppression",
+         "role": "firefighting",
+         "status": "available",
+         "position": {
+          "x": -268,
+          "y": -693,
+          "z": 0
+         },
+         "soc": 86.0,
+         "battery": 86.0,
+         "payload_capacity_kg": 25.0,
+         "payload_module": "water_20l",
+         "payload": 20.0,
+         "agent_remaining": 20.0,
+         "agent_unit": "L",
+         "speed_mps": 8.0,
+         "energy_rate_percent_per_hour": 270.0,
+         "signal": 88.0,
+         "health": 100.0,
+         "assigned_task": null,
+         "last_updated": "2026-09-03T10:00:00Z"
+        },
+        {
+         "uav_id": "E3",
+         "id": "E3",
+         "subgroup": "suppression",
+         "role": "firefighting",
+         "status": "available",
+         "position": {
+          "x": -224,
+          "y": -701,
+          "z": 0
+         },
+         "soc": 79.0,
+         "battery": 79.0,
+         "payload_capacity_kg": 25.0,
+         "payload_module": "co2_6kg",
+         "payload": 6.0,
+         "agent_remaining": 6.0,
+         "agent_unit": "kg",
+         "speed_mps": 8.0,
+         "energy_rate_percent_per_hour": 270.0,
+         "signal": 86.0,
+         "health": 97.0,
+         "assigned_task": null,
+         "last_updated": "2026-09-03T10:00:00Z"
+        },
+        {
+         "uav_id": "E4",
+         "id": "E4",
+         "subgroup": "suppression",
+         "role": "firefighting",
+         "status": "available",
+         "position": {
+          "x": -282,
+          "y": -705,
+          "z": 0
+         },
+         "soc": 74.0,
+         "battery": 74.0,
+         "payload_capacity_kg": 25.0,
+         "payload_module": "water_20l",
+         "payload": 20.0,
+         "agent_remaining": 20.0,
+         "agent_unit": "L",
+         "speed_mps": 8.0,
+         "energy_rate_percent_per_hour": 270.0,
+         "signal": 84.0,
+         "health": 96.0,
+         "assigned_task": null,
+         "last_updated": "2026-09-03T10:00:00Z"
+        },
+        {
+         "uav_id": "S1",
+         "id": "S1",
+         "subgroup": "support",
+         "role": "support",
+         "status": "available",
+         "position": {
+          "x": -214,
+          "y": -657,
+          "z": 0
+         },
+         "soc": 95.0,
+         "battery": 95.0,
+         "payload_capacity_kg": 10.0,
+         "payload_module": "sup_10",
+         "payload": 10.0,
+         "agent_remaining": 10.0,
+         "agent_unit": "kg",
+         "speed_mps": 12.0,
+         "energy_rate_percent_per_hour": 90.0,
+         "signal": 98.0,
+         "health": 100.0,
+         "assigned_task": null,
+         "last_updated": "2026-09-03T10:00:00Z"
+        },
+        {
+         "uav_id": "S2",
+         "id": "S2",
+         "subgroup": "support",
+         "role": "support",
+         "status": "available",
+         "position": {
+          "x": -262,
+          "y": -645,
+          "z": 0
+         },
+         "soc": 90.0,
+         "battery": 90.0,
+         "payload_capacity_kg": 10.0,
+         "payload_module": "sup_10",
+         "payload": 10.0,
+         "agent_remaining": 10.0,
+         "agent_unit": "kg",
+         "speed_mps": 12.0,
+         "energy_rate_percent_per_hour": 90.0,
+         "signal": 95.0,
+         "health": 99.0,
+         "assigned_task": null,
+         "last_updated": "2026-09-03T10:00:00Z"
+        },
+        {
+         "uav_id": "E5",
+         "id": "E5",
+         "subgroup": "suppression",
+         "role": "firefighting",
+         "status": "available",
+         "position": {
+          "x": -232,
+          "y": -712,
+          "z": 0
+         },
+         "soc": 90.0,
+         "battery": 90.0,
+         "payload_capacity_kg": 25.0,
+         "payload_module": "water_20l",
+         "payload": 20.0,
+         "agent_remaining": 20.0,
+         "agent_unit": "L",
+         "speed_mps": 8.0,
+         "energy_rate_percent_per_hour": 270.0,
+         "signal": 91.0,
+         "health": 100.0,
+         "assigned_task": null,
+         "last_updated": "2026-09-03T10:00:00Z"
+        },
+        {
+         "uav_id": "E6",
+         "id": "E6",
+         "subgroup": "suppression",
+         "role": "firefighting",
+         "status": "available",
+         "position": {
+          "x": -276,
+          "y": -716,
+          "z": 0
+         },
+         "soc": 84.0,
+         "battery": 84.0,
+         "payload_capacity_kg": 25.0,
+         "payload_module": "water_20l",
+         "payload": 20.0,
+         "agent_remaining": 20.0,
+         "agent_unit": "L",
+         "speed_mps": 8.0,
+         "energy_rate_percent_per_hour": 270.0,
+         "signal": 87.0,
+         "health": 98.0,
+         "assigned_task": null,
+         "last_updated": "2026-09-03T10:00:00Z"
+        },
+        {
+         "uav_id": "S3",
+         "id": "S3",
+         "subgroup": "support",
+         "role": "support",
+         "status": "available",
+         "position": {
+          "x": -200,
+          "y": -668,
+          "z": 0
+         },
+         "soc": 93.0,
+         "battery": 93.0,
+         "payload_capacity_kg": 25.0,
+         "payload_module": "water_20l",
+         "payload": 20.0,
+         "agent_remaining": 20.0,
+         "agent_unit": "L",
+         "speed_mps": 10.0,
+         "energy_rate_percent_per_hour": 270.0,
+         "signal": 96.0,
+         "health": 100.0,
+         "assigned_task": null,
+         "last_updated": "2026-09-03T10:00:00Z",
+         "multi_role": true
+        },
+        {
+         "uav_id": "S4",
+         "id": "S4",
+         "subgroup": "support",
+         "role": "support",
+         "status": "available",
+         "position": {
+          "x": -286,
+          "y": -638,
+          "z": 0
+         },
+         "soc": 88.0,
+         "battery": 88.0,
+         "payload_capacity_kg": 25.0,
+         "payload_module": "water_20l",
+         "payload": 20.0,
+         "agent_remaining": 20.0,
+         "agent_unit": "L",
+         "speed_mps": 10.0,
+         "energy_rate_percent_per_hour": 270.0,
+         "signal": 93.0,
+         "health": 99.0,
+         "assigned_task": null,
+         "last_updated": "2026-09-03T10:00:00Z",
+         "multi_role": true
+        }
+       ]
+      }
+     },
+     "count": {
+      "data": {
+       "required_drones": 8
+      }
+     },
+     "assignment": {
+      "data": {
+       "tasks": [
+        {
+         "drone_id": "R1",
+         "task": "持续侦察",
+         "branch": "reconnaissance"
+        },
+        {
+         "drone_id": "E1",
+         "task": "主力灭火",
+         "module": "water_20l",
+         "target_flp": 36.0
+        },
+        {
+         "drone_id": "E2",
+         "task": "主力灭火",
+         "module": "water_20l",
+         "target_flp": 36.0
+        },
+        {
+         "drone_id": "E4",
+         "task": "主力灭火",
+         "module": "water_20l",
+         "target_flp": 36.0
+        },
+        {
+         "drone_id": "E5",
+         "task": "主力灭火",
+         "module": "water_20l",
+         "target_flp": 36.0
+        },
+        {
+         "drone_id": "S1",
+         "task": "复核人员与后备侦察",
+         "branch": "support"
+        },
+        {
+         "drone_id": "S2",
+         "task": "通信中继待命",
+         "branch": "support"
+        }
+       ]
+      }
+     },
+     "validation": {
+      "data": {
+       "valid": true,
+       "errors": []
+      }
+     },
+     "v1_plan": {
+      "schema_version": "uav-dispatch-v1",
+      "fleet_shape": {
+       "reconnaissance": 2,
+       "suppression": 6,
+       "support": 4
+      },
+      "firefighting_uavs": [
+       "E1",
+       "E2",
+       "E4",
+       "E5"
+      ],
+      "can_control": true,
+      "control_verdict": "can_control",
+      "feasibility": true,
+      "required_drones": 8,
+      "selected_uavs": [
+       "R1",
+       "E1",
+       "E2",
+       "E4",
+       "E5",
+       "S1",
+       "S2"
+      ],
+      "recommended_material": "water",
+      "material_module": "water_20l",
+      "material_amount": 224.0,
+      "fire_load_flp": 144.0,
+      "growth_rate_per_hour": 0.42,
+      "growth_baseline_flp": 144.0,
+      "growth_flp_per_hour": 60.48,
+      "effective_flp": 171.36,
+      "resource_gap": [],
+      "battery_plan": [
+       {
+        "uav_id": "E1",
+        "soc_before": 92.0,
+        "soc_after_return": 67.12,
+        "sortie_soc_cost": 46.05,
+        "sorties": 3,
+        "swaps": 2,
+        "refills": 2,
+        "reserve_percent": 25,
+        "state": "working",
+        "outbound_minutes": 1.75
+       },
+       {
+        "uav_id": "E2",
+        "soc_before": 86.0,
+        "soc_after_return": 67.12,
+        "sortie_soc_cost": 46.05,
+        "sorties": 3,
+        "swaps": 2,
+        "refills": 2,
+        "reserve_percent": 25,
+        "state": "working",
+        "outbound_minutes": 1.78
+       },
+       {
+        "uav_id": "E4",
+        "soc_before": 74.0,
+        "soc_after_return": 67.12,
+        "sortie_soc_cost": 46.05,
+        "sorties": 3,
+        "swaps": 2,
+        "refills": 2,
+        "reserve_percent": 25,
+        "state": "working",
+        "outbound_minutes": 1.82
+       },
+       {
+        "uav_id": "E5",
+        "soc_before": 90.0,
+        "soc_after_return": 67.12,
+        "sortie_soc_cost": 46.05,
+        "sorties": 3,
+        "swaps": 2,
+        "refills": 2,
+        "reserve_percent": 25,
+        "state": "working",
+        "outbound_minutes": 1.79
+       }
+      ],
+      "people_branch": "unknown",
+      "fire_grid": {
+       "cell_area_m2": 100.0,
+       "cell_count": 6,
+       "intensity": 2,
+       "k_fuel": 1.0,
+       "k_wind": 1.2,
+       "k_slope": 1.0,
+       "fuel_type": "general_forest"
+      },
+      "wind_band": {
+       "band": 1,
+       "label": "4–6 m/s",
+       "k_wind": 1.2,
+       "wind_speed": 4.96
+      },
+      "scoring": {
+       "method": "J=0.40T+0.30B+0.15E+0.10M+0.05N",
+       "lower_is_better": true,
+       "chosen": {
+        "score": 0.44,
+        "lower_is_better": true,
+        "parts": {
+         "time": 0.35,
+         "residual": 0.0,
+         "energy": 1,
+         "material": 1,
+         "change": 1
+        }
+       },
+       "simulation": {
+        "controlled": true,
+        "rounds_used": 9,
+        "stalled_reason": null,
+        "swaps": 8,
+        "refills": 8
+       }
+      },
+      "water_source_plan": {
+       "mode": "base",
+       "fill_minutes": 4.0,
+       "reason": "优先基地补给；就地取水六条件未全通过（saving_ge_5min）",
+       "checks": {
+        "available": true,
+        "safe_access": true,
+        "capacity_ge_20l": true,
+        "route_safe": true,
+        "soc_after_cycle_ge_25": true,
+        "saving_ge_5min": false
+       },
+       "saving_minutes": -5.4,
+       "soc_after_cycle": 39.2
+      },
+      "replan_trigger": [
+       "fire_load_increase_over_20_percent",
+       "wind_band_changed",
+       "soc_below_return_threshold",
+       "agent_insufficient",
+       "people_status_changed",
+       "signal_below_threshold"
+      ],
+      "estimated_control_time": {
+       "earliest_minutes": 42,
+       "latest_minutes": 47,
+       "window_minutes": [
+        42,
+        47
+       ],
+       "unit": "min",
+       "simulated": true
+      },
+      "estimated_minutes": 47,
+      "alternative_plan": [
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E4",
+         "E6"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E4",
+         "S3"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E4",
+         "S4"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E5",
+         "E6"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E5",
+         "S3"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E5",
+         "S4"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E6",
+         "S3"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E6",
+         "S4"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       }
+      ],
+      "tasks": [
+       {
+        "drone_id": "R1",
+        "task": "持续侦察",
+        "branch": "reconnaissance"
+       },
+       {
+        "drone_id": "E1",
+        "task": "主力灭火",
+        "module": "water_20l",
+        "target_flp": 36.0
+       },
+       {
+        "drone_id": "E2",
+        "task": "主力灭火",
+        "module": "water_20l",
+        "target_flp": 36.0
+       },
+       {
+        "drone_id": "E4",
+        "task": "主力灭火",
+        "module": "water_20l",
+        "target_flp": 36.0
+       },
+       {
+        "drone_id": "E5",
+        "task": "主力灭火",
+        "module": "water_20l",
+        "target_flp": 36.0
+       },
+       {
+        "drone_id": "S1",
+        "task": "复核人员与后备侦察",
+        "branch": "support"
+       },
+       {
+        "drone_id": "S2",
+        "task": "通信中继待命",
+        "branch": "support"
+       }
+      ],
+      "reason": "V1 离散仿真可控，按 J 评分选出最优组合"
+     }
+    },
+    "constraint_filtering": {
+     "valid": true,
+     "errors": [],
+     "candidates": [
+      {
+       "drone_id": "R1",
+       "task": "持续侦察",
+       "branch": "reconnaissance"
+      },
+      {
+       "drone_id": "E1",
+       "task": "主力灭火",
+       "module": "water_20l",
+       "target_flp": 36.0
+      },
+      {
+       "drone_id": "E2",
+       "task": "主力灭火",
+       "module": "water_20l",
+       "target_flp": 36.0
+      },
+      {
+       "drone_id": "E4",
+       "task": "主力灭火",
+       "module": "water_20l",
+       "target_flp": 36.0
+      },
+      {
+       "drone_id": "E5",
+       "task": "主力灭火",
+       "module": "water_20l",
+       "target_flp": 36.0
+      },
+      {
+       "drone_id": "S1",
+       "task": "复核人员与后备侦察",
+       "branch": "support"
+      },
+      {
+       "drone_id": "S2",
+       "task": "通信中继待命",
+       "branch": "support"
+      }
+     ],
+     "plan": {
+      "schema_version": "uav-dispatch-v1",
+      "fleet_shape": {
+       "reconnaissance": 2,
+       "suppression": 6,
+       "support": 4
+      },
+      "firefighting_uavs": [
+       "E1",
+       "E2",
+       "E4",
+       "E5"
+      ],
+      "can_control": true,
+      "control_verdict": "can_control",
+      "feasibility": true,
+      "required_drones": 8,
+      "selected_uavs": [
+       "R1",
+       "E1",
+       "E2",
+       "E4",
+       "E5",
+       "S1",
+       "S2"
+      ],
+      "recommended_material": "water",
+      "material_module": "water_20l",
+      "material_amount": 224.0,
+      "fire_load_flp": 144.0,
+      "growth_rate_per_hour": 0.42,
+      "growth_baseline_flp": 144.0,
+      "growth_flp_per_hour": 60.48,
+      "effective_flp": 171.36,
+      "resource_gap": [],
+      "battery_plan": [
+       {
+        "uav_id": "E1",
+        "soc_before": 92.0,
+        "soc_after_return": 67.12,
+        "sortie_soc_cost": 46.05,
+        "sorties": 3,
+        "swaps": 2,
+        "refills": 2,
+        "reserve_percent": 25,
+        "state": "working",
+        "outbound_minutes": 1.75
+       },
+       {
+        "uav_id": "E2",
+        "soc_before": 86.0,
+        "soc_after_return": 67.12,
+        "sortie_soc_cost": 46.05,
+        "sorties": 3,
+        "swaps": 2,
+        "refills": 2,
+        "reserve_percent": 25,
+        "state": "working",
+        "outbound_minutes": 1.78
+       },
+       {
+        "uav_id": "E4",
+        "soc_before": 74.0,
+        "soc_after_return": 67.12,
+        "sortie_soc_cost": 46.05,
+        "sorties": 3,
+        "swaps": 2,
+        "refills": 2,
+        "reserve_percent": 25,
+        "state": "working",
+        "outbound_minutes": 1.82
+       },
+       {
+        "uav_id": "E5",
+        "soc_before": 90.0,
+        "soc_after_return": 67.12,
+        "sortie_soc_cost": 46.05,
+        "sorties": 3,
+        "swaps": 2,
+        "refills": 2,
+        "reserve_percent": 25,
+        "state": "working",
+        "outbound_minutes": 1.79
+       }
+      ],
+      "people_branch": "unknown",
+      "fire_grid": {
+       "cell_area_m2": 100.0,
+       "cell_count": 6,
+       "intensity": 2,
+       "k_fuel": 1.0,
+       "k_wind": 1.2,
+       "k_slope": 1.0,
+       "fuel_type": "general_forest"
+      },
+      "wind_band": {
+       "band": 1,
+       "label": "4–6 m/s",
+       "k_wind": 1.2,
+       "wind_speed": 4.96
+      },
+      "scoring": {
+       "method": "J=0.40T+0.30B+0.15E+0.10M+0.05N",
+       "lower_is_better": true,
+       "chosen": {
+        "score": 0.44,
+        "lower_is_better": true,
+        "parts": {
+         "time": 0.35,
+         "residual": 0.0,
+         "energy": 1,
+         "material": 1,
+         "change": 1
+        }
+       },
+       "simulation": {
+        "controlled": true,
+        "rounds_used": 9,
+        "stalled_reason": null,
+        "swaps": 8,
+        "refills": 8
+       }
+      },
+      "water_source_plan": {
+       "mode": "base",
+       "fill_minutes": 4.0,
+       "reason": "优先基地补给；就地取水六条件未全通过（saving_ge_5min）",
+       "checks": {
+        "available": true,
+        "safe_access": true,
+        "capacity_ge_20l": true,
+        "route_safe": true,
+        "soc_after_cycle_ge_25": true,
+        "saving_ge_5min": false
+       },
+       "saving_minutes": -5.4,
+       "soc_after_cycle": 39.2
+      },
+      "replan_trigger": [
+       "fire_load_increase_over_20_percent",
+       "wind_band_changed",
+       "soc_below_return_threshold",
+       "agent_insufficient",
+       "people_status_changed",
+       "signal_below_threshold"
+      ],
+      "estimated_control_time": {
+       "earliest_minutes": 42,
+       "latest_minutes": 47,
+       "window_minutes": [
+        42,
+        47
+       ],
+       "unit": "min",
+       "simulated": true
+      },
+      "estimated_minutes": 47,
+      "alternative_plan": [
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E4",
+         "E6"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E4",
+         "S3"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E4",
+         "S4"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E5",
+         "E6"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E5",
+         "S3"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E5",
+         "S4"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E6",
+         "S3"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E6",
+         "S4"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       }
+      ],
+      "tasks": [
+       {
+        "drone_id": "R1",
+        "task": "持续侦察",
+        "branch": "reconnaissance"
+       },
+       {
+        "drone_id": "E1",
+        "task": "主力灭火",
+        "module": "water_20l",
+        "target_flp": 36.0
+       },
+       {
+        "drone_id": "E2",
+        "task": "主力灭火",
+        "module": "water_20l",
+        "target_flp": 36.0
+       },
+       {
+        "drone_id": "E4",
+        "task": "主力灭火",
+        "module": "water_20l",
+        "target_flp": 36.0
+       },
+       {
+        "drone_id": "E5",
+        "task": "主力灭火",
+        "module": "water_20l",
+        "target_flp": 36.0
+       },
+       {
+        "drone_id": "S1",
+        "task": "复核人员与后备侦察",
+        "branch": "support"
+       },
+       {
+        "drone_id": "S2",
+        "task": "通信中继待命",
+        "branch": "support"
+       }
+      ],
+      "reason": "V1 离散仿真可控，按 J 评分选出最优组合"
+     },
+     "source": "hard-constraints"
+    },
+    "dispatch_scoring": {
+     "score": 0.44,
+     "lower_is_better": true,
+     "candidate_count": 7,
+     "selected": {
+      "schema_version": "uav-dispatch-v1",
+      "fleet_shape": {
+       "reconnaissance": 2,
+       "suppression": 6,
+       "support": 4
+      },
+      "firefighting_uavs": [
+       "E1",
+       "E2",
+       "E4",
+       "E5"
+      ],
+      "can_control": true,
+      "control_verdict": "can_control",
+      "feasibility": true,
+      "required_drones": 8,
+      "selected_uavs": [
+       "R1",
+       "E1",
+       "E2",
+       "E4",
+       "E5",
+       "S1",
+       "S2"
+      ],
+      "recommended_material": "water",
+      "material_module": "water_20l",
+      "material_amount": 224.0,
+      "fire_load_flp": 144.0,
+      "growth_rate_per_hour": 0.42,
+      "growth_baseline_flp": 144.0,
+      "growth_flp_per_hour": 60.48,
+      "effective_flp": 171.36,
+      "resource_gap": [],
+      "battery_plan": [
+       {
+        "uav_id": "E1",
+        "soc_before": 92.0,
+        "soc_after_return": 67.12,
+        "sortie_soc_cost": 46.05,
+        "sorties": 3,
+        "swaps": 2,
+        "refills": 2,
+        "reserve_percent": 25,
+        "state": "working",
+        "outbound_minutes": 1.75
+       },
+       {
+        "uav_id": "E2",
+        "soc_before": 86.0,
+        "soc_after_return": 67.12,
+        "sortie_soc_cost": 46.05,
+        "sorties": 3,
+        "swaps": 2,
+        "refills": 2,
+        "reserve_percent": 25,
+        "state": "working",
+        "outbound_minutes": 1.78
+       },
+       {
+        "uav_id": "E4",
+        "soc_before": 74.0,
+        "soc_after_return": 67.12,
+        "sortie_soc_cost": 46.05,
+        "sorties": 3,
+        "swaps": 2,
+        "refills": 2,
+        "reserve_percent": 25,
+        "state": "working",
+        "outbound_minutes": 1.82
+       },
+       {
+        "uav_id": "E5",
+        "soc_before": 90.0,
+        "soc_after_return": 67.12,
+        "sortie_soc_cost": 46.05,
+        "sorties": 3,
+        "swaps": 2,
+        "refills": 2,
+        "reserve_percent": 25,
+        "state": "working",
+        "outbound_minutes": 1.79
+       }
+      ],
+      "people_branch": "unknown",
+      "fire_grid": {
+       "cell_area_m2": 100.0,
+       "cell_count": 6,
+       "intensity": 2,
+       "k_fuel": 1.0,
+       "k_wind": 1.2,
+       "k_slope": 1.0,
+       "fuel_type": "general_forest"
+      },
+      "wind_band": {
+       "band": 1,
+       "label": "4–6 m/s",
+       "k_wind": 1.2,
+       "wind_speed": 4.96
+      },
+      "scoring": {
+       "method": "J=0.40T+0.30B+0.15E+0.10M+0.05N",
+       "lower_is_better": true,
+       "chosen": {
+        "score": 0.44,
+        "lower_is_better": true,
+        "parts": {
+         "time": 0.35,
+         "residual": 0.0,
+         "energy": 1,
+         "material": 1,
+         "change": 1
+        }
+       },
+       "simulation": {
+        "controlled": true,
+        "rounds_used": 9,
+        "stalled_reason": null,
+        "swaps": 8,
+        "refills": 8
+       }
+      },
+      "water_source_plan": {
+       "mode": "base",
+       "fill_minutes": 4.0,
+       "reason": "优先基地补给；就地取水六条件未全通过（saving_ge_5min）",
+       "checks": {
+        "available": true,
+        "safe_access": true,
+        "capacity_ge_20l": true,
+        "route_safe": true,
+        "soc_after_cycle_ge_25": true,
+        "saving_ge_5min": false
+       },
+       "saving_minutes": -5.4,
+       "soc_after_cycle": 39.2
+      },
+      "replan_trigger": [
+       "fire_load_increase_over_20_percent",
+       "wind_band_changed",
+       "soc_below_return_threshold",
+       "agent_insufficient",
+       "people_status_changed",
+       "signal_below_threshold"
+      ],
+      "estimated_control_time": {
+       "earliest_minutes": 42,
+       "latest_minutes": 47,
+       "window_minutes": [
+        42,
+        47
+       ],
+       "unit": "min",
+       "simulated": true
+      },
+      "estimated_minutes": 47,
+      "alternative_plan": [
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E4",
+         "E6"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E4",
+         "S3"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E4",
+         "S4"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E5",
+         "E6"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E5",
+         "S3"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E5",
+         "S4"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E6",
+         "S3"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E6",
+         "S4"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       }
+      ],
+      "tasks": [
+       {
+        "drone_id": "R1",
+        "task": "持续侦察",
+        "branch": "reconnaissance"
+       },
+       {
+        "drone_id": "E1",
+        "task": "主力灭火",
+        "module": "water_20l",
+        "target_flp": 36.0
+       },
+       {
+        "drone_id": "E2",
+        "task": "主力灭火",
+        "module": "water_20l",
+        "target_flp": 36.0
+       },
+       {
+        "drone_id": "E4",
+        "task": "主力灭火",
+        "module": "water_20l",
+        "target_flp": 36.0
+       },
+       {
+        "drone_id": "E5",
+        "task": "主力灭火",
+        "module": "water_20l",
+        "target_flp": 36.0
+       },
+       {
+        "drone_id": "S1",
+        "task": "复核人员与后备侦察",
+        "branch": "support"
+       },
+       {
+        "drone_id": "S2",
+        "task": "通信中继待命",
+        "branch": "support"
+       }
+      ],
+      "reason": "V1 离散仿真可控，按 J 评分选出最优组合"
+     },
+     "source": "rules"
+    },
+    "approval_preparation": {
+     "status": "awaiting_confirmation",
+     "requires_user_confirmation": true,
+     "people_confirmed": false,
+     "constraints_valid": true,
+     "plan": {
+      "schema_version": "uav-dispatch-v1",
+      "fleet_shape": {
+       "reconnaissance": 2,
+       "suppression": 6,
+       "support": 4
+      },
+      "firefighting_uavs": [
+       "E1",
+       "E2",
+       "E4",
+       "E5"
+      ],
+      "can_control": true,
+      "control_verdict": "can_control",
+      "feasibility": true,
+      "required_drones": 8,
+      "selected_uavs": [
+       "R1",
+       "E1",
+       "E2",
+       "E4",
+       "E5",
+       "S1",
+       "S2"
+      ],
+      "recommended_material": "water",
+      "material_module": "water_20l",
+      "material_amount": 224.0,
+      "fire_load_flp": 144.0,
+      "growth_rate_per_hour": 0.42,
+      "growth_baseline_flp": 144.0,
+      "growth_flp_per_hour": 60.48,
+      "effective_flp": 171.36,
+      "resource_gap": [],
+      "battery_plan": [
+       {
+        "uav_id": "E1",
+        "soc_before": 92.0,
+        "soc_after_return": 67.12,
+        "sortie_soc_cost": 46.05,
+        "sorties": 3,
+        "swaps": 2,
+        "refills": 2,
+        "reserve_percent": 25,
+        "state": "working",
+        "outbound_minutes": 1.75
+       },
+       {
+        "uav_id": "E2",
+        "soc_before": 86.0,
+        "soc_after_return": 67.12,
+        "sortie_soc_cost": 46.05,
+        "sorties": 3,
+        "swaps": 2,
+        "refills": 2,
+        "reserve_percent": 25,
+        "state": "working",
+        "outbound_minutes": 1.78
+       },
+       {
+        "uav_id": "E4",
+        "soc_before": 74.0,
+        "soc_after_return": 67.12,
+        "sortie_soc_cost": 46.05,
+        "sorties": 3,
+        "swaps": 2,
+        "refills": 2,
+        "reserve_percent": 25,
+        "state": "working",
+        "outbound_minutes": 1.82
+       },
+       {
+        "uav_id": "E5",
+        "soc_before": 90.0,
+        "soc_after_return": 67.12,
+        "sortie_soc_cost": 46.05,
+        "sorties": 3,
+        "swaps": 2,
+        "refills": 2,
+        "reserve_percent": 25,
+        "state": "working",
+        "outbound_minutes": 1.79
+       }
+      ],
+      "people_branch": "unknown",
+      "fire_grid": {
+       "cell_area_m2": 100.0,
+       "cell_count": 6,
+       "intensity": 2,
+       "k_fuel": 1.0,
+       "k_wind": 1.2,
+       "k_slope": 1.0,
+       "fuel_type": "general_forest"
+      },
+      "wind_band": {
+       "band": 1,
+       "label": "4–6 m/s",
+       "k_wind": 1.2,
+       "wind_speed": 4.96
+      },
+      "scoring": {
+       "method": "J=0.40T+0.30B+0.15E+0.10M+0.05N",
+       "lower_is_better": true,
+       "chosen": {
+        "score": 0.44,
+        "lower_is_better": true,
+        "parts": {
+         "time": 0.35,
+         "residual": 0.0,
+         "energy": 1,
+         "material": 1,
+         "change": 1
+        }
+       },
+       "simulation": {
+        "controlled": true,
+        "rounds_used": 9,
+        "stalled_reason": null,
+        "swaps": 8,
+        "refills": 8
+       }
+      },
+      "water_source_plan": {
+       "mode": "base",
+       "fill_minutes": 4.0,
+       "reason": "优先基地补给；就地取水六条件未全通过（saving_ge_5min）",
+       "checks": {
+        "available": true,
+        "safe_access": true,
+        "capacity_ge_20l": true,
+        "route_safe": true,
+        "soc_after_cycle_ge_25": true,
+        "saving_ge_5min": false
+       },
+       "saving_minutes": -5.4,
+       "soc_after_cycle": 39.2
+      },
+      "replan_trigger": [
+       "fire_load_increase_over_20_percent",
+       "wind_band_changed",
+       "soc_below_return_threshold",
+       "agent_insufficient",
+       "people_status_changed",
+       "signal_below_threshold"
+      ],
+      "estimated_control_time": {
+       "earliest_minutes": 42,
+       "latest_minutes": 47,
+       "window_minutes": [
+        42,
+        47
+       ],
+       "unit": "min",
+       "simulated": true
+      },
+      "estimated_minutes": 47,
+      "alternative_plan": [
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E4",
+         "E6"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E4",
+         "S3"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E4",
+         "S4"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E5",
+         "E6"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E5",
+         "S3"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E5",
+         "S4"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E6",
+         "S3"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       },
+       {
+        "selected_uavs": [
+         "E1",
+         "E2",
+         "E6",
+         "S4"
+        ],
+        "feasibility": true,
+        "effective_flp": 171.36,
+        "score": 0.44,
+        "control_minutes": 42
+       }
+      ],
+      "tasks": [
+       {
+        "drone_id": "R1",
+        "task": "持续侦察",
+        "branch": "reconnaissance"
+       },
+       {
+        "drone_id": "E1",
+        "task": "主力灭火",
+        "module": "water_20l",
+        "target_flp": 36.0
+       },
+       {
+        "drone_id": "E2",
+        "task": "主力灭火",
+        "module": "water_20l",
+        "target_flp": 36.0
+       },
+       {
+        "drone_id": "E4",
+        "task": "主力灭火",
+        "module": "water_20l",
+        "target_flp": 36.0
+       },
+       {
+        "drone_id": "E5",
+        "task": "主力灭火",
+        "module": "water_20l",
+        "target_flp": 36.0
+       },
+       {
+        "drone_id": "S1",
+        "task": "复核人员与后备侦察",
+        "branch": "support"
+       },
+       {
+        "drone_id": "S2",
+        "task": "通信中继待命",
+        "branch": "support"
+       }
+      ],
+      "reason": "V1 离散仿真可控，按 J 评分选出最优组合"
+     },
+     "source": "rules"
+    },
+    "report_archiving": {
+     "status": "archived",
+     "skill_count": 29,
+     "chain_keys": [
+      "approval_preparation",
+      "candidate_generation",
+      "constraint_filtering",
+      "constraints",
+      "dispatch_scoring",
+      "drone_dispatch",
+      "environment_assessment",
+      "environment_mode",
+      "fire_assessment",
+      "fire_center",
+      "fire_perception",
+      "fire_type",
+      "image_name",
+      "image_path",
+      "image_paths",
+      "latitude",
+      "longitude",
+      "metadata",
+      "people_assessment",
+      "people_status",
+      "resource_matching",
+      "road_search_radius_m",
+      "round_index",
+      "scenario",
+      "scene_id",
+      "strict_real",
+      "task_id",
+      "use_vlm",
+      "water_search_radius_m"
+     ],
+     "source": "in-memory-report"
+    }
+   },
+   "chain_order": [
+    "fire_perception",
+    "environment_assessment",
+    "fire_assessment",
+    "people_assessment",
+    "candidate_generation",
+    "constraint_filtering",
+    "dispatch_scoring",
+    "approval_preparation",
+    "report_archiving"
+   ],
+   "data_mode": "demo-stub + rules"
+  },
+  "vlm_explanation": {
+   "schema_version": "vlm-analysis-v1",
+   "task_id": "analysis-0924c3f4f66a",
+   "round_index": 1,
+   "image_ids": [
+    "ea08c6506516-fire3.jpg"
+   ],
+   "prompt_version": "v4",
+   "image_quality": {
+    "usable": true,
+    "quality_level": "good",
+    "problems": [
+     "none"
+    ],
+    "missing_inputs": []
+   },
+   "fire_observation": {
+    "fire_presence": "flame_observed",
+    "affected_layer": "ground",
+    "canopy_involvement": "not_observed",
+    "visual_scale": "small"
+   },
+   "smoke_trend": {
+    "smoke_density": "medium",
+    "image_plane_drift": "uncertain",
+    "temporal_trend": "first_round_no_comparison"
+   },
+   "object_clues": {
+    "people": {
+     "state": "not_observed",
+     "evidence": ""
+    },
+    "road": {
+     "state": "observed",
+     "evidence": "图片上方可见一条土路"
+    },
+    "building": {
+     "state": "not_observed",
+     "evidence": ""
+    },
+    "power_equipment": {
+     "state": "not_observed",
+     "evidence": ""
+    },
+    "water": {
+     "state": "not_observed",
+     "evidence": ""
+    },
+    "obstacle": {
+     "state": "observed",
+     "evidence": "植被中有烧焦区域和未燃尽的植被"
+    }
+   },
+   "review": {
+    "conflicts": [],
+    "manual_review_required": true,
+    "human_summary": "画面中可见地面火焰和浓烟，上方有一条土路，植被部分区域已燃烧，部分仍为绿色。火焰位于右下角，烟雾向右侧扩散。"
+   },
+   "usable": true,
+   "quality_level": "good",
+   "problems": [
+    "none"
+   ],
+   "missing_inputs": [],
+   "fire_presence": "flame_observed",
+   "affected_layer": "ground",
+   "canopy_involvement": "not_observed",
+   "visual_scale": "small",
+   "smoke_density": "medium",
+   "image_plane_drift": "uncertain",
+   "temporal_trend": "first_round_no_comparison",
+   "people": {
+    "state": "not_observed",
+    "evidence": ""
+   },
+   "conflicts": [],
+   "manual_review_required": true,
+   "human_summary": "画面中可见地面火焰和浓烟，上方有一条土路，植被部分区域已燃烧，部分仍为绿色。火焰位于右下角，烟雾向右侧扩散。",
+   "source": "vlm-glm-4.6v-flash",
+   "mode": "real",
+   "summary": "画面中可见地面火焰和浓烟，上方有一条土路，植被部分区域已燃烧，部分仍为绿色。火焰位于右下角，烟雾向右侧扩散。"
+  },
+  "environment_source": {
+   "mode": "real",
+   "source": "environment_service",
+   "status": "ok",
+   "stale": false,
+   "location": {
+    "latitude": 32.1,
+    "longitude": 118.9
+   }
+  },
+  "constraints": null,
+  "input_provenance": {
+   "image_name": "fire3.jpg",
+   "image_sha256_16": "a8ee7868beecb680",
+   "frame_sha256_16": []
+  },
+  "execution_provenance": {
+   "backend_commit": "0867a0a",
+   "fleet_count": 12,
+   "environment_mode": "real",
+   "recorded_at": "2026-09-09T15:04:28"
+  }
+ },
+ "stages": [
+  {
+   "id": "ingest",
+   "label": "影像接入",
+   "status": "completed",
+   "source": "上传文件"
+  },
+  {
+   "id": "vision",
+   "label": "视觉识别",
+   "status": "demo",
+   "source": "PWM-YOLO 适配器待接入"
+  },
+  {
+   "id": "environment",
+   "label": "环境融合",
+   "status": "completed",
+   "source": "固定场景数据"
+  },
+  {
+   "id": "assessment",
+   "label": "网格 FLP 评估",
+   "status": "completed",
+   "source": "规则引擎"
+  },
+  {
+   "id": "dispatch",
+   "label": "离散仿真调度",
+   "status": "completed",
+   "source": "规则引擎"
+  }
+ ],
+ "events": [
+  {
+   "timestamp": "2026-09-09T15:04:28",
+   "stage": "dispatch",
+   "message": "分析链完成并生成调度方案",
+   "source": "rules"
+  },
+  {
+   "timestamp": "2026-09-09T15:02:47",
+   "stage": "ingest",
+   "message": "影像输入已接收",
+   "source": "upload"
+  }
+ ],
+ "error": null,
+ "monitor_round": 0,
+ "schema_version": "analysis-v1",
+ "plan_versions": [
+  {
+   "schema_version": "uav-dispatch-v1",
+   "plan_id": "plan-f5557cc1ef",
+   "task_id": "analysis-0924c3f4f66a",
+   "plan_version": 1,
+   "generated_at": "2026-09-09T15:04:28",
+   "fleet_shape": {
+    "reconnaissance": 2,
+    "suppression": 6,
+    "support": 4
+   },
+   "firefighting_uavs": [
+    "E1",
+    "E2",
+    "E4",
+    "E5"
+   ],
+   "can_control": true,
+   "control_verdict": "can_control",
+   "feasibility": true,
+   "required_drones": 8,
+   "selected_uavs": [
+    "R1",
+    "E1",
+    "E2",
+    "E4",
+    "E5",
+    "S1",
+    "S2"
+   ],
+   "recommended_material": "water",
+   "material_module": "water_20l",
+   "material_amount": 224.0,
+   "fire_load_flp": 144.0,
+   "growth_rate_per_hour": 0.42,
+   "growth_baseline_flp": 144.0,
+   "growth_flp_per_hour": 60.48,
+   "effective_flp": 171.36,
+   "resource_gap": [],
+   "battery_plan": [
+    {
+     "uav_id": "E1",
+     "soc_before": 92.0,
+     "soc_after_return": 67.12,
+     "sortie_soc_cost": 46.05,
+     "sorties": 3,
+     "swaps": 2,
+     "refills": 2,
+     "reserve_percent": 25,
+     "state": "working",
+     "outbound_minutes": 1.75
+    },
+    {
+     "uav_id": "E2",
+     "soc_before": 86.0,
+     "soc_after_return": 67.12,
+     "sortie_soc_cost": 46.05,
+     "sorties": 3,
+     "swaps": 2,
+     "refills": 2,
+     "reserve_percent": 25,
+     "state": "working",
+     "outbound_minutes": 1.78
+    },
+    {
+     "uav_id": "E4",
+     "soc_before": 74.0,
+     "soc_after_return": 67.12,
+     "sortie_soc_cost": 46.05,
+     "sorties": 3,
+     "swaps": 2,
+     "refills": 2,
+     "reserve_percent": 25,
+     "state": "working",
+     "outbound_minutes": 1.82
+    },
+    {
+     "uav_id": "E5",
+     "soc_before": 90.0,
+     "soc_after_return": 67.12,
+     "sortie_soc_cost": 46.05,
+     "sorties": 3,
+     "swaps": 2,
+     "refills": 2,
+     "reserve_percent": 25,
+     "state": "working",
+     "outbound_minutes": 1.79
+    }
+   ],
+   "people_branch": "unknown",
+   "fire_grid": {
+    "cell_area_m2": 100.0,
+    "cell_count": 6,
+    "intensity": 2,
+    "k_fuel": 1.0,
+    "k_wind": 1.2,
+    "k_slope": 1.0,
+    "fuel_type": "general_forest"
+   },
+   "wind_band": {
+    "band": 1,
+    "label": "4–6 m/s",
+    "k_wind": 1.2,
+    "wind_speed": 4.96
+   },
+   "scoring": {
+    "method": "J=0.40T+0.30B+0.15E+0.10M+0.05N",
+    "lower_is_better": true,
+    "chosen": {
+     "score": 0.44,
+     "lower_is_better": true,
+     "parts": {
+      "time": 0.35,
+      "residual": 0.0,
+      "energy": 1,
+      "material": 1,
+      "change": 1
+     }
+    },
+    "simulation": {
+     "controlled": true,
+     "rounds_used": 9,
+     "stalled_reason": null,
+     "swaps": 8,
+     "refills": 8
+    }
+   },
+   "water_source_plan": {
+    "mode": "base",
+    "fill_minutes": 4.0,
+    "reason": "优先基地补给；就地取水六条件未全通过（saving_ge_5min）",
+    "checks": {
+     "available": true,
+     "safe_access": true,
+     "capacity_ge_20l": true,
+     "route_safe": true,
+     "soc_after_cycle_ge_25": true,
+     "saving_ge_5min": false
+    },
+    "saving_minutes": -5.4,
+    "soc_after_cycle": 39.2
+   },
+   "replan_trigger": [
+    "fire_load_increase_over_20_percent",
+    "wind_band_changed",
+    "soc_below_return_threshold",
+    "agent_insufficient",
+    "people_status_changed",
+    "signal_below_threshold"
+   ],
+   "estimated_control_time": {
+    "earliest_minutes": 42,
+    "latest_minutes": 47,
+    "window_minutes": [
+     42,
+     47
+    ],
+    "unit": "min",
+    "simulated": true
+   },
+   "estimated_minutes": 47,
+   "alternative_plan": [
+    {
+     "selected_uavs": [
+      "E1",
+      "E2",
+      "E4",
+      "E6"
+     ],
+     "feasibility": true,
+     "effective_flp": 171.36,
+     "score": 0.44,
+     "control_minutes": 42
+    },
+    {
+     "selected_uavs": [
+      "E1",
+      "E2",
+      "E4",
+      "S3"
+     ],
+     "feasibility": true,
+     "effective_flp": 171.36,
+     "score": 0.44,
+     "control_minutes": 42
+    },
+    {
+     "selected_uavs": [
+      "E1",
+      "E2",
+      "E4",
+      "S4"
+     ],
+     "feasibility": true,
+     "effective_flp": 171.36,
+     "score": 0.44,
+     "control_minutes": 42
+    },
+    {
+     "selected_uavs": [
+      "E1",
+      "E2",
+      "E5",
+      "E6"
+     ],
+     "feasibility": true,
+     "effective_flp": 171.36,
+     "score": 0.44,
+     "control_minutes": 42
+    },
+    {
+     "selected_uavs": [
+      "E1",
+      "E2",
+      "E5",
+      "S3"
+     ],
+     "feasibility": true,
+     "effective_flp": 171.36,
+     "score": 0.44,
+     "control_minutes": 42
+    },
+    {
+     "selected_uavs": [
+      "E1",
+      "E2",
+      "E5",
+      "S4"
+     ],
+     "feasibility": true,
+     "effective_flp": 171.36,
+     "score": 0.44,
+     "control_minutes": 42
+    },
+    {
+     "selected_uavs": [
+      "E1",
+      "E2",
+      "E6",
+      "S3"
+     ],
+     "feasibility": true,
+     "effective_flp": 171.36,
+     "score": 0.44,
+     "control_minutes": 42
+    },
+    {
+     "selected_uavs": [
+      "E1",
+      "E2",
+      "E6",
+      "S4"
+     ],
+     "feasibility": true,
+     "effective_flp": 171.36,
+     "score": 0.44,
+     "control_minutes": 42
+    }
+   ],
+   "tasks": [
+    {
+     "drone_id": "R1",
+     "task": "持续侦察",
+     "branch": "reconnaissance"
+    },
+    {
+     "drone_id": "E1",
+     "task": "主力灭火",
+     "module": "water_20l",
+     "target_flp": 36.0
+    },
+    {
+     "drone_id": "E2",
+     "task": "主力灭火",
+     "module": "water_20l",
+     "target_flp": 36.0
+    },
+    {
+     "drone_id": "E4",
+     "task": "主力灭火",
+     "module": "water_20l",
+     "target_flp": 36.0
+    },
+    {
+     "drone_id": "E5",
+     "task": "主力灭火",
+     "module": "water_20l",
+     "target_flp": 36.0
+    },
+    {
+     "drone_id": "S1",
+     "task": "复核人员与后备侦察",
+     "branch": "support"
+    },
+    {
+     "drone_id": "S2",
+     "task": "通信中继待命",
+     "branch": "support"
+    }
+   ],
+   "reason": "V1 离散仿真可控，按 J 评分选出最优组合"
+  }
+ ],
+ "approval": null,
+ "rounds": [],
+ "resource_locks": []
+}
