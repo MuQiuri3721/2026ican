@@ -135,7 +135,9 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
 .process-row b{color:var(--accent)}
 .progress{height:5px;background:#e8ecef;margin:9px 0 11px;border-radius:4px}
 .progress i{display:block;height:100%;background:var(--accent);border-radius:4px;transition:width .5s ease}
-.pipeline{display:flex;align-items:center;justify-content:space-between;color:#9aa6af;font-size:12px}
+.pipeline{display:flex;align-items:center;gap:5px;flex-wrap:nowrap;color:#9aa6af;font-size:11.5px}
+.pipeline span{white-space:nowrap}
+.pipeline svg{width:11px;height:11px;flex-shrink:0}
 .pipeline .done{color:var(--accent);font-weight:600}
 
 /* ---------- KPI 统计带 ---------- */
