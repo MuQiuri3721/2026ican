@@ -20,6 +20,9 @@ def main() -> int:
 
         session.page.get_by_role("button", name="林区态势").click()
         session.page.wait_for_selector(".tactical-amap", timeout=20000)
+        # 冷启动 dev server 时 AMap 卫星图层与视图就绪较慢：
+        # 过早点击 containerToLngLat 返回空被选点逻辑静默跳过，先等视图稳定
+        session.page.wait_for_timeout(3500)
 
         pick_btn = session.page.get_by_role("button", name="指定火点")
         pick_btn.wait_for(timeout=8000)
