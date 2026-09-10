@@ -376,7 +376,7 @@ const vlmNoteFacts = computed(() => {
 const evacuationSummary = computed(() => {
   const eva = analysisResult.value?.agent?.skill_chain?.evacuation
   if (!eva?.found) return ''
-  return `路线 ${eva.steps} 步 · 约 ${eva.estimated_minutes} 分钟 · 避开 ${eva.risk_cells} 个风险格`
+  return `模拟路径（演示网格 BFS）· 路线 ${eva.steps} 步 · 约 ${eva.estimated_minutes} 分钟 · 避开 ${eva.risk_cells} 个风险格`
 })
 // —— 疏散语音广播（FE-21，范式参考 firepatrol TTS）：有人分支路线生成即口播，可一键静音 ——
 const voiceOn = ref(true)
@@ -1148,11 +1148,17 @@ const streamMode = ref('agent') // 大屏右栏：协作流（六角色黑板消
 const mapMode = ref('2d')
 const terrainGrid = ref(null)
 const terrainGridLoading = ref(false)
+const terrainGridKey = ref('')
 async function loadTerrainGrid() {
-  if (terrainGrid.value || terrainGridLoading.value) return
+  if (terrainGridLoading.value) return
+  const { latitude, longitude } = environmentCoordinates.value
+  // 地点键控缓存（OPT-P2-05）：同地点复用；地点变化清旧网格重载，防止沿用旧 3D 地形
+  const key = `${latitude.toFixed(5)},${longitude.toFixed(5)}`
+  if (terrainGrid.value && terrainGridKey.value === key) return
+  terrainGridKey.value = key
+  terrainGrid.value = null
   terrainGridLoading.value = true
   try {
-    const { latitude, longitude } = environmentCoordinates.value
     const query = new URLSearchParams({ latitude: String(latitude), longitude: String(longitude), radius_deg: '0.04', size: '141' })
     const response = await fetch(`/api/terrain/grid?${query}`)
     if (!response.ok) throw new Error(String(response.status))

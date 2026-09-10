@@ -125,10 +125,20 @@ def generate_grid(latitude: float = DEFAULT_LATITUDE, longitude: float = DEFAULT
             xs = transform.c + (np.arange(grid.shape[1]) + 0.5) * transform.a * stride
             ys = transform.f + (np.arange(grid.shape[0]) + 0.5) * transform.e * stride
         valid = grid[np.isfinite(grid)]
+        # 米制核算（OPT-P2-05）：HGT 是地理坐标（EPSG:4326），transform.a/e 单位是度/像素——
+        # 此前直接把"度"当米写进 cell_m（北纬 32° 经度方向偏差约 15%）。按纬度换算两轴米距。
+        cell_deg_x = abs(transform.a) * stride
+        cell_deg_y = abs(transform.e) * stride
+        meters_per_deg_lat = 111320.0
+        meters_per_deg_lon = 111320.0 * math.cos(math.radians(latitude))
+        cell_x_m = round(cell_deg_x * meters_per_deg_lon, 1)
+        cell_y_m = round(cell_deg_y * meters_per_deg_lat, 1)
         return {"status": "ok", "source": "N32E118.hgt",
                 "location": {"latitude": latitude, "longitude": longitude},
                 "nx": int(grid.shape[1]), "ny": int(grid.shape[0]),
-                "cell_m": round(abs(transform.a) * stride, 1),
+                "coordinate_system": "EPSG:4326",
+                "cell_size_x_m": cell_x_m, "cell_size_y_m": cell_y_m,
+                "cell_m": round((cell_x_m + cell_y_m) / 2, 1),  # 兼容键：两轴平均米距
                 "min_elev": round(float(valid.min()), 1), "max_elev": round(float(valid.max()), 1),
                 "lon0": round(float(xs[0]), 6), "lat0": round(float(ys[0]), 6),
                 "lon1": round(float(xs[-1]), 6), "lat1": round(float(ys[-1]), 6),

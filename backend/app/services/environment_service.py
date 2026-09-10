@@ -564,7 +564,17 @@ def get_road_context(
         if distance is None:
             continue
 
+        geometry = element.get("geometry") or []
         roads.append({
+            # 可复建道路子图（OPT-P2-03）：保留 OSM way ID 与 WGS84 折线（采样≤80 点防载荷膨胀），
+            # 此前只存距离/名称摘要——查询端截掉了后续建图需要的数据。
+            "way_id": f"way{element.get('id')}",
+            "provider": "osm",
+            "geometry": [
+                [round(float(pt.get("lon")), 6), round(float(pt.get("lat")), 6)]
+                for pt in geometry[:80] if pt.get("lon") is not None and pt.get("lat") is not None
+            ],
+            "node_count": len(geometry),
             "name": road_name(tags),
             "highway": tags.get("highway"),
             "surface": tags.get("surface"),
@@ -586,6 +596,9 @@ def get_road_context(
     return {
         "found": bool(roads),
         "road_count": len(roads),
+        # 道路子图身份（OPT-P2-03）：way_id+geometry 可复建，坐标系与提供方如实标注
+        "graph": {"provider": "osm", "coordinate_system": "WGS84",
+                  "way_ids": [road["way_id"] for road in roads]},
         "nearest_transport": roads[0] if roads else None,
         "nearest_vehicle_access_candidate": (
             vehicle_candidates[0]

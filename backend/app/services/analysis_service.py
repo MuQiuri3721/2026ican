@@ -96,6 +96,43 @@ def _file_sha16(path: Optional[str]) -> Optional[str]:
         return None
 
 
+def _environment_snapshot(result: Dict[str, Any]) -> Dict[str, Any]:
+    """环境快照（OPT-P2-04）：方案版本的输入证据——内容哈希寻址，同内容同 ID。
+
+    快照一旦进入 environment_snapshots 字典即不可覆盖（setdefault）：
+    环境刷新只生成新观测/新 ID，旧方案引用的旧快照内容永不改变。
+    """
+    env = result.get("environment") or {}
+    scene = result.get("scene") or {}
+    data = {
+        "location": env.get("location") or scene.get("fire_origin_gps"),
+        "weather": {k: env.get(k) for k in ("temperature_c", "relative_humidity_pct", "precipitation_mm", "wind_speed", "wind_direction") if env.get(k) is not None},
+        "terrain": env.get("terrain"),
+        "landcover": env.get("landcover"),
+        "water_sources": env.get("water_sources"),
+        "road_context": env.get("road_context"),
+        "source": env.get("source"), "mode": env.get("mode"),
+        "collected_at": env.get("collected_at"),
+        "stale": env.get("stale"), "fallback": env.get("fallback"),
+    }
+    import hashlib
+    digest = hashlib.sha256(json.dumps(data, sort_keys=True, ensure_ascii=False, default=str).encode()).hexdigest()[:16]
+    return {
+        "snapshot_id": f"envsnap-{digest[:12]}", "content_hash": digest,
+        "captured_at": datetime.now().isoformat(timespec="seconds"),
+        "data": data,
+    }
+
+
+def _bind_environment_snapshot(result: Dict[str, Any], plan: Dict[str, Any]) -> str:
+    """把当前环境快照绑定到方案：同内容复用既有 ID（不可变），新内容生成新 ID。"""
+    snapshot = _environment_snapshot(result)
+    snapshots = result.setdefault("environment_snapshots", {})
+    snapshots.setdefault(snapshot["snapshot_id"], snapshot)
+    plan["environment_snapshot_id"] = snapshot["snapshot_id"]
+    return snapshot["snapshot_id"]
+
+
 @lru_cache(maxsize=1)
 def _backend_commit() -> str:
     """后端提交版本（评审§二：每次测试必须记录对应提交）；非 git 环境/失败返回 unknown。"""
@@ -269,6 +306,8 @@ class AnalysisService:
                     scene_block["altitude"] = fire_gps["altitude_m"]
                 scene_block["fire_origin_source"] = fire_origin_source
                 result["scene"] = scene_block
+            # V1 环境快照绑定（OPT-P2-04）：方案版本的输入证据，批准后不可覆盖
+            _bind_environment_snapshot(result, result.get("dispatch_plan") or {})
             analysis_store.update(
                 item.analysis_id,
                 status="awaiting_confirmation",
@@ -426,6 +465,9 @@ class AnalysisService:
         plan = deterministic_v1_dispatch(state, fire, people_status, constraints=request.constraints or result.get("constraints"))
         version = len(item.plan_versions) + 1
         plan.update({"plan_id": "plan-" + uuid4().hex[:10], "task_id": analysis_id, "plan_version": version, "generated_at": datetime.now().isoformat(timespec="seconds"), "replan_trigger": request.triggers})
+        # 新方案绑定当前环境快照（OPT-P2-04）：环境刷新/重规划产生新观测 → 新 ID；
+        # 旧方案引用的旧快照内容保持不变（同内容哈希复用，不可覆盖）
+        _bind_environment_snapshot(result, plan)
         if request.constraints: plan["constraints"] = request.constraints
         result["dispatch_plan"] = dict(plan)
         result["constraints"] = request.constraints or result.get("constraints")

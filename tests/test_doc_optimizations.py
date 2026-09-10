@@ -298,3 +298,82 @@ def test_T12_environment_values_drive_flp_via_adaptation():
                                          fallback_slope_deg=9, fallback_fuel_type="dense_fuel")
     assert unknown["fuel_type"] == "dense_fuel" and unknown["fuel_source"] == "scenario"
     assert unknown["slope_deg"] == 9 and unknown["slope_source"] == "scenario"
+
+
+def test_T20_road_subgraph_rebuildable_and_evacuation_labeled_simulated():
+    """T20（OPT-P2-03）：道路上下文返回可复建子图（way_id+geometry，非只数量）；
+    疏散输出显式携带模拟路径身份（path_mode/path_source）。"""
+    from unittest import mock
+
+    from backend.app.services import environment_service as env_svc
+
+    fixture = [{"type": "way", "id": 501,
+                "tags": {"highway": "secondary", "name": " test road"},
+                "geometry": [{"lon": 118.84, "lat": 32.07}, {"lon": 118.85, "lat": 32.08}]}]
+    with mock.patch.object(env_svc, "overpass_query", return_value=fixture):
+        context = env_svc.get_road_context(32.07, 118.84, search_radius_m=800)
+    assert context["found"] and context["road_count"] == 1
+    road = context["nearest_transport"]
+    assert road["way_id"] == "way501" and road["provider"] == "osm"
+    assert len(road["geometry"]) == 2 and road["geometry"][0] == [118.84, 32.07]
+    assert context["graph"]["provider"] == "osm" and context["graph"]["way_ids"] == ["way501"]
+
+    # 疏散模拟身份（BFS 路线输出必须自带标注，前端/报告不可宣称真实最优）
+    import math
+
+    from backend.app.skills.registry import EvacuationSkill
+
+    skill = EvacuationSkill()
+    result = skill.run({"candidate_generation": {"fire_origin": {"x": 0, "y": 0}},
+                        "fire_perception": {"observation": {"fire_area_m2": 1800}},
+                        "people_status": "confirmed"})
+    assert result.get("path_mode") == "simulated"
+    assert result.get("path_source") == "rules-grid-bfs"
+    assert result.get("generated_at")
+
+
+def test_T16_terrain_cell_meters_accounted_from_degrees():
+    """T16（OPT-P2-05）：HGT 地理坐标下 cell_m 按纬度换算为米（两轴分列），
+    经度轴 < 纬度轴（比率≈cos 纬度），非零有效网格不得返回 0 米。"""
+    from backend.app.services.terrain_service import generate_grid
+
+    grid = generate_grid(latitude=32.0725, longitude=118.8415, radius_deg=0.04, size=141)
+    assert grid.get("status") == "ok", grid.get("error")
+    assert grid["coordinate_system"] == "EPSG:4326"
+    x_m, y_m = grid["cell_size_x_m"], grid["cell_size_y_m"]
+    assert x_m > 0 and y_m > 0, "非零有效网格不得返回 0 米"
+    assert y_m > x_m, "北半球纬 32° 经度轴米距应小于纬度轴"
+    ratio = x_m / y_m
+    assert 0.80 < ratio < 0.90, f"两轴比率应≈cos(32°)=0.848，实际 {ratio:.3f}"
+    assert grid["cell_m"] == pytest.approx((x_m + y_m) / 2, abs=0.2)
+
+
+def test_T15_environment_snapshot_immutable_and_bound():
+    """T15（OPT-P2-04）：环境快照内容哈希寻址——同内容同 ID 不可覆盖；
+    数据变化生成新 ID；方案绑定 snapshot_id 可追溯输入证据。"""
+    from backend.app.services.analysis_service import _bind_environment_snapshot, _environment_snapshot
+
+    result = {"environment": {"wind_speed": 3.0, "source": "demo"},
+              "scene": {"fire_origin_gps": {"latitude": 32.07, "longitude": 118.84}},
+              "dispatch_plan": {}}
+    snap_v1 = _environment_snapshot(result)
+    snapshots = {}
+    plan_v1 = {}
+    result["environment_snapshots"] = snapshots
+    bound_id = _bind_environment_snapshot(result, plan_v1)
+    assert bound_id == snap_v1["snapshot_id"]
+    assert plan_v1["environment_snapshot_id"] == snap_v1["snapshot_id"]
+    v1_content = snapshots[bound_id]["data"]
+
+    # 环境刷新（风速变化）→ 新观测新 ID，V1 快照内容不变
+    result["environment"]["wind_speed"] = 8.5
+    plan_v2 = {}
+    bound_v2 = _bind_environment_snapshot(result, plan_v2)
+    assert bound_v2 != bound_id, "环境数据变化应生成新快照 ID"
+    assert snapshots[bound_id]["data"] == v1_content, "旧快照内容必须保持不变"
+    assert plan_v2["environment_snapshot_id"] == bound_v2
+
+    # 同内容重复绑定复用既有 ID（不产生副本、不覆盖）
+    before = snapshots[bound_v2]["captured_at"]
+    _bind_environment_snapshot(result, plan_v2)
+    assert snapshots[bound_v2]["captured_at"] == before, "同内容快照不可被覆盖"

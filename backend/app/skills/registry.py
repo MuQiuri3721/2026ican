@@ -215,12 +215,18 @@ class EvacuationSkill(BaseSkill):
             "grid_cols": grid_cols, "grid_rows": grid_rows, "cell_meters": cell_meters,
         })
         data = route.get("data", {})
+        # 模拟路径身份（OPT-P2-03）：当前疏散路线是演示网格 BFS，不是真实路网规划——
+        # 输出/地图/报告均如实标注，防止被宣称为「真实最优疏散路线」。
+        from datetime import datetime
         return {
             "status": "ok" if data.get("found") else "blocked",
             "people_branch": context.get("people_status", "unknown"),
             "fire_origin": origin,
             "risk_cells": len(blocked),
             "start": start,
+            "path_mode": "simulated",
+            "path_source": "rules-grid-bfs",
+            "generated_at": datetime.now().isoformat(timespec="seconds"),
             **data,
             "source": "rules",
         }
