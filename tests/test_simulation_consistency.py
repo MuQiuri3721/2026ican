@@ -588,3 +588,28 @@ def test_T14_approved_water_source_failure_triggers_replan_not_swap():
     e1 = next(d for d in state["fleet"] if d["uav_id"] == "E1")
     assert e1["agent_remaining"] == 0.0, "不得临时取用未批准水源 B 补药"
     assert state.get("water_source_invalid") is True, "批准水源失效必须显式标记"
+
+
+def test_T05_spray_semantics_auto_vs_explicit_cap():
+    """T05（OPT-P0-01）：喷洒入口三语义各自稳定——None/0=自动（不设上限）、
+    显式正数=每轮限额（耗尽即返航不再喷）；水与 CO₂ 限额不混用。"""
+    from backend.app.rules.simulation import advance_one_minute, create_simulation_state
+
+    fleet = [_drone("E1", soc=96.0, agent=20.0)]
+    plan = {"firefighting_uavs": ["E1"], "selected_uavs": ["E1"],
+            "material_module": "water_20l", "growth_rate_per_hour": 0.0,
+            "battery_plan": [{"uav_id": "E1", "outbound_minutes": 1.0}]}
+
+    def run(spray_cap):
+        state = create_simulation_state([dict(fleet[0])], _inventory(), plan, 500.0,
+                                        fire_type="vegetation", spray_cap=spray_cap)
+        for _ in range(3):
+            advance_one_minute(state, plan)
+        return state
+
+    auto = run(None)          # 自动：不设上限
+    assert auto["consumed_water"] == pytest.approx(8.0, abs=0.01), "自动模式 2 分钟作业应喷 8L"
+    capped = run(5.0)         # 显式限额 5L：喷满即止转返航
+    assert capped["consumed_water"] == pytest.approx(5.0, abs=0.01), "限额模式喷洒不超过 5L"
+    halted = run(0.0)         # 核心层限额 0 = 停止喷洒（新语义）；monitor 入口的 0 才转自动（兼容层）
+    assert halted["consumed_water"] == 0.0 and halted["fleet"][0]["status"] != "working"

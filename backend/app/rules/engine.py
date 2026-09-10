@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from ..domain.schemas import InventorySnapshot, UAVRecord
+from ..tools.base import ToolError
 
 # 项目根（与迁出前 tools/core.py、pipeline.py 的 ROOT 指向一致）
 ROOT = Path(__file__).resolve().parents[3]
@@ -42,6 +43,9 @@ def calculate_distance(origin: Dict[str, float], target: Dict[str, float], speed
 
 
 def positive(value: float, name: str) -> float:
+    # 非法数值拒绝（OPT-P0-01/T04）：NaN 比较恒 False 会穿透负数检查，Inf 会炸后续整型转换
+    if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
+        raise ToolError("invalid_input", name + " 不能为 NaN/Inf")
     if value < 0:
         raise ToolError("invalid_input", name + " 不能为负数")
     return value

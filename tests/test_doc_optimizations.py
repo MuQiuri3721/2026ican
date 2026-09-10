@@ -377,3 +377,45 @@ def test_T15_environment_snapshot_immutable_and_bound():
     before = snapshots[bound_v2]["captured_at"]
     _bind_environment_snapshot(result, plan_v2)
     assert snapshots[bound_v2]["captured_at"] == before, "同内容快照不可被覆盖"
+
+
+def test_T04_invalid_numeric_inputs_rejected_or_clamped():
+    """T04（OPT-P0-01）：非法数值（负数/NaN/Inf）被拒绝或钳位；0 作为合法值保留。"""
+    import math
+
+    import pytest as _pytest
+
+    from backend.app.tools.base import ToolError
+    from backend.app.tools.core import build_fire_grid
+
+    for bad in (-100, float("nan"), float("inf")):
+        with _pytest.raises((ToolError, ValueError)):
+            build_fire_grid(fire_area_m2=bad, wind_speed=3, slope_deg=10,
+                            fuel_type="general_forest", intensity=2)
+    # 合法 0：零风速不丢失（K_wind 按 0 风档=1.0）
+    zero_wind = build_fire_grid(fire_area_m2=1800, wind_speed=0, slope_deg=10,
+                                fuel_type="general_forest", intensity=2)
+    assert zero_wind["fire_load_flp"] > 0 and zero_wind["k_wind"] == 1.0
+
+
+def test_T18_vlm_error_classification_matrix():
+    """T18（OPT-P1-01）：模拟 429/超时/鉴权/无效 JSON → 错误码各自准确归类。"""
+    import requests
+
+    import backend.app.vlm.client as client
+
+    def mock_response(code):
+        response = requests.models.Response()
+        response.status_code = code
+        return response
+
+    cases = [
+        (requests.exceptions.HTTPError(response=mock_response(429)), "rate_limited"),
+        (requests.exceptions.HTTPError(response=mock_response(401)), "auth_failed"),
+        (requests.exceptions.HTTPError(response=mock_response(500)), "http_500"),
+        (requests.exceptions.Timeout(), "timeout_or_network"),
+        (ValueError("bad json"), "invalid_response"),
+    ]
+
+    for error, expected in cases:
+        assert client._classify_error(error) == expected, f"{error} 应归类为 {expected}"
