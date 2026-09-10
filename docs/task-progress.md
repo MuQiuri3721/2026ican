@@ -67,6 +67,9 @@
 - [x] EXIF GPS 火点定位：真实照片拍摄位置→火点 GPS 锚点+相对框架迁移，50km 护栏（BE-45）
 - [x] 指定坐标模拟发现火情（用户指令：指定坐标发现火情→上传图片 VLM 判火情→下一步）：显式坐标>EXIF>默认三级定位，火点在管线计算前迁移（网格 FLP/调度距离按真实火点算），`fire_origin_source` 来源标注（BE-48）；前端地图「指定火点」选点模式+上传面板坐标提示（FE-49）。实测：指定 (32.10,118.90)+fire3.jpg VLM→600m²@0.42，审批后 4 轮压制至 352m²
 - [x] 测试资产：pytest 161 项（+test_fire_origin_gps 4 项；修复裸 pytest 误收集 e2e/*_test.py 模块级执行体导致的全套件假挂死，e2e/conftest.py collect_ignore_glob）；E2E R1-R17（+round17 选点联动）
+- [x] OPT 方案落地（用户贴入《下一阶段优化与修正方案》入库 docs/下一阶段优化与修正方案.md，追踪清单 OPT 编号）：P0 火势计算修正（返航相位对称航程/复飞完整航次 SOC 预算/零值语义/分钟 FLP 账本+趋势文案三分/单一判定源 7 原因码/C6 报废账）、P1 VLM 收口（错误码分类五类/状态三态 skipped 单列/映射显式化 demo_mapping 开关+版本）、P2 GIS 进入决策（环境值进网格 FLP/水源稳定 ID+执行不换候选/道路可复建子图/环境快照绑定方案/地形单位度→米修正）、P3 前端解释层（三态结论+轮次账本摘要+输入来源行+环境作用说明）
+- [x] P4 验收 A–F 自动化预执行（e2e/acceptance_opt.py + acceptance_f.py → docs/p4-acceptance-record.json）：A 归档账本守恒 / B 慢压 12 轮净变化「降-降-增」补给间歇实证 / C 双不足三态分离 / D GIS 单测索引 / E VLM 状态 / F 浏览器键控+模拟路径标注 6/6；P5 fixture 冻结 data/frozen_scenarios/ 三组核心故事
+- [x] 测试资产更新：pytest 180 项（+17）；最终门禁=全功能 39 必过 0 警告+R1-R17 全 PASS+J-1 六场景 6/6
 
 ## 当前为演示实现
 

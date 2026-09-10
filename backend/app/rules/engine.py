@@ -319,33 +319,60 @@ def _evaluate_water_plan(scene: Dict[str, Any], inventory: Dict[str, Any], base_
     ⑥节省≥5min：基地往返架次(2×火点↔基地 + 补水4min) − 就地往返架次(2×火点↔水源 + 取水8min)
     """
     sources = (inventory.get("water_sources") or scene.get("water_sources") or [])
-    source = sources[0] if sources else {}
-    # 选中水源 ID（OPT-P2-02）：osm_id 优先；场景演示水源回退 scene 场景 ID 并如实标注
-    source_id = source.get("osm_id") or (f"scene:{source.get('name', 'water')}#{index}" if (index := sources.index(source)) is not None else "scene:water#0")
     config = v1_config()
     refill_cfg = config.get("refill_minutes") or {}
     base_fill = float(refill_cfg.get("base", 4))
     onsite_fill = float(refill_cfg.get("onsite", 8))
     speed_mps = 8.0
-    distance_m = float(source.get("distance_m", 0) or 0)
-    onsite_fly_minutes = 2.0 * distance_m / speed_mps / 60.0
     base_fly_minutes = 2.0 * float(base_distance_m or 0) / speed_mps / 60.0
-    saving_minutes = (base_fly_minutes + base_fill) - (onsite_fly_minutes + onsite_fill)
-    soc_after_cycle = 100.0 - 270.0 * 1.05 * (onsite_fly_minutes + onsite_fill) / 60.0
-    checks = {
-        "available": bool(source.get("available", False)),
-        "safe_access": bool(source.get("safe", source.get("safe_access", False))),
-        "capacity_ge_20l": float(source.get("capacity_remaining", source.get("capacity_liters", 0)) or 0) >= 20.0,
-        "route_safe": bool(scene.get("water_route_safe", True)),
-        "soc_after_cycle_ge_25": soc_after_cycle >= float(config.get("return_soc_percent", 25)),
-        "saving_ge_5min": saving_minutes >= 5.0,
-    }
-    detail = {"checks": checks, "saving_minutes": round(saving_minutes, 1), "soc_after_cycle": round(soc_after_cycle, 1)}
-    if all(checks.values()):
-        return {"mode": "onsite", "source_id": source_id, "source_name": source.get("name"),
+
+    def _sid(entry, idx):
+        # 候选 ID（OPT-P2-02）：osm_id 优先；场景演示水源回退 scene:name#index
+        return str(entry.get("osm_id") or f"scene:{entry.get('name', 'water')}#{idx}")
+
+    def _checks(entry, idx):
+        distance_m = float(entry.get("distance_m", 0) or 0)
+        onsite_fly_minutes = 2.0 * distance_m / speed_mps / 60.0
+        saving_minutes = (base_fly_minutes + base_fill) - (onsite_fly_minutes + onsite_fill)
+        soc_after_cycle = 100.0 - 270.0 * 1.05 * (onsite_fly_minutes + onsite_fill) / 60.0
+        checks = {
+            "available": bool(entry.get("available", False)),
+            "safe_access": bool(entry.get("safe", entry.get("safe_access", False))),
+            "capacity_ge_20l": float(entry.get("capacity_remaining", entry.get("capacity_liters", 0)) or 0) >= 20.0,
+            "route_safe": bool(scene.get("water_route_safe", True)),
+            "soc_after_cycle_ge_25": soc_after_cycle >= float(config.get("return_soc_percent", 25)),
+            "saving_ge_5min": saving_minutes >= 5.0,
+        }
+        return checks, distance_m, saving_minutes, soc_after_cycle
+
+    # OPT-P2-02 遗留收口：逐候选评估六条件（此前只评估首水源），通过者取就近；
+    # 未通过时 reason 附带就近候选的失败项明细
+    passing = []
+    nearest = None  # 就近候选（含未通过者）——base 模式的失败项明细与节省/SOC 数字取自它
+    for idx, source in enumerate(sources):
+        checks, distance_m, saving_minutes, soc_after_cycle = _checks(source, idx)
+        if all(checks.values()):
+            passing.append((distance_m, idx, source, dict(checks), saving_minutes, soc_after_cycle))
+        if nearest is None or distance_m < nearest[0]:
+            nearest = (distance_m, idx, source, dict(checks), saving_minutes, soc_after_cycle)
+    if passing:
+        passing.sort(key=lambda item: item[0])  # 就近优先
+        distance_m, idx, source, checks, saving_minutes, soc_after_cycle = passing[0]
+        detail = {"checks": checks, "saving_minutes": round(saving_minutes, 1),
+                  "soc_after_cycle": round(soc_after_cycle, 1),
+                  "source_id": _sid(source, idx), "candidates_evaluated": len(sources)}
+        return {"mode": "onsite", "source_id": _sid(source, idx), "source_name": source.get("name"),
                 "fill_minutes": onsite_fill,
                 "distance_m": distance_m, "reason": "就地水源通过六条件评估且节省≥5分钟", **detail}
-    failed = "、".join(name for name, ok in checks.items() if not ok)
+    # base 模式：保留冻结回归要求的顶层六条件判定与节省/SOC 数字（取自就近候选）
+    _, idx, source, checks, saving_minutes, soc_after_cycle = nearest if nearest else (0, 0, {}, {}, 0.0, 0.0)
+    failed = "、".join(name for name, ok in checks.items() if not ok) if checks else "无候选"
+    detail = {"checks": checks, "saving_minutes": round(saving_minutes, 1),
+              "soc_after_cycle": round(soc_after_cycle, 1),
+              "source_id": _sid(source, idx) if source else None,
+              "candidates_evaluated": len(sources)}
+    return {"mode": "base", "fill_minutes": base_fill,
+            "reason": f"优先基地补给；就地取水六条件未全通过（{failed}）", **detail}
     return {"mode": "base", "fill_minutes": base_fill,
             "reason": f"优先基地补给；就地取水六条件未全通过（{failed}）", **detail}
 
