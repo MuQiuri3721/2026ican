@@ -20,7 +20,8 @@ from harness import Session, report  # noqa: E402
 
 sys.stdout.reconfigure(encoding="utf-8")
 
-RECORD = Path("../docs/p4-acceptance-record.json")
+# 基于脚本位置解析（CWD 敏感曾致 F 首跑覆盖了 A–E 记录，现固定指向仓库 docs/）
+RECORD = Path(__file__).resolve().parents[1] / "docs" / "p4-acceptance-record.json"
 LOC_A = {"latitude": 32.0725, "longitude": 118.8415}   # 紫金山主峰（默认）
 LOC_B = {"latitude": 32.0622, "longitude": 118.8390}   # 紫霞湖基地附近（不同地点）
 
