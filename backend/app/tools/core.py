@@ -2,6 +2,7 @@ import json
 import math
 import os
 import urllib.request
+from datetime import datetime
 from collections import deque
 from functools import lru_cache
 from pathlib import Path
@@ -537,6 +538,7 @@ def analyze_with_vlm(observation: Dict[str, Any] = None, environment: Dict[str, 
             if strict_real:
                 return {"status": "error", "mode": "real", "source": "vlm-adapter", "error": {"code": "vlm_unavailable", "message": str(error)}}
             explanation = vlm_explain_fire(observation, environment, people_status)
+            explanation["status"] = "fallback"
             explanation["adapter_fallback"] = {"code": "vlm_endpoint_unavailable", "message": str(error)}
             return explanation
 
@@ -549,6 +551,7 @@ def analyze_with_vlm(observation: Dict[str, Any] = None, environment: Dict[str, 
             if strict_real:
                 return {"status": "error", "mode": "real", "source": source_tag, "error": {"code": "vlm_image_unreadable", "message": str(error)}}
             explanation = vlm_explain_fire(observation, environment, people_status)
+            explanation["status"] = "fallback"
             explanation["adapter_fallback"] = {"code": "vlm_image_unreadable", "message": str(error)}
             return explanation
         if raw is not None:
@@ -558,7 +561,11 @@ def analyze_with_vlm(observation: Dict[str, Any] = None, environment: Dict[str, 
                 # 来源标签以平台口径为准（api-contract §10：source 证明可追溯链路），模型名随行
                 cleaned["source"] = source_tag
                 cleaned["mode"] = "real"
+                cleaned["status"] = "real"  # 本次任务状态（OPT-P1-01）：real/fallback/error 三态
                 cleaned["prompt_version"] = PROMPT_VERSION
+                cleaned["analyzed_at"] = datetime.now().isoformat(timespec="seconds")
+                if image_paths:
+                    cleaned["image_ids"] = [Path(p).name for p in image_paths]
                 if task_id:
                     cleaned.setdefault("task_id", task_id)
                 cleaned.setdefault("round_index", int(round_index or 1))
@@ -573,9 +580,14 @@ def analyze_with_vlm(observation: Dict[str, Any] = None, environment: Dict[str, 
         if strict_real:
             return {"status": "error", "mode": "real", "source": source_tag, "error": {"code": "vlm_unavailable", "message": fallback_code}}
         explanation = vlm_explain_fire(observation, environment, people_status)
-        explanation["adapter_fallback"] = {"code": fallback_code}
+        explanation["status"] = "fallback"
+        explanation["adapter_fallback"] = {"code": fallback_code, "error_code": vlm_client_status().get("last_error_code") or "unknown"}
         return explanation
-    return vlm_explain_fire(observation, environment, people_status)
+    explanation = vlm_explain_fire(observation, environment, people_status)
+    # 跳过/未配置单列（OPT-P1-01）：无 Key 时是「未调用」而非「调用失败」，不冒充也不裸奔
+    explanation["status"] = "skipped"
+    explanation["adapter_fallback"] = {"code": "vlm_not_configured"}
+    return explanation
 
 
 def build_core_tools() -> List[BaseTool]:

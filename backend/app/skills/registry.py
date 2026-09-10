@@ -1,6 +1,7 @@
 import math
 from typing import Any, Dict, Optional
 
+from ..rules.engine import v1_config
 from ..tools.base import ToolError
 from ..tools.registry import ToolRegistry, build_registry
 
@@ -19,9 +20,15 @@ VLM_VISUAL_SCALE_AREA = {"small": 600.0, "medium": 1800.0, "large": 4500.0}
 VLM_SMOKE_DENSITY_GROWTH = {"none": 0.15, "light": 0.25, "medium": 0.42, "heavy": 0.7}
 
 
+VLM_PARAM_MAPPING_VERSION_DEFAULT = "demo-mapping-v1"
+
+
 def apply_vlm_fire_params(observation: Dict[str, Any], explanation: Dict[str, Any]) -> Dict[str, Any]:
     """把真实 VLM 的定性视觉评估映射为火情参数(面积/增长率),返回新 observation。
 
+    映射显式化（OPT-P1-02）：本映射是**演示口径**（标签→数值的约定换算，非测量），
+    由 configs/simulation.json `v1.vlm_param_mapping.enabled` 显式开关、`version` 标注版本；
+    关闭时 VLM 标签仅作展示，不得改写面积/增长率等任何规则数值。
     仅当 explanation.mode == "real"(真实识别)时生效;映射表见模块常量。
     fire_presence 为 none_observed/uncertain 时整体不映射——模型明确没看到火时,
     其烟密度不得驱动增长率(防雾景/水汽误报被放大成火情参数)。
@@ -29,6 +36,9 @@ def apply_vlm_fire_params(observation: Dict[str, Any], explanation: Dict[str, An
     """
     if explanation.get("mode") != "real":
         return observation
+    mapping_cfg = (v1_config() or {}).get("vlm_param_mapping") or {}
+    if not bool(mapping_cfg.get("enabled", True)):
+        return observation  # 映射关闭：标签仅展示，数值保持规则引擎原值
     vlm_fire = explanation.get("fire_observation") or {}
     if vlm_fire.get("fire_presence") in ("none_observed", "uncertain"):
         return observation
@@ -41,7 +51,9 @@ def apply_vlm_fire_params(observation: Dict[str, Any], explanation: Dict[str, An
     if mapped_growth:
         out["growth_rate"] = mapped_growth
     if mapped_area or mapped_growth:
-        out["fire_params_source"] = "vlm-visual-assessment"
+        # 来源如实标注「演示映射」+版本：模型调用是 real，派生数值是 demo_mapping，两码事
+        out["fire_params_source"] = "demo_mapping"
+        out["fire_params_mapping_version"] = mapping_cfg.get("version") or VLM_PARAM_MAPPING_VERSION_DEFAULT
         out["fire_params_scale"] = vlm_fire.get("visual_scale")
         if vlm_fire.get("fire_presence") == "smoke_only":
             out["fire_params_presence"] = "smoke_only"

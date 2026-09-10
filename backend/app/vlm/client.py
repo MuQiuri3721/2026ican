@@ -37,6 +37,22 @@ MAX_IMAGES = 4  # 手册 §5.3：首轮 1—3 张；时间对比 2—4 张
 _LOCK = threading.Lock()
 _FAILURES = 0
 _LAST_FAIL = 0.0
+_LAST_ERROR_CODE = ""
+
+
+def _classify_error(error: Exception) -> str:
+    """错误分类（OPT-P1-01）：限流/鉴权/超时/响应异常分别归因，前端不再统一猜「限流」。"""
+    import requests
+    if isinstance(error, requests.exceptions.HTTPError):
+        code = getattr(getattr(error, "response", None), "status_code", None)
+        if code == 429:
+            return "rate_limited"
+        if code in (401, 403):
+            return "auth_failed"
+        return f"http_{code or 'error'}"
+    if isinstance(error, (requests.exceptions.Timeout, requests.exceptions.ConnectionError)):
+        return "timeout_or_network"
+    return "invalid_response"
 BACKOFF_DELAYS = (15.0, 40.0)
 DEGRADED_COOLDOWN_S = 90.0  # 连续失败 ≥2 进入降级，90 秒冷却后放行试探调用（成功即复位；抖动期不会长时间锁死）
 
@@ -55,6 +71,7 @@ def vlm_client_status() -> Dict[str, Any]:
             "configured": bool(_api_key()),
             "available": bool(_api_key()) and _FAILURES < 2,
             "fail_streak": _FAILURES,
+            "last_error_code": _LAST_ERROR_CODE,
             "model": _MODEL if _api_key() else None,
             "prompt_version": PROMPT_VERSION,
             "mode": "glm-vision" if (bool(_api_key()) and _FAILURES < 2) else "deterministic-offline",
@@ -216,7 +233,7 @@ def vlm_analyze_images(
 
 
 def _post(messages: List[Dict[str, Any]]) -> Optional[str]:
-    global _FAILURES, _LAST_FAIL
+    global _FAILURES, _LAST_FAIL, _LAST_ERROR_CODE
     try:
         response = requests.post(
             _BASE_URL.rstrip("/") + "/chat/completions",
@@ -241,14 +258,18 @@ def _post(messages: List[Dict[str, Any]]) -> Optional[str]:
             with _LOCK:
                 _FAILURES += 1
                 _LAST_FAIL = time.monotonic()
+                _LAST_ERROR_CODE = "empty_response"
             return None
         with _LOCK:
             _FAILURES = 0
+            _LAST_ERROR_CODE = ""
         return text
     except Exception as error:
         # BE-12b：吞异常必须留痕（限流/断网/代理故障各有不同签名），否则回退静默无从排查
-        print(f"[vlm] 调用失败: {type(error).__name__}: {str(error)[:160]}")
+        error_code = _classify_error(error)
+        print(f"[vlm] 调用失败[{error_code}]: {type(error).__name__}: {str(error)[:160]}")
         with _LOCK:
             _FAILURES += 1
             _LAST_FAIL = time.monotonic()
+            _LAST_ERROR_CODE = error_code
         return None

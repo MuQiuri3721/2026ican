@@ -158,7 +158,8 @@ def test_vlm_visual_assessment_maps_fire_params():
          "smoke_trend": {"smoke_density": "heavy"}})
     assert observation["fire_area_m2"] == 4500.0
     assert observation["growth_rate"] == 0.7
-    assert observation["fire_params_source"] == "vlm-visual-assessment"
+    assert observation["fire_params_source"] == "demo_mapping"
+    assert observation["fire_params_mapping_version"]  # 版本可追踪（OPT-P1-02）
     assert observation["fire_params_scale"] == "large"
 
 
@@ -200,7 +201,7 @@ def test_vlm_smoke_only_mapping_flagged():
          "smoke_trend": {"smoke_density": "medium"}})
     assert observation["fire_area_m2"] == 1800.0
     assert observation["growth_rate"] == 0.42
-    assert observation["fire_params_source"] == "vlm-visual-assessment"
+    assert observation["fire_params_source"] == "demo_mapping"
     assert observation["fire_params_presence"] == "smoke_only"
 
 
@@ -213,4 +214,55 @@ def test_vlm_mapping_tolerates_missing_scale():
          "smoke_trend": {"smoke_density": "light"}})
     assert observation["fire_area_m2"] == 1800  # 无法判定规模 → 保持原值
     assert observation["growth_rate"] == 0.25   # 烟雾稀疏 → 低增长率仍映射
-    assert observation["fire_params_source"] == "vlm-visual-assessment"
+    assert observation["fire_params_source"] == "demo_mapping"
+
+
+def test_T17_vlm_mapping_switch_off_keeps_rule_values():
+    """T17（OPT-P1-02）：映射关闭时 VLM 标签不得改写任何规则数值；
+    开启时来源=demo_mapping 且版本可追踪（模型调用 real 与派生数值分属两源）。"""
+    import json as _json
+
+    from backend.app.rules.engine import v1_config
+    from backend.app.skills import registry as registry_mod
+
+    payload = {"mode": "real",
+               "fire_observation": {"fire_presence": "flame_observed", "visual_scale": "large"},
+               "smoke_trend": {"smoke_density": "heavy"}}
+    base = {"fire_area_m2": 1800, "growth_rate": 0.42}
+
+    # 关闭：数值原样、无来源标注
+    original = v1_config()["vlm_param_mapping"]
+    try:
+        v1_config()["vlm_param_mapping"] = {**original, "enabled": False}
+        off = registry_mod.apply_vlm_fire_params(dict(base), payload)
+        assert off["fire_area_m2"] == 1800 and off["growth_rate"] == 0.42
+        assert "fire_params_source" not in off
+    finally:
+        v1_config()["vlm_param_mapping"] = original
+
+    # 开启：映射生效 + demo_mapping 来源 + 版本（模型调用 real ≠ 数值来源）
+    on = registry_mod.apply_vlm_fire_params(dict(base), payload)
+    assert on["fire_area_m2"] == 4500.0 and on["growth_rate"] == 0.7
+    assert on["fire_params_source"] == "demo_mapping"
+    assert on["fire_params_mapping_version"] == original.get("version")
+
+
+def test_P101_vlm_status_fields_and_error_codes():
+    """P1-01：回退载荷带本次状态（fallback/skipped）与错误分类码；未配置单列不冒充失败。"""
+    import os
+
+    from backend.app.tools.core import analyze_with_vlm
+
+    # 无 Key 无适配器 → skipped（未调用，不冒充失败）
+    os.environ.pop("FIRE_VLM_API_KEY", None)
+    os.environ.pop("FIRE_VLM_ENDPOINT", None)
+    skipped = analyze_with_vlm({"fire_area_m2": 100}, {}, "absent")
+    assert skipped.get("status") == "skipped"
+    assert skipped["adapter_fallback"]["code"] == "vlm_not_configured"
+
+    # 端点不可达 → fallback + 错误码
+    os.environ["FIRE_VLM_ENDPOINT"] = "http://vlm.test/explain"
+    result = analyze_with_vlm({}, {}, "absent")
+    assert result.get("status") == "fallback"
+    assert result["adapter_fallback"]["code"] == "vlm_endpoint_unavailable"
+    os.environ.pop("FIRE_VLM_ENDPOINT", None)
