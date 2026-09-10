@@ -1,8 +1,96 @@
 {
+ "executed_at": "2026-09-10",
+ "A": {
+  "title": "固定正常场景：成功控制并归档",
+  "rounds": 2,
+  "ledger_consistent_all": true,
+  "final_status": "completed",
+  "environment_snapshot_id": "见任务信封 environment_snapshots（内容哈希寻址）",
+  "flp_input_source": "DEM 实测坡度 + WorldCover 映射（worldcover-fuel-v1）"
+ },
+ "B": {
+  "title": "补给间歇回升：慢压维持 12 轮",
+  "scenario": {
+   "fire_origin": {
+    "x": 150,
+    "y": 150
+   },
+   "fire_area_m2": 600,
+   "growth_rate": 0.42,
+   "constraints": {
+    "max_drones": 2
+   }
+  },
+  "net_change_series": [
+   -7.7497,
+   -3.4776,
+   5.9902,
+   -7.9357,
+   -3.6704,
+   5.7908,
+   -8.1422,
+   -3.884,
+   5.5696,
+   -8.3712,
+   -4.1211,
+   5.324
+  ],
+  "interpretation": "周期性「降-降-增」三拍 = 作业轮压制 / 药剂耗尽返航补给轮回升；未触发重规划风暴（余烬下限设计生效）"
+ },
+ "C": {
+  "resource_insufficient": {
+   "can_control": false,
+   "control_verdict": "cannot_control",
+   "control_reason_code": "suppression_insufficient",
+   "gaps": [
+    "effective_flp"
+   ]
+  },
+  "time_insufficient": {
+   "can_control": false,
+   "control_verdict": "maintain_only",
+   "control_reason_code": "time_limit_exceeded",
+   "gaps": [
+    "time_limit"
+   ]
+  },
+  "conclusion": "三态、原因码与缺口完全分离——「压不住须增援」与「压得住但超时限」不再共用结论"
+ },
+ "D": {
+  "unit_tests": [
+   "T12 坡度/燃料→FLP",
+   "T13 水源 ID 稳定",
+   "T14 失效不换候选",
+   "T15 快照不可变"
+  ],
+  "snapshot_evidence": "见 A.environment_snapshot_id 与 plan-summary FLP 输入来源行"
+ },
+ "E": {
+  "not_configured": {
+   "status": "skipped",
+   "code": "vlm_not_configured"
+  },
+  "endpoint_unreachable": {
+   "status": "fallback",
+   "code": "vlm_endpoint_unavailable"
+  },
+  "real_call_evidence": {
+   "final_gate": "全功能测试 39/39 必过 0 警告（2026-09-10）[E] VLM 真实解释 source=vlm-glm-4.6v-flash 摘要 51 字",
+   "historical": "e2e/_webfire_suite.py 12/12 真实识别；docs/vlm-delivery/evaluation-results.md"
+  }
+ },
  "F": {
-  "executed_at": "2026-09-10T20:20:26",
   "passed": true,
   "terrain_requests": 1,
-  "evacuation_summary": "疏散：模拟路径（演示网格 BFS）· 路线 12 步 · 约 6.67 分钟 · 避开 5 个风险格"
+  "terrain_key_reload": "A 基线→切 B→最后请求=B（键控清缓存重载）",
+  "evacuation_summary": "疏散：模拟路径（演示网格 BFS）· 路线 12 步 · 约 6.67 分钟 · 避开 5 个风险格",
+  "environment_note": "坡度→K_slope · 燃料→K_fuel · 风速→K_wind/风档（参与 FLP 计算）；温湿度为背景信息"
+ },
+ "final_gate": {
+  "pytest": "180 passed",
+  "full_function": "39/39 必过 0 警告",
+  "e2e": "R1-R17 全 PASS（120 断言）",
+  "acceptance_six": "J-1 六场景 6/6（截图 e2e/artifacts/j1）",
+  "executed_at": "2026-09-10"
  }
 }
