@@ -266,3 +266,35 @@ def test_P101_vlm_status_fields_and_error_codes():
     assert result.get("status") == "fallback"
     assert result["adapter_fallback"]["code"] == "vlm_endpoint_unavailable"
     os.environ.pop("FIRE_VLM_ENDPOINT", None)
+
+
+def test_T12_environment_values_drive_flp_via_adaptation():
+    """T12（OPT-P2-01）：固定面积/风速，仅改变跨档坡度或 WorldCover 燃料类别 →
+    实际 FLP 按冻结配置 K 值变化；未知类别回退场景值并标注来源。"""
+    from backend.app.tools.core import build_fire_grid, environment_to_rule_inputs
+
+    # 坡度跨档：10°(k1.0) vs 25°(k1.15) → FLP 按配置变化
+    flat = build_fire_grid(fire_area_m2=1800, wind_speed=3, slope_deg=10,
+                           fuel_type="general_forest", intensity=2)
+    steep = build_fire_grid(fire_area_m2=1800, wind_speed=3, slope_deg=25,
+                            fuel_type="general_forest", intensity=2)
+    assert steep["fire_load_flp"] > flat["fire_load_flp"]
+    assert flat["k_slope"] == 1.0 and steep["k_slope"] == 1.15
+
+    # 燃料类别：Tree Cover(k1.0) vs Grassland(k0.8) → FLP 变化
+    tree = build_fire_grid(fire_area_m2=1800, wind_speed=3, slope_deg=10,
+                           fuel_type="general_forest", intensity=2)
+    grass = build_fire_grid(fire_area_m2=1800, wind_speed=3, slope_deg=10,
+                             fuel_type="sparse_grass", intensity=2)
+    assert tree["fire_load_flp"] > grass["fire_load_flp"]
+
+    # 适配层：Tree Cover/Grassland 显式映射；未知类别回退场景值且如实标注来源
+    tree_env = environment_to_rule_inputs({"terrain": {"slope_deg": 22.5}, "landcover": {"dominant_class": "Tree Cover"}})
+    assert tree_env["fuel_type"] == "general_forest" and tree_env["fuel_source"] == "worldcover-fuel-v1"
+    assert tree_env["slope_source"] == "environment"
+    grass_env = environment_to_rule_inputs({"terrain": {"slope_deg": 5}, "landcover": {"dominant_class": "Grassland"}})
+    assert grass_env["fuel_type"] == "sparse_grass"
+    unknown = environment_to_rule_inputs({"terrain": {}, "landcover": {"dominant_class": "Built-up"}},
+                                         fallback_slope_deg=9, fallback_fuel_type="dense_fuel")
+    assert unknown["fuel_type"] == "dense_fuel" and unknown["fuel_source"] == "scenario"
+    assert unknown["slope_deg"] == 9 and unknown["slope_source"] == "scenario"

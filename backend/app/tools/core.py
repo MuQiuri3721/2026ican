@@ -590,6 +590,42 @@ def analyze_with_vlm(observation: Dict[str, Any] = None, environment: Dict[str, 
     return explanation
 
 
+# WorldCover 类别 → 规则燃料映射（OPT-P2-01，团队仿真约定 worldcover-fuel-v1，非 ESA 消防燃料模型）：
+# 仅 Tree Cover / Grassland 有显式映射；其余类别（Shrubland/耕地/湿地/建成区等）不暗推燃料，
+# dense_fuel 只能来自显式场景。K_fuel 仍从冻结配置 fuel_factors 查表。
+WORLDCOVER_FUEL_MAPPING_V1 = {"Tree Cover": "general_forest", "Grassland": "sparse_grass"}
+WORLDCOVER_FUEL_MAPPING_VERSION = "worldcover-fuel-v1"
+
+
+def environment_to_rule_inputs(environment: Optional[Dict[str, Any]], fallback_slope_deg: float = 12.0,
+                               fallback_fuel_type: str = "general_forest") -> Dict[str, Any]:
+    """环境查询值 → 规则输入适配（OPT-P2-01，确定性，Tool 层职责）。
+
+    优先级：任务绑定的环境数据 → 显式场景回退。坡度取 DEM 实测 terrain.slope_deg；
+    燃料按 WorldCover 主导类别映射（worldcover-fuel-v1），无效/未知类别不暗用默认森林值以外
+    的推定——回退场景值并如实标注来源，界面/报告可追踪到实际系数来源。
+    """
+    env = environment or {}
+    terrain = env.get("terrain") or {}
+    landcover = env.get("landcover") or {}
+    slope = terrain.get("slope_deg")
+    slope_valid = isinstance(slope, (int, float)) and slope >= 0
+    slope_deg = round(float(slope), 2) if slope_valid else float(fallback_slope_deg)
+    dominant = str(landcover.get("dominant_class") or "")
+    fuel_mapped = WORLDCOVER_FUEL_MAPPING_V1.get(dominant)
+    if fuel_mapped:
+        fuel_type, fuel_source = fuel_mapped, WORLDCOVER_FUEL_MAPPING_VERSION
+    else:
+        fuel_type, fuel_source = str(fallback_fuel_type or "general_forest"), "scenario"
+    return {
+        "slope_deg": slope_deg,
+        "fuel_type": fuel_type,
+        "fuel_source": fuel_source,
+        "slope_source": "environment" if slope_valid else "scenario",
+        "landcover_class": dominant or None,
+    }
+
+
 def build_core_tools() -> List[BaseTool]:
     """构建确定性核心工具注册表，兼容旧的函数式 registry。"""
     handlers = {

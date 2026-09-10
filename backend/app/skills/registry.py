@@ -267,11 +267,20 @@ class CandidateGenerationSkill(BaseSkill):
         if not fire.get("fire_load_flp"):
             # 输入兜底：环境抓取失败时 wind_speed 可能为 None，直接进 positive() 会把
             # 工具失败信封（无 data）带进下方硬索引 → KeyError('cell_area_m2') 422（用户实测 2026-09-07）
+            # OPT-P2-01：坡度/燃料优先取任务绑定环境的适配值（DEM 实测坡度 + WorldCover
+            # 类别映射 worldcover-fuel-v1），无效/未知回退场景值并标注来源——
+            # 此前硬取场景 slope_deg/fuel_type，实时环境值进不了 FLP 计算。
+            from ..tools.core import environment_to_rule_inputs
+            env_inputs = environment_to_rule_inputs(
+                (context.get("environment_assessment") or {}).get("environment"),
+                fallback_slope_deg=state["scene"].get("slope_deg", 12),
+                fallback_fuel_type=state["scene"].get("fuel_type", "general_forest"),
+            )
             grid = self.registry.execute("build_fire_grid", {
                 "fire_area_m2": fire.get("fire_area_m2") or 1800,
                 "wind_speed": fire.get("wind_speed") or 0,
-                "slope_deg": state["scene"].get("slope_deg", 12),
-                "fuel_type": state["scene"].get("fuel_type", "general_forest"),
+                "slope_deg": env_inputs["slope_deg"],
+                "fuel_type": env_inputs["fuel_type"],
                 "intensity": min(4, max(1, assessment.get("level", 2))),
             })
             grid_data = grid.get("data") or {}
@@ -279,6 +288,8 @@ class CandidateGenerationSkill(BaseSkill):
             if fire["fire_load_flp"] is None:
                 raise ToolError("fire_grid_failed", f"火情网格计算失败: {grid.get('error') or '工具无有效返回'}")
             fire["fire_grid"] = {key: grid_data.get(key) for key in ("cell_area_m2", "cell_count", "intensity", "k_fuel", "k_wind", "k_slope", "fuel_type")}
+            fire["fire_grid"]["slope_source"] = env_inputs["slope_source"]
+            fire["fire_grid"]["fuel_source"] = env_inputs["fuel_source"]
             fire["growth_flp_per_hour"] = round(float(fire["fire_load_flp"]) * float(fire.get("growth_rate", 0.42)), 2)
         plan = deterministic_v1_dispatch(
             state,
