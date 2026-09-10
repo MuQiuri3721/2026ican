@@ -238,6 +238,12 @@ def test_monitor_flags_emergency_units_below_15_percent():
     analysis = _low_soc_monitor_analysis()
     analysis["dispatch_plan"]["selected_uavs"] = ["E1"]
     analysis["fleet"][0]["soc"] = 26
+    # OPT-P0-02 修复返航相位后，短去程的 E1 会提前落地转充电（SOC 回升，不再跌破 15）；
+    # 应急标记改用「长去程返航途中跌破」场景：outbound=8 分钟，5 分钟后 SOC≈26-22.5=3.5。
+    analysis["fleet"][0]["status"] = "returning"
+    analysis["fleet"][0]["_phase_elapsed"] = 0.0
+    analysis["fleet"][0]["_phase_minutes"] = 8.0
+    analysis["fleet"][0]["_outbound_minutes"] = 8.0
     result = simulate_monitor(analysis, elapsed_minutes=5, extinguishing_liters=0)
     assert "emergency_units" in result and "emergency_soc_percent" in result
     # 高耗电率下 5 分钟内 SOC 跌破 15%
@@ -338,7 +344,9 @@ def test_returning_uav_progresses_across_monitor_rounds():
     from backend.app.pipeline import simulate_monitor
     analysis = _low_soc_monitor_analysis()
     analysis["fleet"][0]["agent_remaining"] = 4  # 一分钟喷完即返航
-    first = simulate_monitor(analysis, elapsed_minutes=3, extinguishing_liters=0)
+    # OPT-P0-02 修复返航相位后（返航=去程 0.5 分钟而非继承的 5 分钟），
+    # 3 分钟末已推进到服务相位——返航段本身在第 2 分钟末出现且仅持续 0.5 分钟。
+    first = simulate_monitor(analysis, elapsed_minutes=2, extinguishing_liters=0)
     e1 = next(d for d in first["next_fleet"] if d["uav_id"] == "E1")
     assert e1["status"] == "returning"
 

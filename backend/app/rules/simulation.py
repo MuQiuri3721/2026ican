@@ -23,6 +23,7 @@
 相位进度（_phase_elapsed/_phase_minutes/_outbound_minutes）与服务计时器
 （_swap_left/_refill_left/_c6_left）都挂在无人机记录上，随机队快照跨轮持久。
 """
+import math
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -110,6 +111,17 @@ def create_simulation_state(
     }
 
 
+def _begin_return(drone: Dict[str, Any]) -> None:
+    """进入返航相位（P0-02）：清零相位进度，返航时长=去程时长（对称航程假设）。
+
+    此前 working→returning 不重置相位、返航继承 flying 完成时硬编码的
+    5.0 分钟——单程 1 分钟与 8 分钟的返航阶段同为 5 分钟。
+    """
+    drone["status"] = "returning"
+    drone["_phase_elapsed"] = 0.0
+    drone["_phase_minutes"] = max(0.5, float(drone.get("_outbound_minutes") or 4.0))
+
+
 def _relaunch(state: Dict[str, Any], drone: Dict[str, Any], uid: str) -> None:
     """补给/换电/充电完成后的重新出动。
 
@@ -118,8 +130,21 @@ def _relaunch(state: Dict[str, Any], drone: Dict[str, Any], uid: str) -> None:
     - 电量：SOC 低于返航硬约束（25%）不得复飞——无备用电池时转慢充，
       此前 12% SOC 的机被复飞冲进火场、当拍即触发返航，空耗一个往返。
     """
-    soc_ok = float(drone.get("soc", 0)) >= state.get("return_soc_percent", 25.0)
+    soc = float(drone.get("soc", 0))
+    soc_ok = soc >= state.get("return_soc_percent", 25.0)
     agent_ok = float(drone.get("agent_remaining", 0)) > 0
+    # 完整航次 SOC 预算（P0-02）：复飞须保证「去+满载作业+回」结束后预计 SOC
+    # 仍 ≥ 返航硬约束——仅当前 SOC 达标而航次预算不足的机不得复飞（转充电待命）。
+    # 航次耗电 = 2×去程分钟（巡航）+ 满载作业分钟（按容量/喷射速率估计，耗电+5%）。
+    if soc_ok and agent_ok and uid in state["selected_ids"]:
+        outbound = max(0.5, float(drone.get("_outbound_minutes") or 1.0))
+        rate = float(drone.get("energy_rate_percent_per_hour", 180))
+        dmod = str(drone.get("payload_module") or state["module"])
+        dcap, drate = _module_agent(dmod)
+        work_minutes = math.ceil(dcap / drate) if drate > 0 else 0
+        projected = soc - (2 * outbound + work_minutes * 1.05) * rate / 60.0
+        if projected < state.get("return_soc_percent", 25.0):
+            soc_ok = False
     if uid in state["selected_ids"] and agent_ok and soc_ok:
         outbound = max(0.5, float(drone.get("_outbound_minutes") or 1.0))
         drone["status"] = "flying"
@@ -162,15 +187,15 @@ def advance_one_minute(state: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str,
         elif status == "working":
             spray_cap = state["spray_cap"]
             if spray_cap is not None and state["consumed"] >= spray_cap:
-                drone["status"] = "returning"
+                _begin_return(drone)
                 continue
             if drone["soc"] < 25:
                 state["soc_return_risk"] = True
-                drone["status"] = "returning"
+                _begin_return(drone)
                 continue
             agent = float(drone.get("agent_remaining", 0))
             if agent <= 0:
-                drone["status"] = "returning"
+                _begin_return(drone)
                 continue
             # 按各机自身 payload_module 计量（评审问题5）：W20 用升、C6 用千克，
             # κ 按「本机模块 × 火型」查表——水打电气火 κ=0 无效，不得混账。
@@ -194,7 +219,7 @@ def advance_one_minute(state: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str,
             drone["soc"] = max(0.0, round(drone["soc"] - drain, 2))
             drone["_soc_used"] = float(drone.get("_soc_used", 0.0)) + drain
             if drone["agent_remaining"] <= 0 or drone["soc"] < 25:
-                drone["status"] = "returning"
+                _begin_return(drone)
                 if drone["soc"] < 25:
                     state["soc_return_risk"] = True
         elif status == "returning":
@@ -310,7 +335,9 @@ def advance_one_minute(state: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str,
     state["minute"] += 1
     state["minute_suppression"] = minute_suppression
     # 火势净更新：比例增长率按分钟复利（分母是方案基线 → rate 为常数，余烬不复燃）
-    state["fire_load_flp"] = max(0.0, state["fire_load_flp"] * (1.0 + float(plan.get("growth_rate_per_hour") or 0.0) / 60.0) - minute_suppression)
+    _rate = plan.get("growth_rate_per_hour")
+    _rate = float(_rate) if _rate is not None else 0.0  # 零值语义：显式 0 合法，仅 None 视为未提供
+    state["fire_load_flp"] = max(0.0, state["fire_load_flp"] * (1.0 + _rate / 60.0) - minute_suppression)
     return {
         "minute": state["minute"],
         "minute_suppression": round(minute_suppression, 4),

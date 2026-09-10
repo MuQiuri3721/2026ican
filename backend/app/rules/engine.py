@@ -200,7 +200,11 @@ def score_candidate_plan(control_minutes: Optional[float], residual_flp: float, 
     config = v1_config()
     weights = config.get("scoring_weights") or {"time": 0.4, "residual": 0.3, "energy": 0.15, "material": 0.1, "change": 0.05}
     refs = config.get("scoring_refs") or {"time_ref_minutes": 120, "energy_ref_per_uav": 100, "material_ref_liters": 80, "change_ref_rounds": 4}
-    time_norm = min(max((control_minutes or refs["time_ref_minutes"] * 2) / refs["time_ref_minutes"], 0), 1) if control_minutes else 1.0
+    if control_minutes is not None:
+        # 0 分钟 = 立即控制（最优）；None 才是缺失（最差档）
+        time_norm = min(max(control_minutes / refs["time_ref_minutes"], 0), 1)
+    else:
+        time_norm = 1.0
     residual_norm = min(max(residual_flp / max(fire_load_flp, 1), 0), 1)
     energy_norm = min(max(energy_total / max(uav_count * refs["energy_ref_per_uav"], 1), 0), 1)
     material_norm = min(max(material_used / refs["material_ref_liters"], 0), 1)
@@ -362,7 +366,12 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
     # 重规划」更新；方案同时落 growth_baseline_flp（生成时点负荷）。approve 盖章的
     # replan_trigger_baseline_flp 只作重规划触发线，不再参与增长计算——审批/重规划
     # 均不得改变火势自然增长速度。
-    growth_rate_per_hour = float(fire.get("growth_rate_per_hour") or fire.get("growth_rate", 0.42))
+    # 零值语义（P0-01）：0 是合法增长率（新观测覆盖），只有 None/缺失才回退——
+    # 此前 `or` 链把显式 0 跳回旧研判 0.42，100 FLP 无压制一分钟仍涨到 100.7。
+    raw_rate = fire.get("growth_rate_per_hour")
+    if raw_rate is None:
+        raw_rate = fire.get("growth_rate", 0.42)
+    growth_rate_per_hour = float(raw_rate)
     growth_flp_per_hour = fire_load * growth_rate_per_hour
     wind_speed = float(fire.get("wind_speed", scene.get("wind_speed", 0)))
     band = resolve_wind_band(wind_speed)
@@ -425,6 +434,8 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
     if time_limit is not None:
         try:
             time_limit = float(time_limit)
+            if math.isnan(time_limit) or math.isinf(time_limit) or time_limit < 0:
+                time_limit = None  # 非法时限拒绝（0 = 立即截止，合法）
         except (TypeError, ValueError):
             time_limit = None
     time_gap = None
@@ -449,8 +460,11 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
     # maintain_only=平均压制追平增长（可维持不扩散，但时限内灭不掉，属"慢压"，加速需增援）；
     # cannot_control=压制追不上增长（必须增援）。此前只有 can_control 布尔值，
     # "慢压可维持"与"完全压不住"两种局面共用 False，无法向指挥员区分。
-    if simulation["controlled"]:
+    if simulation["controlled"] and time_gap is None:
         control_verdict = "can_control"
+    elif simulation["controlled"]:
+        # 方案本身可控但超出时限：三态归入「时限内未完成」，不与 can_control=False 矛盾
+        control_verdict = "maintain_only"
     elif simulation.get("suppression_flp", 0.0) / max(simulation.get("minutes_used", 0), 1) >= growth_rate_per_hour * fire_load / 60.0:
         control_verdict = "maintain_only"
     else:
@@ -599,11 +613,16 @@ def simulate_monitor(
     # 场景/观测层的比例增长率，只随「新观测重规划」更新（replan 携带、approve 不碰）；
     # approve 盖章的 replan_trigger_baseline_flp 只做重规划触发线（趋势闸门/失控安全网）。
     # 旧档回退链：显式比率 → growth_flp_per_hour/growth_baseline_flp → 研判 growth_rate。
-    growth_rate_per_hour = float(
-        dispatch.get("growth_rate_per_hour")
-        or (float(dispatch.get("growth_flp_per_hour") or 0) / max(float(dispatch.get("growth_baseline_flp") or dispatch.get("base_fire_load_flp") or load_before), 1e-6))
-        or float(fire.get("growth_rate", 0.42))
-    )
+    # 零值语义（P0-01）：显式 0 是合法增长率（新观测覆盖），仅 None/缺失走回退链——
+    # 此前 `or` 链把显式 0 跳回研判旧值，无压制时 100 FLP 一分钟仍涨到 100.7。
+    _explicit_rate = dispatch.get("growth_rate_per_hour")
+    if _explicit_rate is None:
+        _flp_rate = dispatch.get("growth_flp_per_hour")
+        _baseline = dispatch.get("growth_baseline_flp") or dispatch.get("base_fire_load_flp") or load_before
+        _explicit_rate = (float(_flp_rate) / max(float(_baseline), 1e-6)) if _flp_rate is not None else None
+    if _explicit_rate is None:
+        _explicit_rate = fire.get("growth_rate", 0.42)
+    growth_rate_per_hour = float(_explicit_rate)
     growth_flp_per_hour = round(growth_rate_per_hour * load_before, 2)
     # 多用途支援机（multi_role）参战时计入可用灭火机数（架构纪要§五扩展）
     available_drones = sum(1 for drone in fleet if (drone.get("subgroup") == "suppression" or drone.get("multi_role")) and drone.get("soc", 0) >= 25 and drone.get("health", 0) >= 60)

@@ -356,10 +356,18 @@ def test_8_fleet_2_6_4_full_scenario():
     assert "E3" not in plan["firefighting_uavs"]
     # 备选组合出现 5/6 架规模（逐数量枚举生效）
     assert max(len(a["selected_uavs"]) for a in plan["alternative_plan"]) > 4
-    # 资源诚实战线：600 FLP 超出净处置能力 → 不可控 + 三态裁决 + 有效 FLP 缺口，不强行成功
-    assert plan["can_control"] is False
-    assert plan["control_verdict"] in {"maintain_only", "cannot_control"}, plan["control_verdict"]
-    assert any(gap.get("resource") == "effective_flp" and gap.get("resource_gap") for gap in plan["resource_gap"])
+    # OPT-P0-02 修复返航相位后（返航=去程 1.75 分钟而非继承的 5 分钟），周转恢复正常：
+    # 600 FLP 可在 24 轮窗口内压完（21 轮），结论翻转为可控——旧断言锁的是返航 bug 的数字。
+    assert plan["can_control"] is True
+    assert plan["control_verdict"] == "can_control"
+    assert plan["scoring"]["simulation"]["controlled"] is True
+    # 资源诚实战线（换更大的火保持覆盖）：2000 FLP 远超净处置能力 → 不可控 + 三态裁决 + 有效 FLP 缺口，不强行成功
+    huge = {"fire_type": "vegetation", "fire_area_m2": 26000, "fire_load_flp": 2000.0,
+            "growth_flp_per_hour": 840.0, "growth_rate": 0.42, "wind_speed": 3.0}
+    plan_huge = deterministic_v1_dispatch(state, huge, "absent", constraints={"max_drones": 8})
+    assert plan_huge["can_control"] is False
+    assert plan_huge["control_verdict"] in {"maintain_only", "cannot_control"}, plan_huge["control_verdict"]
+    assert any(gap.get("resource") == "effective_flp" and gap.get("resource_gap") for gap in plan_huge["resource_gap"])
     # 小火仍然可控（J 评分时间权重主导，组合规模交由评分决定，不强行限定 ≤4）
     small = {"fire_type": "vegetation", "fire_area_m2": 300, "fire_load_flp": 30.0,
              "growth_flp_per_hour": 12.6, "growth_rate": 0.42, "wind_speed": 3.0}
@@ -367,3 +375,96 @@ def test_8_fleet_2_6_4_full_scenario():
     assert plan_small["can_control"] is True
     assert plan_small["control_verdict"] == "can_control"
     assert 1 <= len(plan_small["firefighting_uavs"]) <= 8
+
+
+# ---------- OPT-P0 下一阶段方案回归（docs/下一阶段优化与修正方案.md） ----------
+
+def test_T02_return_phase_uses_symmetric_outbound():
+    """T02（OPT-P0-02）：返航时长必须等于去程时长（对称航程假设）。
+
+    修复前 working→returning 不重置相位、返航继承 flying 完成时硬编码的
+    5.0 分钟——单程 1 分钟与 8 分钟的返航阶段同为 5 分钟。
+    """
+    for outbound in (1.0, 8.0):
+        fleet = [_drone("E1", soc=96.0, agent=20.0)]
+        analysis = _analysis(fleet, fire_load=120.0, outbound=outbound)
+        total = int(outbound) + 5 + int(outbound) + 2
+        statuses, _ = _minute_statuses(analysis, total)
+        seq = [s.get("E1") for s in statuses]
+        if int(outbound) > 1:
+            assert seq[int(outbound) - 2] == "flying", f"outbound={outbound}: 去程中途应仍在飞行"
+        assert seq[int(outbound) - 1] in ("flying", "working"), f"outbound={outbound}: 去程末分钟应为飞行/转换点"
+        assert seq[int(outbound)] == "working", f"outbound={outbound}: 去程完成后应进入作业"
+        returning_minutes = sum(1 for s in seq if s == "returning")
+        assert returning_minutes == int(outbound), (
+            f"outbound={outbound}: 返航应持续 {int(outbound)} 分钟，实际 {returning_minutes}")
+
+
+def test_T06_relaunch_requires_full_sortie_soc_budget():
+    """T06（OPT-P0-02）：复飞须通过完整航次 SOC 预算——当前 SOC 达标但
+    去程+满载作业+回程耗电后预计低于返航硬约束（25%）时不得复飞；
+    短航次同 SOC 仍正常复飞（对照）。"""
+    from backend.app.rules.simulation import _relaunch, create_simulation_state
+
+    plan = {"firefighting_uavs": ["E1", "E2"], "selected_uavs": ["E1", "E2"],
+            "material_module": "water_20l", "growth_rate_per_hour": 0.42,
+            "battery_plan": [{"uav_id": "E1", "outbound_minutes": 8.0},
+                             {"uav_id": "E2", "outbound_minutes": 3.0}]}
+    # 满电 E1：outbound=8 的完整航次耗电 2×8×4.5 + 5×4.725 ≈ 95.6，预计返航 SOC≈4.4% < 25%
+    long_e1 = _drone("E1", soc=100.0, agent=20.0)
+    long_e1["_outbound_minutes"] = 8.0
+    # 满电 E2：outbound=3 的完整航次耗电 ≈50.6，预计返航 SOC≈49.4% ≥ 25%
+    short_e2 = _drone("E2", soc=100.0, agent=20.0)
+    short_e2["_outbound_minutes"] = 3.0
+    state = create_simulation_state([long_e1, short_e2], _inventory(battery_packs=0), plan, 120.0)
+    state["fleet"][0]["status"] = "available"
+    state["fleet"][1]["status"] = "available"
+
+    _relaunch(state, state["fleet"][0], "E1")
+    assert state["fleet"][0]["status"] != "flying", "完整航次预算不足的机不得复飞"
+
+    _relaunch(state, state["fleet"][1], "E2")
+    assert state["fleet"][1]["status"] == "flying", "短航次满电机应正常复飞"
+
+
+def test_T03_zero_growth_observation_overrides_old_rate():
+    """T03（OPT-P0-01）：方案增长率显式 0 不得被旧研判 0.42 覆盖；
+    新观测增长率 0 同样生效（无压制时负荷保持不变）。"""
+    fleet = [_drone("E1", soc=96.0, agent=0.0, status="available")]
+    fleet[0]["agent_remaining"] = 0.0  # 无药剂 → 无压制，纯自然增长
+    analysis = _analysis(fleet, fire_load=100.0, growth=0.42, outbound=3.0)
+    analysis["dispatch_plan"]["growth_rate_per_hour"] = 0  # 新方案显式 0
+    results = _drive(analysis, [1])
+    after = results[-1]["next_fire_load_flp"]
+    assert after == pytest.approx(100.0, abs=0.01), f"增长率 0 被回退覆盖：100 → {after}"
+
+    # 新观测增长率 0 单独更新研判（fire_assessment.growth_rate）也生效：
+    # 方案各显式字段全部缺失 → 回退链落到研判 growth_rate=0（而非默认 0.42）
+    fleet2 = [_drone("E1", soc=96.0, agent=0.0)]
+    analysis2 = _analysis(fleet2, fire_load=100.0, growth=0.42, outbound=3.0)
+    analysis2["fire_assessment"]["growth_rate"] = 0  # 新观测覆盖
+    del analysis2["dispatch_plan"]["growth_rate_per_hour"]
+    del analysis2["dispatch_plan"]["growth_flp_per_hour"]
+    del analysis2["dispatch_plan"]["growth_baseline_flp"]
+    results2 = _drive(analysis2, [1])
+    assert results2[-1]["next_fire_load_flp"] == pytest.approx(100.0, abs=0.01)
+
+
+def test_T11_zero_target_minutes_no_contradiction():
+    """T11（OPT-P0-01/P0-04）：target_minutes=0（立即截止）时可控方案必然超时限 →
+    can_control=False 且三态不得渲染「可控制」，时间缺口如实输出；负值/NaN 拒绝。"""
+    fleet = [_drone("E1", soc=96.0), _drone("E2", soc=95.0)]
+    analysis = _analysis(fleet, fire_load=30.0, growth=0.42, outbound=3.0)
+    state = {"fleet": analysis["fleet"], "inventory": analysis["inventory"],
+             "scene": analysis["scene"], "environment": analysis["environment"]}
+    plan = deterministic_v1_dispatch(state, dict(analysis["fire_assessment"], fire_load_flp=30.0),
+                                     "absent", constraints={"target_minutes": 0})
+    assert plan["can_control"] is False, "target_minutes=0 时不可能时限内可控"
+    assert plan["control_verdict"] != "can_control"
+    assert any(g.get("resource") == "time_limit" for g in plan["resource_gap"])
+
+    for bad in (-5, "nan"):
+        plan_bad = deterministic_v1_dispatch(state, dict(analysis["fire_assessment"], fire_load_flp=30.0),
+                                             "absent", constraints={"target_minutes": bad})
+        assert not any(g.get("resource") == "time_limit" for g in plan_bad["resource_gap"]), (
+            f"非法时限 {bad} 应被拒绝而非产生缺口")
