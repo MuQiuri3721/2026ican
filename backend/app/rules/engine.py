@@ -314,7 +314,10 @@ def _evaluate_water_plan(scene: Dict[str, Any], inventory: Dict[str, Any], base_
     ⑤循环后 SOC：满载作业能耗率 270%/h ×1.05 折算「飞去+取水 8min」全程，≥返航线 25%
     ⑥节省≥5min：基地往返架次(2×火点↔基地 + 补水4min) − 就地往返架次(2×火点↔水源 + 取水8min)
     """
-    source = (inventory.get("water_sources") or scene.get("water_sources") or [{}])[0]
+    sources = (inventory.get("water_sources") or scene.get("water_sources") or [])
+    source = sources[0] if sources else {}
+    # 选中水源 ID（OPT-P2-02）：osm_id 优先；场景演示水源回退 scene 场景 ID 并如实标注
+    source_id = source.get("osm_id") or (f"scene:{source.get('name', 'water')}#{index}" if (index := sources.index(source)) is not None else "scene:water#0")
     config = v1_config()
     refill_cfg = config.get("refill_minutes") or {}
     base_fill = float(refill_cfg.get("base", 4))
@@ -335,7 +338,8 @@ def _evaluate_water_plan(scene: Dict[str, Any], inventory: Dict[str, Any], base_
     }
     detail = {"checks": checks, "saving_minutes": round(saving_minutes, 1), "soc_after_cycle": round(soc_after_cycle, 1)}
     if all(checks.values()):
-        return {"mode": "onsite", "source_id": source.get("name"), "fill_minutes": onsite_fill,
+        return {"mode": "onsite", "source_id": source_id, "source_name": source.get("name"),
+                "fill_minutes": onsite_fill,
                 "distance_m": distance_m, "reason": "就地水源通过六条件评估且节省≥5分钟", **detail}
     failed = "、".join(name for name, ok in checks.items() if not ok)
     return {"mode": "base", "fill_minutes": base_fill,
@@ -580,7 +584,7 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
         "wind_band": band,
         "scoring": {"method": "J=0.40T+0.30B+0.15E+0.10M+0.05N", "lower_is_better": True, "chosen": chosen["score"], "simulation": {key: simulation[key] for key in ("controlled", "rounds_used", "stalled_reason", "swaps", "refills")}},
         "water_source_plan": _evaluate_water_plan(scene, inventory, base_distance_m=base_distance_m),
-        "replan_trigger": ["fire_load_increase_over_20_percent", "wind_band_changed", "soc_below_return_threshold", "agent_insufficient", "people_status_changed", "signal_below_threshold"],
+        "replan_trigger": ["fire_load_increase_over_20_percent", "wind_band_changed", "soc_below_return_threshold", "agent_insufficient", "people_status_changed", "signal_below_threshold", "water_source_invalid"],
         "estimated_control_time": {"earliest_minutes": window[0] if window else None, "latest_minutes": window[1] if window else None, "window_minutes": window, "unit": "min", "simulated": simulation["controlled"]},
         "estimated_minutes": window[1] if window else None,
         "alternative_plan": alternatives,
@@ -589,10 +593,31 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
     }
 
 
-def _pick_water_source(stock: Dict[str, Any], quantity: float) -> Optional[Dict[str, Any]]:
-    """规则 V1 §5.3：从库存水源中挑一处可用且安全、剩余容量足够的水源（就近优先）。"""
-    sources = [s for s in (stock.get("water_sources") or [])
-               if s.get("available") and s.get("safe", True) and float(s.get("capacity_liters", 0)) >= quantity]
+def _pick_water_source(stock: Dict[str, Any], quantity: float,
+                       approved_source_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """规则 V1 §5.3：从库存水源中挑一处可用且安全、剩余容量足够的水源（就近优先）。
+
+    执行约束（OPT-P2-02）：
+    - 安全未核验（safe is None/False）不放行——unknown ≠ true，防未知水源放行；
+    - 容量未知（null）不放行（未知 ≠ 充足），0 表示已知耗尽；
+    - 已批准 source_id 时只允许该水源——失效返回 None（由调用方记水源失效并触发
+      重规划），禁止临时换成未经批准的候选。
+    """
+    def _sid(source: Dict[str, Any]) -> str:
+        return str(source.get("osm_id") or f"scene:{source.get('name', 'water')}")
+
+    sources = []
+    for source in stock.get("water_sources") or []:
+        if approved_source_id is not None and _sid(source) != str(approved_source_id):
+            continue  # 只用已批准水源，失效不换候选
+        if not source.get("available"):
+            continue
+        if source.get("safe") is not True:  # None=未核验 / False=不安全，均不放行
+            continue
+        capacity = source.get("capacity_liters")
+        if capacity is None or float(capacity) < quantity:  # 未知容量不放行
+            continue
+        sources.append(source)
     sources.sort(key=lambda s: float(s.get("distance_m", 1e9)))
     return sources[0] if sources else None
 
@@ -734,6 +759,9 @@ def simulate_monitor(
         triggers.append("soc_below_return_threshold")
     if stalled_agent:
         triggers.append("agent_insufficient")
+    if state.get("water_source_invalid"):
+        # OPT-P2-02：已批准就地取水水源失效——不临时换候选，触发重规划重新评估
+        triggers.append("water_source_invalid")
     # BE-14（规则1 §10 关键事件）：任务机信号低于阈值（默认 60%）触发重规划评估——
     # 此前 signal 字段只透传不判定，「通信低于阈值」事件从未存在。
     comm_floor = float(v1_config().get("comm_signal_floor_percent", 60))

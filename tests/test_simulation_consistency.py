@@ -543,3 +543,48 @@ def test_T07_agent_ledgers_conserved_across_refill_cycles():
     # 分键计量（BE-13）：水入 consumed_water、C6 千克入 consumed_co2，不混账
     assert state["consumed_water"] == pytest.approx(4.0, abs=0.01), "E1 喷洒 4L 记水账"
     assert state["consumed_co2"] == pytest.approx(1.5, abs=0.01), "E2 喷洒 1.5kg 记 CO₂ 账"
+
+
+def test_T13_water_candidate_ids_stable_and_unverified_not_executable():
+    """T13（OPT-P2-02）：同名水源 ID 不同且稳定；未核验（safe=None）/未知容量候选不放行。"""
+    from backend.app.rules.engine import _pick_water_source
+
+    stock = {"water_sources": [
+        {"name": "无名水塘", "osm_id": "w111", "available": True, "safe": None,
+         "capacity_liters": None, "distance_m": 100},   # 未核验 + 未知容量
+        {"name": "无名水塘", "osm_id": "w222", "available": True, "safe": True,
+         "capacity_liters": 300, "distance_m": 200},    # 同名但不同 ID，已核验
+        {"name": "枯水池", "osm_id": "w333", "available": True, "safe": True,
+         "capacity_liters": 0, "distance_m": 50},       # 已知耗尽（0）
+    ]}
+    picked = _pick_water_source(stock, 20.0)
+    assert picked is not None and picked["osm_id"] == "w222", "只能取已核验且容量充足的水源"
+    # 已批准 ID 约束：批准 w222 时不会错选同名 w111；批准未核验的 w111 时取不到水
+    assert _pick_water_source(stock, 20.0, approved_source_id="w222")["osm_id"] == "w222"
+    assert _pick_water_source(stock, 20.0, approved_source_id="w111") is None
+
+
+def test_T14_approved_water_source_failure_triggers_replan_not_swap():
+    """T14（OPT-P2-02）：规划选定的水源 A 失效后，执行不得临时换成未批准的 B——
+    标记 water_source_invalid 并触发重规划评估。"""
+    from backend.app.rules.simulation import advance_one_minute, create_simulation_state
+
+    # 满药出动（空载禁飞守卫），作业耗电跌破返航线 → servicing 补药时才走水源选择
+    fleet = [_drone("E1", soc=30.0, agent=20.0, status="available")]
+    plan = {"firefighting_uavs": ["E1"], "selected_uavs": ["E1"],
+            "material_module": "water_20l", "growth_rate_per_hour": 0.0,
+            "water_source_plan": {"mode": "onsite", "source_id": "wA"},
+            "battery_plan": [{"uav_id": "E1", "outbound_minutes": 0.5}]}
+    stock = _inventory(water_liters=0.0, battery_packs=48,
+                       water_sources=[
+                           {"name": "水源A", "osm_id": "wA", "available": True, "safe": True,
+                            "capacity_liters": 0.0, "distance_m": 100},   # 批准后耗尽（0=已知耗尽）
+                           {"name": "水源B", "osm_id": "wB", "available": True, "safe": True,
+                            "capacity_liters": 500.0, "distance_m": 150},  # 未批准的可用候选
+                       ])
+    state = create_simulation_state(fleet, stock, plan, 40.0, fire_type="vegetation")
+    for _ in range(10):
+        advance_one_minute(state, plan)
+    e1 = next(d for d in state["fleet"] if d["uav_id"] == "E1")
+    assert e1["agent_remaining"] == 0.0, "不得临时取用未批准水源 B 补药"
+    assert state.get("water_source_invalid") is True, "批准水源失效必须显式标记"

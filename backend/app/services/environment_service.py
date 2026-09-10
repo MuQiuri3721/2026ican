@@ -430,6 +430,13 @@ def get_water_sources(
         source_type = classify_water(tags)
 
         features.append({
+            # 稳定 ID（OPT-P2-02）：OSM 对象类型+对象 ID，不随名称/排序变化；
+            # OSM 水体默认是「候选」（unverified）——地理存在 ≠ 可取水。
+            "osm_id": f"{element.get('type', 'n')}{element.get('id')}",
+            "provider": "osm",
+            "verification_status": "unverified",
+            "safety_status": None,
+            "capacity_liters": None,  # 未知容量存 null；0 表示已知耗尽
             "name": water_name(tags, source_type),
             "type": source_type,
             "latitude": round(float(lat), 6),

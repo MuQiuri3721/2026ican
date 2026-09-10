@@ -393,6 +393,8 @@ Query：`once`（可选，`1` = 仅推送当前事件快照后结束，供一次
 | 文件 | 角色 | 变更规则 |
 |---|---|---|
 | `data/scene.json` | 固定演示场景（风、坡度、燃料、火点、水源） | 视同契约（CONTRIBUTING 6.3） |
+
+**水源候选字段（OPT-P2-02，2026-09-10）**：OSM 水体默认 `verification_status="unverified"`、`provider="osm"`、`osm_id="<type><id>"`（稳定 ID，不随名称/排序变化）、`safety_status=null`（未知≠不安全）、`capacity_liters=null`（未知容量；0=已知耗尽）。执行约束：安全未核验或容量未知的候选**不放行**；`dispatch_plan.water_source_plan.source_id` 为已批准水源，执行侧只允许该水源，失效（耗尽/条件不再满足）时置 `water_source_invalid` 触发重规划评估，**禁止临时换成未批准候选**。演示场景（scene.json）水源为显式核验态（`verification_source="demo-fixture"`）。规划 `water_source_plan.source_id`：osm_id 优先，场景演示水源回退 `scene:<name>#<index>`。
 | `data/fleet.json` | 2+6+4 初始机群（R1–R2、E1–E6、S1–S4，S3/S4 multi_role） | 同上 |
 | `data/inventory.json` | 初始库存 | 同上 |
 | `data/vision_observations.json` | 视觉 fixture（default / small-fire） | YOLO 接入的字段对齐基准 |

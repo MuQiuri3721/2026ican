@@ -606,8 +606,9 @@ def environment_to_rule_inputs(environment: Optional[Dict[str, Any]], fallback_s
     的推定——回退场景值并如实标注来源，界面/报告可追踪到实际系数来源。
     """
     env = environment or {}
-    terrain = env.get("terrain") or {}
-    landcover = env.get("landcover") or {}
+    # 类型防御：demo 场景的 terrain 是描述字符串（"丘陵"），real 模式才是含 slope_deg 的 dict
+    terrain = env.get("terrain") if isinstance(env.get("terrain"), dict) else {}
+    landcover = env.get("landcover") if isinstance(env.get("landcover"), dict) else {}
     slope = terrain.get("slope_deg")
     slope_valid = isinstance(slope, (int, float)) and slope >= 0
     slope_deg = round(float(slope), 2) if slope_valid else float(fallback_slope_deg)

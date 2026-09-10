@@ -27,7 +27,11 @@
         "y": -20
       },
       "latitude": 32.0701,
-      "longitude": 118.8432
+      "longitude": 118.8432,
+      "safe": true,
+      "capacity_liters": 1200.0,
+      "verification_status": "verified",
+      "verification_source": "demo-fixture"
     }
   ]
 }

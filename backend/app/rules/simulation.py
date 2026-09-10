@@ -106,6 +106,9 @@ def create_simulation_state(
         "base_refill_minutes": float(refill_cfg.get("base", 4)),
         "onsite_refill_minutes": float(refill_cfg.get("onsite", 8)),
         "return_soc_percent": float(config.get("return_soc_percent", 25)),
+        # 已批准就地取水水源（OPT-P2-02）：执行只允许该水源，失效不临时换候选
+        "approved_water_source_id": (plan.get("water_source_plan") or {}).get("source_id"),
+        "water_source_invalid": False,
         # BE-14：充电速率读冻结配置（基地 base_soc_per_hour；前向点 60%/h 留待前向补能流程）
         "base_charge_per_minute": float(charging_cfg.get("base_soc_per_hour", 100)) / 60.0,
     }
@@ -272,7 +275,10 @@ def advance_one_minute(state: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str,
                         drone["_refill_count"] = int(drone.get("_refill_count", 0)) + 1
                     else:
                         # 基地不足 → 就地取水（规则 V1 §5.3）：扣水源容量，装满后归队
-                        source = _pick_water_source(stock, dcap)
+                        source = _pick_water_source(stock, dcap, state.get("approved_water_source_id"))
+                        if source is None and state.get("approved_water_source_id") is not None:
+                            # 已批准水源失效（耗尽/不再满足条件）：不临时换候选，标记失效触发重规划
+                            state["water_source_invalid"] = True
                         if source is not None:
                             source["capacity_liters"] = round(float(source.get("capacity_liters", 0)) - dcap, 2)
                             drone["agent_remaining"] = dcap
