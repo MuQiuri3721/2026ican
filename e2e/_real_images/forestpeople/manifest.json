@@ -1,0 +1,191 @@
+[
+ {
+  "category": "forest_far",
+  "file": "forest_far_1.jpg",
+  "query": "原始森林 航拍 远眺 山林",
+  "source_url": "https://pic.vjshi.com/2022-07-12/826eb886fe254074b7a93f18c80ba3c9/00002.jpg?x-oss-process=style/watermark",
+  "width": 3840,
+  "height": 2160,
+  "bytes": 1542813
+ },
+ {
+  "category": "forest_far",
+  "file": "forest_far_2.jpg",
+  "query": "原始森林 航拍 远眺 山林",
+  "source_url": "https://img.redocn.com/sheying/20190614/hangpaidaxinganlingyuanshisenlin_10410563.jpg",
+  "width": 700,
+  "height": 497,
+  "bytes": 198586
+ },
+ {
+  "category": "forest_far",
+  "file": "forest_far_3.jpg",
+  "query": "原始森林 航拍 远眺 山林",
+  "source_url": "https://pic.nximg.cn/file/20180126/13871900_121417394000_2.jpg",
+  "width": 1024,
+  "height": 545,
+  "bytes": 428709
+ },
+ {
+  "category": "forest_near",
+  "file": "forest_near_1.jpg",
+  "query": "森林 近景 树木 林间小路",
+  "source_url": "https://pic.nximg.cn/file/20171202/25756751_155724967000_2.jpg",
+  "width": 1024,
+  "height": 683,
+  "bytes": 954564
+ },
+ {
+  "category": "forest_near",
+  "file": "forest_near_2.jpg",
+  "query": "森林 近景 树木 林间小路",
+  "source_url": "https://pic.nximg.cn/file/20260319/2504833_125211849104_2.jpg",
+  "width": 1024,
+  "height": 683,
+  "bytes": 295213
+ },
+ {
+  "category": "forest_near",
+  "file": "forest_near_3.jpg",
+  "query": "森林 近景 树木 林间小路",
+  "source_url": "https://img95.699pic.com/photo/50657/4467.jpg_wh860.jpg",
+  "width": 860,
+  "height": 528,
+  "bytes": 263531
+ },
+ {
+  "category": "fire_far",
+  "file": "fire_far_1.jpg",
+  "query": "森林火灾 航拍 山火 远景",
+  "source_url": "https://aerial.scol.com.cn/items/202004/200428174659862000156409.jpg",
+  "width": 1600,
+  "height": 900,
+  "bytes": 1631263
+ },
+ {
+  "category": "fire_far",
+  "file": "fire_far_2.jpg",
+  "query": "森林火灾 航拍 山火 远景",
+  "source_url": "https://aerial.scol.com.cn/items/202004/2004281744410090001563FF.jpg",
+  "width": 1600,
+  "height": 900,
+  "bytes": 1378615
+ },
+ {
+  "category": "fire_far",
+  "file": "fire_far_3.jpg",
+  "query": "森林火灾 航拍 山火 远景",
+  "source_url": "https://aerial.scol.com.cn/items/202004/200428174456353000156404.jpg",
+  "width": 1600,
+  "height": 901,
+  "bytes": 1120259
+ },
+ {
+  "category": "fire_near",
+  "file": "fire_near_1.jpg",
+  "query": "森林 地面火 火焰 树木 近景",
+  "source_url": "https://img95.699pic.com/photo/50244/4588.jpg_wh860.jpg",
+  "width": 860,
+  "height": 574,
+  "bytes": 257356
+ },
+ {
+  "category": "fire_near",
+  "file": "fire_near_2.jpg",
+  "query": "森林 地面火 火焰 树木 近景",
+  "source_url": "https://img95.699pic.com/photo/50739/6310.jpg_wh860.jpg",
+  "width": 860,
+  "height": 530,
+  "bytes": 185693
+ },
+ {
+  "category": "fire_near",
+  "file": "fire_near_3.jpg",
+  "query": "森林 地面火 火焰 树木 近景",
+  "source_url": "https://img95.699pic.com/photo/30787/7979.jpg_wh860.jpg",
+  "width": 860,
+  "height": 571,
+  "bytes": 186665
+ },
+ {
+  "category": "people_far",
+  "file": "people_far_1.jpg",
+  "query": "森林 徒步 一群人 远处",
+  "source_url": "https://img95.699pic.com/photo/30006/4861.jpg_wh860.jpg",
+  "width": 860,
+  "height": 573,
+  "bytes": 319108
+ },
+ {
+  "category": "people_far",
+  "file": "people_far_2.jpg",
+  "query": "森林 徒步 一群人 远处",
+  "source_url": "https://img95.699pic.com/photo/30006/4409.jpg_wh860.jpg",
+  "width": 860,
+  "height": 573,
+  "bytes": 265558
+ },
+ {
+  "category": "people_far",
+  "file": "people_far_3.jpg",
+  "query": "森林 徒步 一群人 远处",
+  "source_url": "https://img95.699pic.com/photo/50628/0690.jpg_wh860.jpg",
+  "width": 860,
+  "height": 573,
+  "bytes": 203350
+ },
+ {
+  "category": "people_near",
+  "file": "people_near_1.jpg",
+  "query": "森林里 人物 近景 树林中",
+  "source_url": "https://pic.nximg.cn/file/20180929/3405174_105014149081_2.jpg",
+  "width": 1024,
+  "height": 683,
+  "bytes": 1168574
+ },
+ {
+  "category": "people_near",
+  "file": "people_near_2.jpg",
+  "query": "森林里 人物 近景 树林中",
+  "source_url": "https://img.shetu66.com/2023/07/25/1690264844339723.jpg",
+  "width": 1024,
+  "height": 683,
+  "bytes": 564087
+ },
+ {
+  "category": "people_near",
+  "file": "people_near_3.jpg",
+  "query": "森林里 人物 近景 树林中",
+  "source_url": "https://img95.699pic.com/photo/50464/8760.jpg_wh860.jpg",
+  "width": 860,
+  "height": 574,
+  "bytes": 180824
+ },
+ {
+  "category": "firefighter",
+  "file": "firefighter_1.jpg",
+  "query": "森林消防员 扑火 火线",
+  "source_url": "https://n.sinaimg.cn/sinakd20221001s/366/w700h466/20221001/f65c-3b5ad367774c6f9410c594e997af17a5.jpg",
+  "width": 700,
+  "height": 466,
+  "bytes": 62043
+ },
+ {
+  "category": "firefighter",
+  "file": "firefighter_2.jpg",
+  "query": "森林消防员 扑火 火线",
+  "source_url": "https://n.sinaimg.cn/sinakd20220825s/366/w700h466/20220825/c5b2-db41e2d5b5806fac26a763a5721c7be6.jpg",
+  "width": 700,
+  "height": 466,
+  "bytes": 68495
+ },
+ {
+  "category": "firefighter",
+  "file": "firefighter_3.jpg",
+  "query": "森林消防员 扑火 火线",
+  "source_url": "https://p.statickksmg.com/cont/2023/06/04/mNdWKVlaLyDp4C5i_fdb270bd-23e1-3faa-af7a-1a4153bdd51a.jpeg",
+  "width": 1280,
+  "height": 853,
+  "bytes": 221502
+ }
+]

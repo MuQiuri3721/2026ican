@@ -19,5 +19,5 @@ backend/data/
 data/vlm-testcases/_raw_images/
 data/vlm-testcases/CASE-*/images/
 data/audit_store.db
-e2e/_real_images/
+# e2e/_real_images/ 检验图片与结果已按用户指令入库（2026-09-10）；网络来源版权不明，仅作测试 fixture
 e2e/e2e/

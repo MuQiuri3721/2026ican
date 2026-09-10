@@ -1,0 +1,110 @@
+[
+ {
+  "category": "large",
+  "file": "webfire/large_1.jpg",
+  "query": "大规模森林火灾 航拍 火线 浓烟",
+  "source_url": "https://img.redocn.com/sheji/20260304/senlinhuozaihangpaihuamian_13777939.jpg",
+  "width": 700,
+  "height": 1244,
+  "bytes": 342703
+ },
+ {
+  "category": "large",
+  "file": "webfire/large_2.jpg",
+  "query": "大规模森林火灾 航拍 火线 浓烟",
+  "source_url": "https://img.redocn.com/sheji/20251118/senlinhuozaihangpaiyanwumimanchangjing_13719665.jpg",
+  "width": 700,
+  "height": 393,
+  "bytes": 114045
+ },
+ {
+  "category": "medium",
+  "file": "webfire/medium_1.jpg",
+  "query": "森林火灾 山火 火线燃烧",
+  "source_url": "https://pic4.zhimg.com/v2-4e97e77ac928ed01226aa56e960d10ae_r.jpg",
+  "width": 2074,
+  "height": 1382,
+  "bytes": 271347
+ },
+ {
+  "category": "medium",
+  "file": "webfire/medium_2.jpg",
+  "query": "森林火灾 山火 火线燃烧",
+  "source_url": "https://x0.ifengimg.com/ucms/2021_44/17D9E448BB1609B552796CF3B195583696B44725_size74_w1920_h1080.jpg",
+  "width": 1920,
+  "height": 1080,
+  "bytes": 71546
+ },
+ {
+  "category": "small",
+  "file": "webfire/small_1.jpg",
+  "query": "草地火 火堆 地面小火",
+  "source_url": "https://pic.ntimg.cn/file/20250208/35479210_095909613131_2.jpg",
+  "width": 1024,
+  "height": 574,
+  "bytes": 196798
+ },
+ {
+  "category": "small",
+  "file": "webfire/small_2.jpg",
+  "query": "草地火 火堆 地面小火",
+  "source_url": "https://img95.699pic.com/photo/30355/3703.jpg_wh860.jpg",
+  "width": 860,
+  "height": 574,
+  "bytes": 135225
+ },
+ {
+  "category": "night",
+  "file": "webfire/night_1.jpg",
+  "query": "夜间森林火灾 火光",
+  "source_url": "https://img95.699pic.com/photo/50745/7653.jpg_wh860.jpg",
+  "width": 860,
+  "height": 572,
+  "bytes": 132013
+ },
+ {
+  "category": "night",
+  "file": "webfire/night_2.jpg",
+  "query": "夜间森林火灾 火光",
+  "source_url": "https://img95.699pic.com/photo/50727/7897.jpg_wh860.jpg",
+  "width": 860,
+  "height": 573,
+  "bytes": 65599
+ },
+ {
+  "category": "smolder",
+  "file": "webfire/smolder_1.jpg",
+  "query": "森林火灾 浓烟 阴燃",
+  "source_url": "https://x0.ifengimg.com/ucms/2021_44/17D9E448BB1609B552796CF3B195583696B44725_size74_w1920_h1080.jpg",
+  "width": 1920,
+  "height": 1080,
+  "bytes": 71546
+ },
+ {
+  "category": "smolder",
+  "file": "webfire/smolder_2.jpg",
+  "query": "森林火灾 浓烟 阴燃",
+  "source_url": "https://img95.699pic.com/photo/50742/1060.jpg_wh860.jpg",
+  "width": 860,
+  "height": 619,
+  "bytes": 472417
+ },
+ {
+  "category": "nofire",
+  "file": "webfire/nofire_1.jpg",
+  "query": "绿色森林 航拍 无人机",
+  "source_url": "https://pic.ntimg.cn/file/20241110/35479210_012830041131_2.jpg",
+  "width": 1024,
+  "height": 1024,
+  "bytes": 452116
+ },
+ {
+  "category": "nofire",
+  "file": "webfire/nofire_2.jpg",
+  "query": "绿色森林 航拍 无人机",
+  "source_url": "https://pic.ntimg.cn/file/20241123/35479210_011004160138_2.jpg",
+  "width": 1024,
+  "height": 574,
+  "bytes": 211870
+ }
+]
