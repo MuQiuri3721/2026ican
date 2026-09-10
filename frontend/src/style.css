@@ -115,6 +115,10 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
 .hero-footer strong{display:block;font-size:14px;font-weight:700;color:var(--ok)}
 .hero-footer>div:first-child strong{font:800 23px/1.3 var(--font-ui);letter-spacing:-.01em}
 .hero-footer.ok>div:first-child strong{color:var(--ok)}
+.hero-footer.bad strong{color:var(--fire)}
+/* OPT-P3-01：维持压制中间态（压得住但时限内未完成/慢压）——琥珀警示，区别于可控与不可控 */
+.hero-footer.mid strong{color:var(--warn)}
+.hero-footer.mid{background:var(--warn-soft);border-radius:var(--radius-s);padding:10px 12px;margin-top:8px}
 .hero-footer.bad>div:first-child strong{color:var(--fire-deep)}
 .hero-stat{border-left:1px solid var(--line);padding-left:24px!important}
 .hero-stat strong{font:800 22px/1.1 var(--font-ui);color:var(--ink)}
