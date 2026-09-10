@@ -1,0 +1,25 @@
+{
+ "title": "核心故事二：补给间歇回升",
+ "reproduce": "POST /api/analyze {scene_id, use_vlm:false, environment_mode:offline, people_status:absent, scenario:{fire_origin:{x:150,y:150}, fire_area_m2:600, growth_rate:0.42}, constraints:{max_drones:2}} → approve → 12 轮",
+ "frozen_inputs": {
+  "scenario": {
+   "fire_origin": {
+    "x": 150,
+    "y": 150
+   },
+   "fire_area_m2": 600,
+   "growth_rate": 0.42
+  },
+  "environment_mode": "offline",
+  "people_status": "absent",
+  "constraints": {
+   "max_drones": 2
+  }
+ },
+ "expect": {
+  "verdict": "maintain_only",
+  "net_series_pattern": "周期性降-降-增（作业轮压制/补给轮回升）",
+  "no_replan_storm": true
+ },
+ "frozen_at_commit": "git rev-parse HEAD（录制时填写）"
+}

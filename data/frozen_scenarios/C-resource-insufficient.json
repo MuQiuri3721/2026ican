@@ -1,0 +1,16 @@
+{
+ "title": "核心故事三：资源不足诚实增援",
+ "reproduce": "POST /api/analyze {scene_id, use_vlm:false, environment_mode:offline, image_name:large-fire} → 不批准（cannot_control）",
+ "frozen_inputs": {
+  "image_name": "large-fire",
+  "environment_mode": "offline",
+  "people_status": "unknown"
+ },
+ "expect": {
+  "can_control": false,
+  "control_verdict": "cannot_control",
+  "control_reason_code": "suppression_insufficient",
+  "gaps_contain": "effective_flp"
+ },
+ "frozen_at_commit": "git rev-parse HEAD（录制时填写）"
+}

@@ -1,0 +1,16 @@
+{
+ "title": "核心故事一：成功控制并归档",
+ "reproduce": "POST /api/analyze {scene_id, use_vlm:false, environment_mode:offline, image_name:small, people_status:confirmed} → approve → 逐轮 rounds(5min, 0L) 至 finish",
+ "frozen_inputs": {
+  "image_name": "small",
+  "environment_mode": "offline",
+  "people_status": "confirmed",
+  "constraints": null
+ },
+ "expect": {
+  "final_status": "completed",
+  "ledger_conserved": true,
+  "evacuation": "模拟路径（演示网格 BFS）"
+ },
+ "frozen_at_commit": "git rev-parse HEAD（录制时填写）"
+}

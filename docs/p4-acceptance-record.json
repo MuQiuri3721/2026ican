@@ -1,0 +1,8 @@
+{
+ "F": {
+  "executed_at": "2026-09-10T20:20:26",
+  "passed": true,
+  "terrain_requests": 1,
+  "evacuation_summary": "疏散：模拟路径（演示网格 BFS）· 路线 12 步 · 约 6.67 分钟 · 避开 5 个风险格"
+ }
+}
