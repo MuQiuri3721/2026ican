@@ -342,6 +342,33 @@ def _evaluate_water_plan(scene: Dict[str, Any], inventory: Dict[str, Any], base_
             "reason": f"优先基地补给；就地取水六条件未全通过（{failed}）", **detail}
 
 
+def _control_decision(simulation: Dict[str, Any], has_units: bool, time_gap: Optional[Dict[str, Any]],
+                      growth_rate_per_hour: float, fire_load: float) -> Dict[str, Any]:
+    """单一判定源（P0-04）：布尔结论、三态裁决与原因码同出一处。
+
+    reason_code 区分「时间不够」（time_limit_exceeded，压得住但时限内灭不掉）
+    与「持续压制不足」（suppression_insufficient，压不住须增援）——两者不共用一条解释。
+    """
+    controlled = bool(simulation.get("controlled"))
+    if controlled and time_gap is None:
+        return {"can_control": True, "verdict": "can_control", "reason_code": "controlled_within_time"}
+    if time_gap is not None:
+        # 方案本身可控但超时限：时间不够，非能力不足
+        return {"can_control": False, "verdict": "maintain_only", "reason_code": "time_limit_exceeded"}
+    if not has_units:
+        return {"can_control": False, "verdict": "cannot_control", "reason_code": "no_firefighting_units"}
+    stalled = simulation.get("stalled_reason")
+    if stalled == "agent_insufficient":
+        return {"can_control": False, "verdict": "cannot_control", "reason_code": "agent_insufficient"}
+    if stalled == "soc_below_return":
+        return {"can_control": False, "verdict": "cannot_control", "reason_code": "soc_below_return"}
+    avg_suppression_per_min = float(simulation.get("suppression_flp", 0.0)) / max(float(simulation.get("minutes_used", 0)), 1.0)
+    growth_per_min = growth_rate_per_hour * fire_load / 60.0
+    if avg_suppression_per_min >= growth_per_min:
+        return {"can_control": False, "verdict": "maintain_only", "reason_code": "suppression_slow_within_window"}
+    return {"can_control": False, "verdict": "cannot_control", "reason_code": "suppression_insufficient"}
+
+
 def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], people_status: str = "unknown", constraints: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """V1 调度：枚举 E 组合 → 硬约束过滤 → 5 分钟离散仿真 → 多目标评分 J → 最优/备选方案。
 
@@ -455,20 +482,16 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
     ok, selected, battery_plan, total_flp, gaps, errors = (False, (), [], 0.0, [], [])
     selected = chosen["selected"]
     simulation = chosen["simulation"]
-    ok = bool(selected) and simulation["controlled"] and time_gap is None
+    # 单一判定源（P0-04）：布尔结论、三态裁决与原因码同出一函数——此前 can_control、
+    # control_verdict、gaps 三处各自判定，「方案可控但超时限」曾同时渲染
+    # can_control=False 与 control_verdict=can_control 的矛盾结论。
+    decision = _control_decision(simulation, bool(selected), time_gap, growth_rate_per_hour, fire_load)
+    ok = decision["can_control"]
     # BE-13e（评审测试8/§八）：可行性三态裁决——can_control=时限内可灭；
     # maintain_only=平均压制追平增长（可维持不扩散，但时限内灭不掉，属"慢压"，加速需增援）；
     # cannot_control=压制追不上增长（必须增援）。此前只有 can_control 布尔值，
     # "慢压可维持"与"完全压不住"两种局面共用 False，无法向指挥员区分。
-    if simulation["controlled"] and time_gap is None:
-        control_verdict = "can_control"
-    elif simulation["controlled"]:
-        # 方案本身可控但超出时限：三态归入「时限内未完成」，不与 can_control=False 矛盾
-        control_verdict = "maintain_only"
-    elif simulation.get("suppression_flp", 0.0) / max(simulation.get("minutes_used", 0), 1) >= growth_rate_per_hour * fire_load / 60.0:
-        control_verdict = "maintain_only"
-    else:
-        control_verdict = "cannot_control"
+    control_verdict = decision["verdict"]
     battery_plan = [
         {
             "uav_id": entry["uav_id"], "soc_before": next((u.get("soc", 0) for u in selected if u.get("uav_id") == entry["uav_id"]), 0),
@@ -538,6 +561,7 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
         "firefighting_uavs": selected_ids,
         "can_control": bool(ok),
         "control_verdict": control_verdict,
+        "control_reason_code": decision["reason_code"],
         "feasibility": ok and bool(r_ids) and bool(s_ids),
         "required_drones": max(1, math.ceil(fire_load / max(quantity * kappa * 0.9, 1))),
         "selected_uavs": r_ids + selected_ids + s_ids + ([corridor_reserve] if corridor_reserve else []),
@@ -638,10 +662,25 @@ def simulate_monitor(
         eta=eta,
         spray_cap=float(extinguishing_liters) if extinguishing_liters else None,
     )
+    minute_ledger = []
     for _ in range(total_minutes):
-        advance_one_minute(state, core_plan)
+        minute_ledger.append(advance_one_minute(state, core_plan))
 
     fire_load = state["fire_load_flp"]
+    # 轮级账本（P0-03）：分钟账本只求和——增长/有效压制/净变化全部出自统一核心，
+    # 满足 after = before + growth - suppression；解释文本据此输出，不得与账本矛盾。
+    round_growth = float(state.get("growth_total", 0.0))
+    round_suppression = float(state.get("suppression_effective_total", 0.0))
+    round_net = fire_load - load_before
+    round_ledger = {
+        "before_flp": round(load_before, 4),
+        "growth_flp": round(round_growth, 4),
+        "suppression_flp": round(round_suppression, 4),
+        "net_change_flp": round(round_net, 4),
+        "after_flp": round(fire_load, 4),
+        "minutes": total_minutes,
+        "per_minute": minute_ledger,
+    }
     stalled_agent = state["stalled_agent"]
     soc_return_risk = state["soc_return_risk"]
     suppression_total = state["suppression_total"]
@@ -675,7 +714,14 @@ def simulate_monitor(
     elif soc_return_risk:
         action, reason = "return", "预计返航 SOC 低于 25%，触发硬约束，部分机组提前返航。"
     else:
-        action, reason = "continue", "火势受到抑制，继续当前任务并在 5 分钟后复评。"
+        # P0-03：趋势文案以轮内账本净变化为准——净增长时不得声称「受到抑制」。
+        stable_tol = 0.05  # 与账本持久化精度（4 位小数）一致的稳定容差
+        if round_net < -stable_tol:
+            action, reason = "continue", f"火势净下降 {abs(round(round_net, 2))} FLP（增长 {round(round_growth, 2)}，压制 {round(round_suppression, 2)}），继续当前任务并在 5 分钟后复评。"
+        elif round_net > stable_tol:
+            action, reason = "continue", f"压制未追平增长：轮内净增 {round(round_net, 2)} FLP（增长 {round(round_growth, 2)}，有效压制 {round(round_suppression, 2)}），维持方案并加密复评。"
+        else:
+            action, reason = "continue", "火势基本稳定（压制与增长相当），继续当前任务并在 5 分钟后复评。"
 
     triggers = []
     # BE-12 补：与 add_round 累计触发器同样的绝对下限——余烬级（<20 FLP）的 ±1 FLP
@@ -707,6 +753,8 @@ def simulate_monitor(
         "next_fire_load_flp": round(fire_load, 2),
         "fire_load_flp": round(fire_load, 2),
         "fire_load_before_flp": round(load_before, 2),
+        # 轮级 FLP 账本（P0-03）：before/growth/suppression/net/after 出自统一核心分钟账
+        "flp_ledger": round_ledger,
         "growth_area_m2": growth,
         "extinguished_area_m2": reduction,
         "change_ratio": ratio,

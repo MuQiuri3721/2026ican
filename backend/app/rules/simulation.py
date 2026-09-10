@@ -167,6 +167,9 @@ def advance_one_minute(state: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str,
     module = state["module"]
     fire_type = state["fire_type"]
     eta = state["eta"]
+    # 分钟 FLP 账本（P0-03）：自然增长/有效压制/净变化在本核心逐分钟累计，
+    # 监测端只求和——此前解释依赖轮末状态、增长按轮初线性另算，与分钟实际脱节。
+    minute_before = float(state["fire_load_flp"])
     minute_suppression = 0.0
     finished_units: List[str] = []
     working_units: List[str] = []
@@ -238,6 +241,10 @@ def advance_one_minute(state: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str,
                 landed_module = str(drone.get("payload_module") or state["module"])
                 if 0.0 < leftover < _module_agent(landed_module)[0] and landed_module == "water_20l":
                     stock["water_liters"] = round(stock.get("water_liters", 0) + leftover, 2)
+                    drone["agent_remaining"] = 0.0
+                elif leftover > 0 and landed_module == "co2_6kg":
+                    # C6 未用余量随整型模块报废（P0-04）：单独记账，公斤账闭合有去向
+                    state["c6_scrapped_kg"] = round(state.get("c6_scrapped_kg", 0.0) + leftover, 2)
                     drone["agent_remaining"] = 0.0
         elif status == "servicing":
             # 补给按各机自身模块计量并分别计时：基地补水/就地取水/C6 换模块/换电；
@@ -337,11 +344,25 @@ def advance_one_minute(state: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str,
     # 火势净更新：比例增长率按分钟复利（分母是方案基线 → rate 为常数，余烬不复燃）
     _rate = plan.get("growth_rate_per_hour")
     _rate = float(_rate) if _rate is not None else 0.0  # 零值语义：显式 0 合法，仅 None 视为未提供
-    state["fire_load_flp"] = max(0.0, state["fire_load_flp"] * (1.0 + _rate / 60.0) - minute_suppression)
+    minute_growth = minute_before * _rate / 60.0
+    raw_after = minute_before + minute_growth - minute_suppression
+    after = max(0.0, raw_after)
+    # 有效压制守恒（P0-03）：负荷清零时实际压制被截断为「增长+原有负荷」，
+    # 潜在喷洒量（minute_suppression）不得超记进账本——药剂实际消耗仍照实计量。
+    effective_suppression = min(minute_suppression, minute_before + minute_growth)
+    state["fire_load_flp"] = after
+    state["growth_total"] = state.get("growth_total", 0.0) + minute_growth
+    state["suppression_effective_total"] = state.get("suppression_effective_total", 0.0) + effective_suppression
     return {
         "minute": state["minute"],
         "minute_suppression": round(minute_suppression, 4),
-        "fire_load_flp": round(state["fire_load_flp"], 4),
+        "fire_load_flp": round(after, 4),
+        # 分钟账本（P0-03）：before + growth - suppression(有效) = after
+        "before_flp": round(minute_before, 4),
+        "growth_flp": round(minute_growth, 4),
+        "suppression_flp": round(effective_suppression, 4),
+        "net_change_flp": round(after - minute_before, 4),
+        "after_flp": round(after, 4),
         "working_units": working_units,
         "finished_units": finished_units,
         "consumed_water": round(state["consumed_water"], 2),

@@ -468,3 +468,78 @@ def test_T11_zero_target_minutes_no_contradiction():
                                              "absent", constraints={"target_minutes": bad})
         assert not any(g.get("resource") == "time_limit" for g in plan_bad["resource_gap"]), (
             f"非法时限 {bad} 应被拒绝而非产生缺口")
+
+
+def test_P003_round_ledger_conservation_and_trend_text():
+    """P0-03：轮级账本守恒（after = before + growth - suppression）、负荷清零时
+    有效压制截断不超记、趋势解释与账本一致（净增长不得声称「受到抑制」）。"""
+    # B. 净下降：小火 + 双机压制 → reason 含「净下降」
+    fleet = [_drone("E1", soc=96.0), _drone("E2", soc=95.0)]
+    analysis = _analysis(fleet, fire_load=30.0, growth=0.42, outbound=3.0)
+    result = _drive(analysis, [5])[0]
+    ledger = result["flp_ledger"]
+    assert ledger["after_flp"] == pytest.approx(
+        ledger["before_flp"] + ledger["growth_flp"] - ledger["suppression_flp"], abs=1e-2)
+    assert ledger["net_change_flp"] == pytest.approx(ledger["after_flp"] - ledger["before_flp"], abs=1e-2)
+    assert "净下降" in result["reason"]
+    assert result["flp_ledger"]["suppression_flp"] > 0
+
+    # A. 净增长：大火 + 高增长率 + 双机 → reason 不得声称「受到抑制」
+    fleet_g = [_drone("E1", soc=96.0), _drone("E2", soc=95.0)]
+    analysis_g = _analysis(fleet_g, fire_load=1000.0, growth=1.5, outbound=3.0)
+    result_g = _drive(analysis_g, [5])[0]
+    ledger_g = result_g["flp_ledger"]
+    assert ledger_g["net_change_flp"] > 0
+    assert ledger_g["after_flp"] == pytest.approx(
+        ledger_g["before_flp"] + ledger_g["growth_flp"] - ledger_g["suppression_flp"], abs=1e-2)
+    assert "受到抑制" not in result_g["reason"], result_g["reason"]
+    assert "净增" in result_g["reason"]
+
+    # C. 清零截断：负荷压到 0 的轮，有效压制不得超过 before+growth
+    fleet_c = [_drone("E1", soc=96.0), _drone("E2", soc=95.0)]
+    analysis_c = _analysis(fleet_c, fire_load=8.0, growth=0.0, outbound=1.0)
+    results_c = _drive(analysis_c, [10])
+    ledgers = [r["flp_ledger"] for r in results_c]
+    final = ledgers[-1]
+    assert final["after_flp"] == 0.0
+    for entry in ledgers:
+        assert entry["suppression_flp"] <= entry["before_flp"] + entry["growth_flp"] + 1e-6
+    assert final["suppression_flp"] == pytest.approx(final["before_flp"] + final["growth_flp"], abs=1e-2)
+
+
+def test_T07_agent_ledgers_conserved_across_refill_cycles():
+    """T07（OPT-P0-04）：W20 水账（机上+基地回注）与 C6 报废账分别闭合，无重复扣减。"""
+    from backend.app.rules.simulation import advance_one_minute, create_simulation_state
+
+    fleet = [_drone("E1", soc=96.0, agent=8.0),    # 机上 8L：1 分钟作业喷 4L 后剩 4L→SOC 门槛未触
+             ]
+    # 构造「半载返航」：E1 携 8L 出动，作业 2 分钟喷完 8L？——直接用 8L、作业 2 分钟
+    # 低 SOC 构造「带余量返航」：作业 1 分钟后 SOC<25% 触发硬约束返航，
+    # E1 剩 4L 水、E2 剩 0.5kg——落地分别走回注与报废账
+    fleet = [_drone("E1", soc=30.0, agent=8.0),
+             _drone("E2", module="co2_6kg", soc=30.0, agent=2.0)]
+    plan = {"firefighting_uavs": ["E1", "E2"], "selected_uavs": ["E1", "E2"],
+            "material_module": "water_20l", "growth_rate_per_hour": 0.0,
+            "battery_plan": [{"uav_id": "E1", "outbound_minutes": 1.0},
+                             {"uav_id": "E2", "outbound_minutes": 1.0}]}
+    stock = _inventory(water_liters=0.0, water_modules_w20=4, co2_modules_c6=4, battery_packs=0)
+    # 基地 0 水：E1 返航补水将走就地取水（水源 1200L）
+    state = create_simulation_state(fleet, stock, plan, 500.0, fire_type="vegetation")
+    co2_modules_before = int(state["inventory"]["co2_modules_c6"])
+
+    for _ in range(24):  # 去程+作业1分钟+返航+回注/报废+补药全流程
+        advance_one_minute(state, plan)
+
+    e1 = next(d for d in state["fleet"] if d["uav_id"] == "E1")
+    e2 = next(d for d in state["fleet"] if d["uav_id"] == "E2")
+    # C6 余量 0.5kg 随整型模块报废，单独记账有去向；模块库存只减 1 个
+    assert state.get("c6_scrapped_kg", 0.0) == pytest.approx(0.5), "C6 未用余量应有报废去向记录"
+    assert int(state["inventory"]["co2_modules_c6"]) == co2_modules_before - 1
+    assert e2["agent_remaining"] == 6.0, "C6 换新模块后满载 6kg"
+    # W20：半载 4L 落地回注基地后整模块补满（基地 0 水 → 就地取水 20L）
+    assert e1["agent_remaining"] == 20.0, "W20 补水后满载 20L"
+    source = state["inventory"]["water_sources"][0]
+    assert float(source["capacity_liters"]) == 1200.0 - 20.0, "就地取水扣水源容量恰好一次"
+    # 分键计量（BE-13）：水入 consumed_water、C6 千克入 consumed_co2，不混账
+    assert state["consumed_water"] == pytest.approx(4.0, abs=0.01), "E1 喷洒 4L 记水账"
+    assert state["consumed_co2"] == pytest.approx(1.5, abs=0.01), "E2 喷洒 1.5kg 记 CO₂ 账"

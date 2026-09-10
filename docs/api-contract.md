@@ -360,6 +360,12 @@ Form 字段（全部为 multipart 表单字段，显式 `Form(...)` 绑定）：
 
 行为与 §5.7 的底层监测一致：仅允许 `executing` 状态（否则 409）；旧 `extinguishing_liters` 仅在入口作为 W20 喷洒输入，不把旧面积口径写入领域模型。响应：`{**AnalysisEnvelope, "action": "continue|resupply|reinforce|return|finish"}`，监测细节在 `result.monitor`（含 `next_fire_load_flp`、`replan_triggers`、`resource_consumed`——BE-13 起按药剂单位分键 `{water_liters: 升, co2_kg: 千克, module}`、`availability`、`battery_plan`、`next_fleet`、`next_inventory`）。
 
+**轮次 FLP 账本与结论原因码（OPT-P0，2026-09-10）**：
+- `result.monitor.flp_ledger`：`{before_flp, growth_flp, suppression_flp, net_change_flp, after_flp, minutes, per_minute[]}`——全部出自统一分钟核心（`advance_one_minute`），监测端只求和；无观测校正时满足 `after = before + growth - suppression`。负荷清零轮的有效压制被截断为 `before+growth`（潜在喷洒量不超记，药剂实际消耗照实）。
+- 轮次记录 `rounds[].observation_adjustment_flp`：本轮 before 与上轮 after 的差＝图像观测造成的状态校正，单独记账，不混入自然增长。
+- `dispatch_plan.control_reason_code`：结论原因码，与 `can_control`/`control_verdict` 同源（单一判定函数）。取值：`controlled_within_time`（时限内可控）/ `time_limit_exceeded`（压得住但超时限）/ `suppression_slow_within_window`（仿真窗口内慢压）/ `suppression_insufficient`（压不住须增援）/ `agent_insufficient` / `soc_below_return` / `no_firefighting_units`。「时间不够」与「持续压制不足」使用不同原因码，不得共用一条解释。
+- 库存审计辅助字段：`monitor.c6_scrapped_kg`（C6 整型模块未用余量报废去向，千克）经状态累计后在 `resource_consumed` 同侧可见。
+
 ### 5.10 `GET /api/tasks/{task_id}/events/stream`（SSE 事件流）
 
 Query：`once`（可选，`1` = 仅推送当前事件快照后结束，供一次性拉取与测试）。

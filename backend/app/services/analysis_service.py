@@ -598,6 +598,14 @@ class AnalysisService:
             "replan_triggers": triggers,
             "next_action": action if action == "finish" else ("awaiting_confirmation" if triggers else action),
         }
+        # 观测校正账目（P0-03）：本轮 before 与上轮 after 的差是「图像观测造成的状态
+        # 校正」，单独记录——不得混入自然增长/压制账本。首无上轮则为 0。
+        _ledger = monitor_data.get("flp_ledger") or {}
+        _prev_rounds = analysis_store.get(analysis_id).rounds
+        if _prev_rounds and _ledger:
+            _prev_after = ((_prev_rounds[-1].get("after") or {}).get("flp_ledger") or {}).get("after_flp")
+            if _prev_after is not None:
+                round_data["observation_adjustment_flp"] = round(_ledger.get("before_flp", 0.0) - _prev_after, 4)
         if analysis_store.get(analysis_id).status == "terminated":
             # 推演期间任务被终止：本轮作废，不得覆盖终态
             raise ValueError("任务已终止，本轮反馈作废")
