@@ -533,13 +533,16 @@ function rebuildInner() {
   // 取景对准火点（无火时看场景中心）：仅首次放置，之后尊重用户拖拽的视角
   if (!entry.cameraPlaced) {
     entry.cameraPlaced = true
-    // 取景居中（FE-55）：注视点 = 火点与各标站的质心，火点/基地/水源同框不偏边
+    // 取景（FE-58）：注视点 = 火点 60% + 兴趣点质心 40%——主任务对象保持画面焦点；
+    // 俯角约 55°（战术图惯例），火点略偏向观察者一侧
     const fireW = props.fireGps ? toWorld(props.fireGps.latitude, props.fireGps.longitude) : null
     const poi = [fireW, ...props.stations.map((s) => toWorld(s.gps.latitude, s.gps.longitude))].filter(Boolean)
     const cx = poi.length ? poi.reduce((sum, p) => sum + p.x, 0) / poi.length : 0
     const cz = poi.length ? poi.reduce((sum, p) => sum + p.z, 0) / poi.length : 0
-    entry.controls.target.set(cx, 300, cz)
-    entry.camera.position.set(cx - grid.scene_w * 0.34, grid.scene_w * 0.52, cz + grid.scene_w * 0.44)
+    const focusX = fireW ? fireW.x * 0.6 + cx * 0.4 : cx
+    const focusZ = fireW ? fireW.z * 0.6 + cz * 0.4 : cz
+    entry.controls.target.set(focusX, 260, focusZ)
+    entry.camera.position.set(focusX - grid.scene_w * 0.1, grid.scene_w * 0.55, focusZ + grid.scene_w * 0.3)
   }
   buildTerrain(three, grid, world)
   buildContours(three, world, grid)
@@ -580,6 +583,9 @@ onMounted(() => {
   controls.dampingFactor = 0.08
   controls.autoRotate = true
   controls.autoRotateSpeed = 0.4
+  // 用户一旦拖拽/缩放即停止自动巡航——此前巡航永不停止，用户永远抓不到稳定视角
+  controls.addEventListener('start', () => { controls.autoRotate = false })
+  controls.maxPolarAngle = Math.PI * 0.49
   controls.target.set(0, 220, 0)
   controls.maxDistance = 4600
   controls.minDistance = 200
