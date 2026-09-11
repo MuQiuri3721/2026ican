@@ -61,11 +61,12 @@ function smoothProgress(p) { return p * p * (3 - 2 * p) }
 // 递归释放几何体/材质/纹理（rebuild 频繁重建地形与精灵，不释放会持续泄漏 GPU 内存）
 function disposeObject(root) {
   root.traverse((obj) => {
-    if (obj.geometry) obj.geometry.dispose()
+    // 共享缓存的几何体/材质不得释放（BE-17 共享缓存），否则二次重建后无人机集体消失
+    if (obj.geometry && !obj.geometry.userData?.shared) obj.geometry.dispose()
     const materials = Array.isArray(obj.material) ? obj.material : (obj.material ? [obj.material] : [])
     for (const mat of materials) {
       if (mat.map) mat.map.dispose()
-      mat.dispose()
+      if (!mat.userData?.shared) mat.dispose()
     }
   })
 }
@@ -269,45 +270,74 @@ function radialTexture(inner, outer, size = 128) {
 }
 
 // ---------- 四旋翼（与 firepatrol 同款造型：机身+旋翼+航行灯+子群挂载） ----------
+// BE-17：几何体/材质按 (子群, 部件) 共享缓存——此前每架独立分配 ~14 份，
+// 12 架 = 168 份几何+材质，重建与 GC 都是卡顿源。注意 dispose 时不得释放共享资源。
+const _droneGeo = new Map()
+const _droneMat = new Map()
+function sharedGeo(key, make) {
+  if (!_droneGeo.has(key)) {
+    const g = make()
+    g.userData = { shared: true }
+    _droneGeo.set(key, g)
+  }
+  return _droneGeo.get(key)
+}
+function sharedMat(key, make) {
+  if (!_droneMat.has(key)) {
+    const m = make()
+    m.userData = { shared: true }
+    _droneMat.set(key, m)
+  }
+  return _droneMat.get(key)
+}
+
 function buildDrone(colorHex, subgroup) {
   const group = new THREE.Group()
   const color = new THREE.Color(colorHex)
-  const matAir = new THREE.MeshStandardMaterial({ color: '#3a4450', roughness: 0.42, metalness: 0.45 })
-  const matDark = new THREE.MeshStandardMaterial({ color: '#171c22', roughness: 0.55, metalness: 0.3 })
-  const matAccent = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.5, roughness: 0.35 })
-  group.add(new THREE.Mesh(new THREE.BoxGeometry(13, 5, 17), matAir))
-  const canopy = new THREE.Mesh(new THREE.SphereGeometry(5.2, 18, 12), new THREE.MeshStandardMaterial({ color: '#0d141c', emissive: color, emissiveIntensity: 0.3, roughness: 0.15, metalness: 0.65 }))
+  const matAir = sharedMat('air', () => new THREE.MeshStandardMaterial({ color: '#3a4450', roughness: 0.42, metalness: 0.45 }))
+  const matDark = sharedMat('dark', () => new THREE.MeshStandardMaterial({ color: '#171c22', roughness: 0.55, metalness: 0.3 }))
+  const matAccent = sharedMat(`accent-${subgroup}-${colorHex}`, () => new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.5, roughness: 0.35 }))
+  const matDisc = sharedMat(`disc-${colorHex}`, () => new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.15, side: THREE.DoubleSide, depthWrite: false }))
+  const geoBody = sharedGeo('body', () => new THREE.BoxGeometry(13, 5, 17))
+  const geoCanopy = sharedGeo('canopy', () => new THREE.SphereGeometry(5.2, 18, 12))
+  const geoArm = sharedGeo('arm', () => new THREE.BoxGeometry(1.6, 1.1, 12.5))
+  const geoHub = sharedGeo('hub', () => new THREE.CylinderGeometry(0.7, 0.7, 1, 8))
+  const geoBlade = sharedGeo('blade', () => new THREE.BoxGeometry(12.4, 0.22, 1.15))
+  const geoDisc = sharedGeo('disc', () => new THREE.CylinderGeometry(6.3, 6.3, 0.05, 24))
+  const geoLight = sharedGeo('light', () => new THREE.SphereGeometry(3.2, 12, 10))
+
+  group.add(new THREE.Mesh(geoBody, matAir))
+  const canopy = new THREE.Mesh(geoCanopy, sharedMat('canopy', () => new THREE.MeshStandardMaterial({ color: '#0d141c', emissive: color, emissiveIntensity: 0.3, roughness: 0.15, metalness: 0.65 })))
   canopy.scale.set(1.05, 0.48, 1.32)
   canopy.position.y = 2.6
   group.add(canopy)
   const rotors = []
-  const matDisc = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.15, side: THREE.DoubleSide, depthWrite: false })
   for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.1, 12.5), matAir)
+    const arm = new THREE.Mesh(geoArm, matAir)
     arm.position.set(dx * 4.6, 0.9, dz * 4.6)
     arm.rotation.y = Math.atan2(dx, dz)
     group.add(arm)
     const prop = new THREE.Group()
     prop.position.set(dx * 8.8, 3.7, dz * 8.8)
-    prop.add(new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 1, 8), matAccent))
-    prop.add(new THREE.Mesh(new THREE.BoxGeometry(12.4, 0.22, 1.15), matDark))
-    prop.add(new THREE.Mesh(new THREE.CylinderGeometry(6.3, 6.3, 0.05, 24), matDisc))
+    prop.add(new THREE.Mesh(geoHub, matAccent))
+    prop.add(new THREE.Mesh(geoBlade, matDark))
+    prop.add(new THREE.Mesh(geoDisc, matDisc))
     group.add(prop)
     rotors.push(prop)
   }
-  const body = new THREE.Mesh(new THREE.SphereGeometry(3.2, 12, 10), matAccent)
+  const body = new THREE.Mesh(geoLight, matAccent)
   body.position.y = 0.5
   group.add(body)
   if (subgroup === 'suppression') {
-    const tank = new THREE.Mesh(new THREE.BoxGeometry(8.6, 3.8, 11), new THREE.MeshStandardMaterial({ color: '#d92b2b', roughness: 0.4 }))
+    const tank = new THREE.Mesh(sharedGeo('tank', () => new THREE.BoxGeometry(8.6, 3.8, 11)), sharedMat('tank', () => new THREE.MeshStandardMaterial({ color: '#d92b2b', roughness: 0.4 })))
     tank.position.set(0, -4.6, -0.5)
     group.add(tank)
   } else if (subgroup === 'support') {
-    const crate = new THREE.Mesh(new THREE.BoxGeometry(8.6, 3.6, 11), new THREE.MeshStandardMaterial({ color: '#4d5d3a', roughness: 0.7 }))
+    const crate = new THREE.Mesh(sharedGeo('crate', () => new THREE.BoxGeometry(8.6, 3.6, 11)), sharedMat('crate', () => new THREE.MeshStandardMaterial({ color: '#4d5d3a', roughness: 0.7 })))
     crate.position.set(0, -4.5, -0.5)
     group.add(crate)
   } else {
-    const gimbal = new THREE.Mesh(new THREE.SphereGeometry(2.4, 12, 10), matDark)
+    const gimbal = new THREE.Mesh(sharedGeo('gimbal', () => new THREE.SphereGeometry(2.4, 12, 10)), matDark)
     gimbal.position.set(0, -4.2, 5)
     group.add(gimbal)
   }
@@ -539,8 +569,13 @@ function rebuildInner() {
     const poi = [fireW, ...props.stations.map((s) => toWorld(s.gps.latitude, s.gps.longitude))].filter(Boolean)
     const cx = poi.length ? poi.reduce((sum, p) => sum + p.x, 0) / poi.length : 0
     const cz = poi.length ? poi.reduce((sum, p) => sum + p.z, 0) / poi.length : 0
-    const focusX = fireW ? fireW.x * 0.6 + cx * 0.4 : cx
-    const focusZ = fireW ? fireW.z * 0.6 + cz * 0.4 : cz
+    let focusX = fireW ? fireW.x * 0.6 + cx * 0.4 : cx
+    let focusZ = fireW ? fireW.z * 0.6 + cz * 0.4 : cz
+    // 钳制在地形中心 35% 半径内：注视点被远处标站拉出地形时，画面会偏向空黑一侧
+    const clampX = grid.scene_w * 0.175
+    const clampZ = grid.scene_h * 0.175
+    focusX = Math.max(-clampX, Math.min(clampX, focusX))
+    focusZ = Math.max(-clampZ, Math.min(clampZ, focusZ))
     entry.controls.target.set(focusX, 260, focusZ)
     entry.camera.position.set(focusX - grid.scene_w * 0.1, grid.scene_w * 0.55, focusZ + grid.scene_w * 0.3)
   }
