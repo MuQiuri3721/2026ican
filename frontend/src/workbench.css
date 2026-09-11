@@ -9,13 +9,14 @@
 .plan-summary .src-note{color:#5f6b77;font-size:11.5px;white-space:normal;line-height:1.5}
 .plan-summary .src-note::before{content:"⌗ ";color:var(--plan)}
 /* 留白优化（FE-31 自查）：hero 内容少于同行的上传面板时不再被网格拉伸出大片空白 */
-.hero-panel{align-self:start}
+.hero-panel{display:flex;flex-direction:column}
+.hero-panel .hero-footer{margin-top:auto}
 /* 排版优化（FE-33）：上传面板跨两行，KPI 卡 2×2 填入 hero 下方，消除左列空洞 */
 .dashboard .upload-panel{grid-column:2;grid-row:1/span 2}
 .dashboard .hero-panel{grid-column:1}
 .dashboard .metrics-grid{grid-column:1;grid-row:2;grid-template-columns:repeat(2,1fr)}
 /* 留白优化（UI 审计）：决策面板内容少于左侧 12 机名册时不再被拉伸出大片面板内空白 */
-.dashboard .decision-panel{align-self:start}
+.dashboard .decision-panel{display:flex;flex-direction:column}
 @media(max-width:1000px){
   .dashboard .upload-panel{grid-column:auto;grid-row:auto}
 }
