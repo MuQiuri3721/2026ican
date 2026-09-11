@@ -15,6 +15,8 @@ const props = defineProps({
   mission: { type: Object, default: null },       // 与 TacticalMap 同源的出动推演对象
   fireOrigin: { type: Object, default: null },    // 相对米制原点 {x, y}
   stations: { type: Array, default: () => [] },   // [{name, gps:{latitude, longitude}, color}]
+  contours: { type: Object, default: null },      // /api/terrain/contours GeoJSON（等高线 draped + 海拔标签）
+  roadContext: { type: Object, default: null },   // environment.road_context（最近道路 draped）
   evacPath: { type: Array, default: () => [] },   // [{latitude, longitude}]
   peopleStatus: { type: String, default: 'unknown' },
 })
@@ -26,10 +28,13 @@ const SUBGROUP_COLOR = { reconnaissance: 0x4f8dff, suppression: 0xff7a45, suppor
 
 const mountRef = ref(null)
 const ready = ref(false)
+const hudNeedle = shallowRef(null)
 const core = shallowRef(null)
 const droneIndex = shallowRef(new Map())   // id -> {group, rotors, spray, badge, cur, anchor}
 const raf = shallowRef(0)
 const fallbackTimer = shallowRef(0)
+
+const fireElevM = computed(() => (props.fireGps ? elevAt(props.fireGps.latitude, props.fireGps.longitude) : null))
 
 function metersPerLat() { return 111320 }
 function metersPerLng(lat) { return 111320 * Math.cos((lat * Math.PI) / 180) }
@@ -144,6 +149,80 @@ function buildStation(three, world, station, groundY) {
   group.add(pillar, ring, tag)
   group.position.copy(station.world)
   world.add(group)
+}
+
+// ---------- 等高线 draped + 海拔标签（FE-55：此前三维只有地形色，无任何高程信息） ----------
+function buildContours(three, world, grid) {
+  const features = props.contours?.features || []
+  const halfW = grid.scene_w / 2 + grid.scene_w * 0.02
+  const halfH = grid.scene_h / 2 + grid.scene_h * 0.02
+  let labeled = 0
+  for (const feature of features) {
+    const geometry = feature?.geometry
+    const segments = geometry?.type === 'LineString' ? [geometry.coordinates]
+      : geometry?.type === 'MultiLineString' ? (geometry.coordinates || []) : []
+    const elevation = Number(feature?.properties?.elevation_m ?? feature?.properties?.elevation ?? 0)
+    for (const segment of segments) {
+      if (!Array.isArray(segment) || segment.length < 2) continue
+      const points = []
+      for (const [lng, lat] of segment) {
+        const w = toWorld(lat, lng)
+        if (!w || Math.abs(w.x) > halfW || Math.abs(w.z) > halfH) continue
+        points.push(new THREE.Vector3(w.x, elevAt(lat, lng) * EX + 10, w.z))
+      }
+      if (points.length < 2) continue
+      world.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(points),
+        new THREE.LineBasicMaterial({ color: '#d8c48a', transparent: true, opacity: 0.5 })))
+      if (labeled < 14 && elevation > 0 && points.length >= 6) {
+        const mid = points[Math.floor(points.length / 2)]
+        const tag = textSprite(`${Math.round(elevation)}m`, '#e8d9a8', 0.4)
+        tag.position.copy(mid).setY(mid.y + 30)
+        world.add(tag)
+        labeled += 1
+      }
+    }
+  }
+}
+
+// ---------- 最近道路 draped（P2-03 道路子图：nearest_transport / vehicle_candidate 带 geometry） ----------
+function roadEntries(roadContext) {
+  if (!roadContext) return []
+  const out = []
+  for (const key of ['nearest_transport', 'nearest_vehicle_access_candidate']) {
+    const value = roadContext[key]
+    if (Array.isArray(value)) out.push(...value.filter(Boolean))
+    else if (value && value.geometry) out.push(value)
+  }
+  return out.filter((r) => r && r.geometry && Array.isArray(r.geometry.coordinates)).slice(0, 2)
+}
+
+function buildRoads(three, world, grid) {
+  const halfW = grid.scene_w / 2 + grid.scene_w * 0.02
+  const halfH = grid.scene_h / 2 + grid.scene_h * 0.02
+  for (const road of roadEntries(props.roadContext)) {
+    const geometry = road.geometry
+    const segments = geometry.type === 'LineString' ? [geometry.coordinates]
+      : geometry.type === 'MultiLineString' ? (geometry.coordinates || []) : []
+    for (const segment of segments) {
+      const points = []
+      for (const [lng, lat] of segment) {
+        const w = toWorld(lat, lng)
+        if (!w || Math.abs(w.x) > halfW || Math.abs(w.z) > halfH) continue
+        points.push(new THREE.Vector3(w.x, elevAt(lat, lng) * EX + 6, w.z))
+      }
+      if (points.length < 2) continue
+      world.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(points),
+        new THREE.LineBasicMaterial({ color: '#c9cdd4', transparent: true, opacity: 0.7 })))
+      if (road.name) {
+        const mid = points[Math.floor(points.length / 2)]
+        const tag = textSprite(String(road.name).slice(0, 12), '#c9cdd4', 0.42)
+        tag.position.copy(mid).setY(mid.y + 24)
+        world.add(tag)
+      }
+    }
+  }
 }
 
 function textSprite(text, color, scale = 1) {
@@ -413,6 +492,8 @@ function animateInner(three, ts) {
     if (meta.fireLight) child.intensity = 4 + 1.6 * Math.sin(ts / 90 + meta.seed)
   }
   missionTick(three, ts)
+  // 指北针：场景北为 -Z，方位角随 OrbitControls 旋转，直接改 DOM 避免逐帧重渲染
+  if (hudNeedle.value) hudNeedle.value.style.transform = `rotate(${(controls.getAzimuthalAngle() * 180) / Math.PI}deg)`
   controls.update()
   renderer.render(scene, camera)
   raf.value = requestAnimationFrame((next) => animate(three, next))
@@ -437,7 +518,7 @@ function rebuildInner() {
   world.clear()
   dynamic.clear()
   grid.scene_w = (grid.lon1 - grid.lon0) * metersPerLng(grid.lat0)
-  grid.scene_h = grid.lat0 - grid.lat1
+  grid.scene_h = (grid.lat0 - grid.lat1) * 111320  // BE-17：度数→米。此前是 0.05°，地形压成细带、等高线/道路全被错误裁剪
   const K = grid.scene_w / 2000  // 场景比例因子（firepatrol 基准 2000m）
   const three = { THREE }
   entry.scene.fog.near = grid.scene_w * 1.1
@@ -454,6 +535,8 @@ function rebuildInner() {
     entry.camera.position.set(focus.x - grid.scene_w * 0.42, grid.scene_w * 0.62, focus.z + grid.scene_w * 0.52)
   }
   buildTerrain(three, grid, world)
+  buildContours(three, world, grid)
+  buildRoads(three, world, grid)
   for (const station of props.stations) {
     const w = toWorld(station.gps.latitude, station.gps.longitude)
     if (w) buildStation(three, world, { ...station, scaleK: K, world: new THREE.Vector3(w.x, 0, w.z) }, elevAt(station.gps.latitude, station.gps.longitude) * EX)
@@ -535,7 +618,7 @@ onBeforeUnmount(() => {
   }
 })
 
-watch(() => [props.grid, props.stations, props.fireGps, props.fireActive, props.evacPath], rebuild, { deep: false })
+watch(() => [props.grid, props.stations, props.fireGps, props.fireActive, props.evacPath, props.contours, props.roadContext], rebuild, { deep: false })
 watch(() => props.drones, () => {
   const entry = core.value
   const grid = props.grid
@@ -564,7 +647,14 @@ onBeforeUnmount(() => {
 <template>
   <div class="terrain3d-wrap">
     <div ref="mountRef" class="terrain3d" role="application" aria-label="紫金山三维地形（拖拽旋转 / 滚轮缩放）"></div>
-    <span v-if="grid" class="terrain3d-tag">紫金山实测高程 · 拖拽旋转 / 滚轮缩放 / 自动巡航</span>
+    <div v-if="grid" class="terrain3d-hud" aria-label="三维场景信息">
+      <span>场景 {{ (grid.scene_w / 1000).toFixed(1) }} × {{ (grid.scene_h / 1000).toFixed(1) }} km</span>
+      <span>高程 {{ Math.round(grid.min_elev) }} – {{ Math.round(grid.max_elev) }} m</span>
+      <span v-if="fireGps">火点海拔 {{ Math.round(fireElevM) }} m</span>
+      <span>作业悬停 {{ Math.round(60 * EX) }} m AGL</span>
+      <span class="hud-compass"><i ref="hudNeedle" class="hud-needle">N</i></span>
+    </div>
+    <span v-if="grid" class="terrain3d-tag">紫金山实测高程（N32E118.hgt） · 等高线 20m 间隔 · 拖拽旋转 / 滚轮缩放 / 自动巡航</span>
   </div>
 </template>
 
@@ -572,4 +662,8 @@ onBeforeUnmount(() => {
 .terrain3d-wrap { position: absolute; inset: 0; }
 .terrain3d { position: absolute; inset: 0; }
 .terrain3d-tag { position: absolute; left: 12px; bottom: 10px; font: 500 11px/1.2 var(--font-data, monospace); color: #9fb8a8; background: #101820cc; padding: 5px 10px; border-radius: 999px; pointer-events: none; }
+.terrain3d-hud { position: absolute; top: 10px; right: 12px; display: flex; flex-direction: column; gap: 5px; align-items: flex-end; pointer-events: none; }
+.terrain3d-hud > span { font: 400 11px/1.3 var(--font-data, monospace); color: #cfe0d4; background: #101820cc; padding: 4px 9px; border-radius: 6px; border: 1px solid #2c3e36; }
+.hud-compass { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; border: 1px solid #3c5246; background: #101820cc; padding: 0; }
+.hud-needle { display: inline-block; font: 700 11px/1 var(--font-data, monospace); color: #7fd4a8; transform-origin: center; }
 </style>
