@@ -566,7 +566,7 @@ function rebuildInner() {
 onMounted(() => {
   const mount = mountRef.value
   if (!mount) return
-  const renderer = new THREE.WebGLRenderer({ antialias: true })
+  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
   renderer.setClearColor('#0a1410')
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = 1.6

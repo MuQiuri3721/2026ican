@@ -6,6 +6,7 @@ export function useLogs(initial = []) {
 
   function addLog(message, details = {}) {
     logs.value.unshift({ timestamp: new Date().toISOString(), stage: 'ui', source: 'frontend', message, ...details })
+    if (logs.value.length > 300) logs.value.length = 300
   }
 
   const foldedLogs = computed(() => {

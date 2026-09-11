@@ -527,10 +527,14 @@ function smoothProgress(p) {
   return p * p * (3 - 2 * p)
 }
 
-function missionTick() {
+function missionTick(ts) {
   const mission = props.mission
   if (!mission?.active) { missionRaf = 0; return }
   missionLastTickMs = Date.now()
+  // BE-17：60fps 对地图标记过载（12 架 × 每帧 AMap setPosition + DOM 写入），
+  // 节流到 ~30fps——视觉平滑度不变，标记重定位开销减半
+  if (ts - (missionTick.last || 0) < 33) { missionRaf = requestAnimationFrame(missionTick); return }
+  missionTick.last = ts
   const fire = fireGps()
   const metersPerLat = 111320
   const metersPerLng = 111320 * Math.cos((fire.latitude * Math.PI) / 180)
