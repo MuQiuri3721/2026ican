@@ -81,10 +81,10 @@ function buildTerrain(three, grid, world) {
   geometry.rotateX(-Math.PI / 2)
   const pos = geometry.attributes.position
   const colors = []
-  const colValley = new THREE.Color('#33584a')
-  const colMid = new THREE.Color('#4d6e52')
-  const colHigh = new THREE.Color('#6b6247')
-  const colPeak = new THREE.Color('#8a8172')
+  const colValley = new THREE.Color('#467a63')
+  const colMid = new THREE.Color('#64886a')
+  const colHigh = new THREE.Color('#8a8060')
+  const colPeak = new THREE.Color('#b0a68c')
   const sun = new THREE.Vector3(-0.55, 0.75, 0.35).normalize()
   const span = grid.max_elev - grid.min_elev || 1
   const height = (r, c) => grid.elevations[Math.max(0, Math.min(grid.ny - 1, r))]?.[Math.max(0, Math.min(grid.nx - 1, c))] ?? grid.min_elev
@@ -102,7 +102,7 @@ function buildTerrain(three, grid, world) {
     const dhx = height(gy, gx + 1) - height(gy, gx - 1)
     const dhy = height(gy + 1, gx) - height(gy - 1, gx)
     const normal = new THREE.Vector3(-dhx * EX, 40, -dhy * EX).normalize()
-    c.multiplyScalar(0.72 + 0.45 * Math.max(0, normal.dot(sun)))
+    c.multiplyScalar(0.85 + 0.5 * Math.max(0, normal.dot(sun)))
     colors.push(c.r, c.g, c.b)
   }
   geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
@@ -288,15 +288,37 @@ function syncDrones(three, dynamic, grid) {
     if (!entry) {
       const colorHex = '#' + new THREE.Color(SUBGROUP_COLOR[drone.subgroup] ?? 0x4f8dff).getHexString()
       const built = buildDrone(colorHex, drone.subgroup)
-      built.group.scale.setScalar(grid.scene_w / 2000)
-      const badge = textSprite(`${drone.id} · ${drone.soc ?? '—'}%`, colorHex, 0.55)
-      badge.position.y = 30
+      built.group.scale.setScalar(grid.scene_w / 900)
+      const badge = textSprite(`${drone.id} · ${drone.soc ?? '—'}%`, colorHex, 0.8)
+      badge.position.y = 34
       built.group.add(badge)
       dynamic.add(built.group)
       entry = { ...built, badge, cur: null }
       index.set(drone.id, entry)
     }
     entry.target = { x: w.x, y: alt, z: w.z, lat: w.latitude, lng: w.longitude, groundY }
+    // BE-17：无任务（待命）时机群散布悬停在驻地上空——此前 syncDrones 只登记不摆放，
+    // 12 架全部叠在世界原点（埋进地形），缩放也小到镜头下不可见。
+    if (!props.mission?.active) {
+      const idx = Math.max(0, props.drones.indexOf(drone))
+      const angle = idx * 2.399
+      const radius = 300 + (idx % 6) * 120
+      const lat = w.latitude + Math.sin(angle) * radius / 111320
+      const lng = w.longitude + Math.cos(angle) * radius / (111320 * Math.cos(w.latitude * Math.PI / 180))
+      const gw = toWorld(lat, lng)
+      if (gw) {
+        entry.target.x = gw.x
+        entry.target.z = gw.z
+        entry.target.y = elevAt(lat, lng) * EX + 46 * EX
+        entry.target.lat = lat
+        entry.target.lng = lng
+      }
+      if (!entry.cur) entry.cur = { ...entry.target }
+      entry.cur.x += (entry.target.x - entry.cur.x) * 0.08
+      entry.cur.y += (entry.target.y - entry.cur.y) * 0.08
+      entry.cur.z += (entry.target.z - entry.cur.z) * 0.08
+      entry.group.position.set(entry.cur.x, entry.cur.y, entry.cur.z)
+    }
   }
   for (const [id, entry] of index) {
     if (!seen.has(id)) {
@@ -460,7 +482,7 @@ onMounted(() => {
   const renderer = new THREE.WebGLRenderer({ antialias: true })
   renderer.setClearColor('#0a1410')
   renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 1.35
+  renderer.toneMappingExposure = 1.6
   mount.appendChild(renderer.domElement)
   const camera = new THREE.PerspectiveCamera(46, 1, 1, 9000)
   const controls = new OrbitControls(camera, renderer.domElement)
@@ -474,7 +496,7 @@ onMounted(() => {
   const scene = new THREE.Scene()
   scene.fog = new THREE.Fog('#1c2822', 3000, 12000)
   const sky = buildSky(THREE, scene)
-  scene.add(new THREE.HemisphereLight('#b8d0c0', '#2a3428', 1.15))
+  scene.add(new THREE.HemisphereLight('#b8d0c0', '#2a3428', 1.35))
   const sun = new THREE.DirectionalLight('#ffd9a3', 1.8)
   sun.position.set(-900, 1200, 600)
   scene.add(sun)
