@@ -316,3 +316,68 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
   .full-logs>div{grid-template-columns:64px 10px 1fr;gap:7px}
   .full-logs small{display:none}
 }
+
+/* =====================================================================
+   UI-POLISH（BE-17 视觉打磨层）：只调观感，不动信息架构与类名契约。
+   1 SOC 条语义分级 2 遥测数据徽章化 3 表单控件统一 + 禁用 chip 化
+   4 日志条目卡片化 5 空态弱化 6 对比度/焦点环/按钮质感
+   ===================================================================== */
+
+/* ---- 1. SOC 电量条：语义分级（≥60 主题绿 / 30-60 琥珀 / <30 火/红），带过渡 ---- */
+.battery-bar i{transition:width .4s ease,background var(--speed) ease}
+.battery-bar.soc-mid i{background:#d99a26}
+.battery-bar.soc-low i{background:var(--fire)}
+.roster-soc b,.battery span{font-variant-numeric:tabular-nums}
+
+/* ---- 2. 主页集群列表：遥测数据徽章化 + 行节奏 ---- */
+.fleet-list .drone-row{padding:13px 2px;gap:14px}
+.fleet-list .drone-row .drone-telemetry{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0;justify-content:flex-end}
+.drone-row .drone-telemetry span{padding:3px 9px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;font:400 11.5px var(--font-data);color:var(--ink-2);white-space:nowrap}
+.drone-row .drone-telemetry span:nth-child(odd){background:var(--surface)}
+.fleet-list .drone-row:last-child{border-bottom:1px solid #eceff2}
+
+/* ---- 3. 表单控件：统一焦点环 / 悬停描边 ---- */
+.people-risk select:hover,.environment-controls select:hover,.minute-input:hover,.reason-input:hover{border-color:var(--accent-line)}
+.people-risk select:focus-visible,.environment-controls select:focus-visible,.minute-input:focus-visible,.reason-input:focus-visible{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+/* 禁用名单：checkbox 自身即 chip（::after 显示机号，真实可点；选中=火色「已禁用」） */
+.uav-disable{gap:5px}
+.uav-disable input[type=checkbox]{appearance:none;margin:0;padding:4px 10px;background:var(--surface);border:1px solid var(--line-strong);border-radius:999px;font:500 11.5px var(--font-data);color:var(--ink-3);cursor:pointer;user-select:none;line-height:1.2;transition:all var(--speed) ease}
+.uav-disable input[type=checkbox]::after{content:attr(value)}
+.uav-disable input[type=checkbox]:hover{border-color:var(--fire-line);color:var(--fire-deep)}
+.uav-disable input[type=checkbox]:checked{background:var(--fire-soft);border-color:var(--fire-line);color:var(--fire-deep);font-weight:600}
+.uav-disable input[type=checkbox]:checked::after{content:"✕ " attr(value)}
+.uav-disable input[type=checkbox]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.uav-disable input[type=checkbox]+span{display:none}
+
+/* ---- 4. 任务日志：条目卡片化，边界清晰不再挤排 ---- */
+.logs{column-gap:14px;row-gap:8px}
+.logs>div{border:1px solid var(--line);border-radius:var(--radius-s);background:var(--surface);padding:9px 12px;align-items:flex-start;margin:0}
+.logs>div span:last-of-type{flex:1;min-width:0;line-height:1.55}
+.logs>div .log-time{padding-top:2px}
+.logs .empty-hint{grid-column:1/-1;border:1px dashed var(--line-strong);border-radius:var(--radius-s);background:var(--surface-2);justify-content:center}
+.logs .empty-hint b{margin-right:6px}
+
+/* ---- 5. 环境空态：无数据项弱化为虚线占位，不再一排灰卡 ---- */
+.environment-item:has(strong.is-empty){background:transparent;border:1px dashed var(--line-strong);opacity:.72}
+.environment-item strong.is-empty{font-weight:500;letter-spacing:.5px}
+.environment-item:not(:has(strong.is-empty)){border:1px solid var(--line)}
+
+/* ---- 6. 决策建议框：左侧强调线，层级更清晰 ---- */
+.decision-callout{border-left:3px solid var(--accent);box-shadow:inset 0 1px 0 #fff}
+/* 次要来源注释对比度提升（小字可读） */
+.src-note,.plan-summary .src-note{color:#75828e}
+/* fleet 页「遥测」按钮降噪：12 个重复按钮弱化为紧凑次级样式 */
+.roster-row .outline-btn{padding:6px 11px;font-size:12px;color:var(--ink-3)}
+.roster-row .outline-btn:hover{color:var(--accent)}
+/* 审批按钮组：主操作「批准主方案」升级为实心强调 */
+.approval-actions .outline-btn{box-shadow:var(--shadow-1)}
+.approval-actions .outline-btn.danger-btn{color:var(--fire-deep);border-color:var(--fire-line)}
+.approval-actions .outline-btn.danger-btn:hover{background:var(--fire-soft)}
+.approval-actions .outline-btn:not(.danger-btn):first-of-type{background:var(--accent);border-color:var(--accent-deep);color:#fff;font-weight:700}
+.approval-actions .outline-btn:not(.danger-btn):first-of-type:hover{background:var(--accent-deep);color:#fff}
+/* 主按钮质感与页签激活下划线加强 */
+.primary{background:linear-gradient(180deg,#3172f2,var(--accent-deep))}
+.primary:active{transform:translateY(1px)}
+.tab-pills .selected::after{content:"";position:absolute;left:16px;right:16px;bottom:-1px;height:2px;background:var(--accent)}
+/* 任务徽章（等待二次审批/待命）更轻 */
+.task-badge{background:var(--warn-soft);border-color:#f0dfc0;color:var(--warn)}
