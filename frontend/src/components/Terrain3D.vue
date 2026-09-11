@@ -157,6 +157,7 @@ function buildContours(three, world, grid) {
   const halfW = grid.scene_w / 2 + grid.scene_w * 0.02
   const halfH = grid.scene_h / 2 + grid.scene_h * 0.02
   let labeled = 0
+  const segmentsAll = []
   for (const feature of features) {
     const geometry = feature?.geometry
     const segments = geometry?.type === 'LineString' ? [geometry.coordinates]
@@ -171,9 +172,7 @@ function buildContours(three, world, grid) {
         points.push(new THREE.Vector3(w.x, elevAt(lat, lng) * EX + 10, w.z))
       }
       if (points.length < 2) continue
-      world.add(new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints(points),
-        new THREE.LineBasicMaterial({ color: '#d8c48a', transparent: true, opacity: 0.5 })))
+      for (let i = 0; i < points.length - 1; i++) segmentsAll.push(points[i], points[i + 1])
       if (labeled < 14 && elevation > 0 && points.length >= 6) {
         const mid = points[Math.floor(points.length / 2)]
         const tag = textSprite(`${Math.round(elevation)}m`, '#e8d9a8', 0.4)
@@ -182,6 +181,11 @@ function buildContours(three, world, grid) {
         labeled += 1
       }
     }
+  }
+  if (segmentsAll.length) {
+    // 全部等高线合并为单个 LineSegments：一次 draw call，不再每条线一个绘制批次
+    world.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(segmentsAll),
+      new THREE.LineBasicMaterial({ color: '#d8c48a', transparent: true, opacity: 0.5 })))
   }
 }
 
@@ -594,7 +598,7 @@ onMounted(() => {
     const rect = mount.getBoundingClientRect()
     if (rect.width < 8 || rect.height < 8) return
     renderer.setSize(rect.width, rect.height, false)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
     camera.aspect = rect.width / rect.height
     camera.updateProjectionMatrix()
   }
@@ -618,7 +622,16 @@ onBeforeUnmount(() => {
   }
 })
 
-watch(() => [props.grid, props.stations, props.fireGps, props.fireActive, props.evacPath, props.contours, props.roadContext], rebuild, { deep: false })
+// BE-17：按内容签名触发重建——stations/evacPath 是 computed，数组身份每次重算都变，
+// 此前按引用 watch 导致每次机群/环境刷新都整场景推倒重建（卡顿主因）
+const rebuildKey = computed(() => JSON.stringify([
+  props.grid?.lon0, props.grid?.lat0, props.grid?.nx, props.grid?.scene_h,
+  props.fireGps, props.fireActive, props.evacPath?.length,
+  props.contours?.features?.length,
+  props.stations?.map((s) => [s.name, s.gps?.latitude, s.gps?.longitude]),
+  props.roadContext?.road_count,
+]))
+watch(rebuildKey, rebuild)
 watch(() => props.drones, () => {
   const entry = core.value
   const grid = props.grid
