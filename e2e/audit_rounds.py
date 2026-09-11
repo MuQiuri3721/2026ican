@@ -87,8 +87,12 @@ def audit_round(rnd, round_data, prev_after_flp, prev_water):
         if not (0 <= (u.get("soc") or 0) <= 100):
             check(False, f"R{rnd} {u.get('uav_id')} SOC 越界({u.get('soc')})")
     if prev_water is not None and inv.get("water_liters") is not None:
-        if inv["water_liters"] > prev_water + 1e-6:
-            check(False, f"R{rnd} 库存水回升（{prev_water}->{inv['water_liters']}）")
+        if inv["water_liters"] < -1e-6:
+            check(False, f"R{rnd} 库存水为负（{inv['water_liters']}）")
+        # BE-14 余水退库（规则1 §5.2 Returned_unused）：落场机的机上余水会回注库存，
+        # 单轮回升合法但上限 = 灭火机数 × 单模块 20L（全部落场且满退的物理上限）。
+        if inv["water_liters"] > prev_water + 20 * max(len(fleet), 1) + 1e-6:
+            check(False, f"R{rnd} 库存水异常回升（{prev_water}->{inv['water_liters']}，超过全队退库物理上限）")
     return {"round": rnd, "flp_before": flp_b, "flp_after": flp_a, "action": action,
             "triggers": triggers, "next_action": round_data.get("next_action"),
             "area": area, "water": inv.get("water_liters")}
