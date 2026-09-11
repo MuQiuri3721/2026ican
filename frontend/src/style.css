@@ -412,3 +412,19 @@ nav button:hover:not(.active){background:#1a2530;color:#dce5ec}
 .roster-group-head{margin-bottom:10px}
 .roster-group-head b{letter-spacing:.01em}
 .roster-table{box-shadow:var(--shadow-1)}
+
+/* =====================================================================
+   UI-POLISH W3（FE-53）：主页左右面板等高对齐 + 列表内滚动
+   fleet-panel 限高后 12 架列表在面板内滚动；decision 面板经网格拉伸
+   与其底边对齐，内容超高时同样面板内滚动。
+   ===================================================================== */
+.dashboard .fleet-panel{display:flex;flex-direction:column;max-height:640px}
+.fleet-panel .fleet-list{flex:1;min-height:0;overflow-y:auto;padding-right:6px;margin-top:14px;scrollbar-width:thin;scrollbar-color:#c8d1d8 transparent}
+.fleet-panel .fleet-list::-webkit-scrollbar{width:6px}
+.fleet-panel .fleet-list::-webkit-scrollbar-thumb{background:#c8d1d8;border-radius:3px}
+.fleet-panel .panel-heading{flex-shrink:0}
+.dashboard .decision-panel{display:flex;flex-direction:column;max-height:640px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#c8d1d8 transparent}
+.dashboard .decision-panel::-webkit-scrollbar{width:6px}
+.dashboard .decision-panel::-webkit-scrollbar-thumb{background:#c8d1d8;border-radius:3px}
+.dashboard .decision-panel .panel-heading{position:sticky;top:-20px;z-index:2;background:var(--surface);margin:-20px -22px 0;padding:18px 22px 10px}
+@media(max-width:1000px){.dashboard .fleet-panel,.dashboard .decision-panel{max-height:none}}
