@@ -6,6 +6,36 @@ const Terrain3D = defineAsyncComponent(() => import('./components/Terrain3D.vue'
 import PhaseStepper from './components/PhaseStepper.vue'
 import EvolutionChart from './components/EvolutionChart.vue'
 import {
+  AGENT_MSG_LABELS,
+  AGENT_SOURCE_LABELS,
+  LAYER_LABELS,
+  MISSION_MS_PER_MIN,
+  MISSION_PHASE_LABELS,
+  MISSION_ROUND_MS,
+  MODULE_LABELS,
+  STREAM_TYPE_META,
+  SUBGROUP_COLORS,
+  TTS_VOICE,
+  VLM_ERROR_LABELS,
+  ZIXIAHU_BASE_GPS,
+  statusLabels,
+} from './constants'
+import {
+  agentMsgLabel,
+  agentSourceLabel,
+  formatNumber,
+  issueText,
+  logText,
+  logTime,
+  moduleLabel,
+  streamType,
+  waterTypeClass,
+  waterTypeLabel,
+} from './utils/labels'
+import { useLogs } from './composables/useLogs'
+import { useEnvironment } from './composables/useEnvironment'
+import { useVoice } from './composables/useVoice'
+import {
   Activity,
   Bell,
   Bot,
@@ -40,7 +70,6 @@ const errorMessage = ref('')
 const analysisEnvelope = ref(null)
 const analysisResult = ref(null)
 const analysisId = ref('')
-const environment = ref(null)
 const fleet = ref([])
 const inventory = ref(null)
 const peopleStatus = ref('unknown')
@@ -156,12 +185,6 @@ function dismissMarker(event) {
 const selectedFrames = ref([])
 const streamedTaskId = ref('')
 const approvalBusy = ref(false)
-const environmentLoading = ref(false)
-const environmentMode = ref('real')
-const environmentCoordinates = ref({ latitude: 32.0725, longitude: 118.8415 })
-const coordinateDraft = ref({ ...environmentCoordinates.value })
-const coordinateError = ref('')
-const environmentRequestToken = ref(0)
 const contourData = ref(null)
 const contourLoading = ref(false)
 const contourRequestToken = ref(0)
@@ -181,7 +204,7 @@ const monitorResult = ref(null)
 const rounds = ref([])
 const serviceOnline = ref(false)
 const projectStatus = ref({ framework: 'checking', demo_pipeline: 'checking', yolo: 'pending', vlm: 'pending', geo_data: 'demo-data' })
-const logs = ref([
+const { logs, foldedLogs, addLog } = useLogs([
   { timestamp: '', stage: 'system', source: 'local', message: '系统已连接 · 等待新的侦察数据' },
   { timestamp: '', stage: 'scene', source: 'local', message: '场景「紫金山演示林区」已载入' },
   { timestamp: '', stage: 'fleet', source: 'local', message: '无人机集群状态同步完成' },
@@ -198,6 +221,23 @@ const scene = {
   terrain: '丘陵',
   waterDistance: 800,
 }
+
+const {
+  environment,
+  environmentLoading,
+  environmentMode,
+  environmentCoordinates,
+  coordinateDraft,
+  coordinateError,
+  environmentStatus,
+  environmentSource,
+  environmentStale,
+  environmentFallback,
+  environmentLocation,
+  environmentFeatures,
+  applyCoordinates,
+  loadEnvironment,
+} = useEnvironment({ sceneId: scene.id, addLog, onCoordinateApplied: () => loadContours() })
 
 const drones = ref([
   { id: 'R1', label: '侦察单元', role: 'reconnaissance', subgroup: 'reconnaissance', battery: 92, soc: 92, status: '待命', module: 'EO/IR', payload: '—', signal: 96, health: 100, color: 'blue', task: '待命' },
@@ -260,11 +300,6 @@ const result = computed(() => {
   if (!environment.value) return base
   return { ...base, environment: { ...base.environment, ...environment.value } }
 })
-const statusLabels = { succeeded: '已完成', completed: '已完成', running: '执行中', awaiting_confirmation: '待确认', approved: '已批准', executing: '执行中', replanning: '重规划中', terminated: '已终止', action_required: '需要处置', failed: '失败', queued: '排队中', available: '待命', assigned: '已分配', flying: '飞行中', working: '作业中', returning: '返航中', servicing: '维护中', charging: '充电中', fault: '故障', offline: '离线' }
-const AGENT_MSG_LABELS = { TASK_ASSIGN: '建案派任务', FINDING: '态势发现', PLAN_PROPOSAL: '方案提案', SIM_RESULT: '仿真评估', APPROVAL_REQ: '审批请求', APPROVAL_DECISION: '审批仲裁', JUDGMENT: '自主研判', REPLAN_TRIGGER: '重规划触发', REPORT: '结案报告', EVAC_BROADCAST: '疏散广播', UAV_FAULT: '单机失能', BACKFILL: '补位接替', RECOVERY: '结案回收', INFO: '信息', ERROR: '异常' }
-const AGENT_SOURCE_LABELS = { glm: 'GLM 在线', 'conservative-fallback': '保守降级', 'deterministic-offline': '规则离线', rules: '规则引擎', agent: 'Agent', user: '指挥员', 'parse-failed': '解析回退' }
-function agentMsgLabel(type) { return AGENT_MSG_LABELS[type] || type }
-function agentSourceLabel(source) { return AGENT_SOURCE_LABELS[source] || source || '规则' }
 const displayStatus = computed(() => statusLabels[analysisEnvelope.value?.status] || analysisEnvelope.value?.status || taskStatus.value)
 const plan = computed(() => result.value.dispatch_plan || {})
 const planStatus = computed(() => analysisEnvelope.value?.status || (plan.value.feasibility === false ? 'awaiting_confirmation' : 'ready'))
@@ -290,18 +325,6 @@ const latestRound = computed(() => activeRounds.value.at(-1))
 const monitorArea = computed(() => monitorResult.value?.next_fire_area_m2 ?? result.value.fire_assessment.fire_area_m2)
 const dataMode = computed(() => result.value.data_mode || '本地演示数据 · 规则引擎')
 // VLM 视觉解释（E-2 开发侧就绪）：vlm_explanation 由后端三级来源生成（vlm 直连 / 适配器 / 规则回退），来源随行标注
-const foldedLogs = computed(() => {
-  const folded = []
-  for (const log of logs.value) {
-    const last = folded[folded.length - 1]
-    if (last && last.stage === log.stage && last.source === log.source && last.message === log.message) {
-      last.repeat = (last.repeat || 1) + 1
-      continue
-    }
-    folded.push({ ...log, repeat: 1 })
-  }
-  return folded
-})
 const frameTrendText = computed(() => {
   const seq = result.value && result.value.visual_sequence
   if (!seq || (seq.frame_count || 0) < 2) return ''
@@ -318,12 +341,6 @@ const inputProvenanceText = computed(() => {
   return `输入溯源 · ${prov.image_name || '未命名'} · sha256:${prov.image_sha256_16}` + (frames ? ` · 序列帧 ×${frames}` : '')
 })
 const vlmNote = computed(() => result.value.vlm_explanation || null)
-const issueText = (item) => {
-  if (item == null) return ''
-  if (typeof item === 'string') return item
-  if (typeof item === 'object') return item.message || item.description || item.reason || ''
-  return String(item)
-}
 const vlmNoteBody = computed(() => {
   const note = vlmNote.value
   if (!note) return ''
@@ -349,13 +366,6 @@ const controlVerdictView = computed(() => {
   return { tone: 'bad', hero: '暂不可控 · 请求增援', callout: '压制不足 · 建议立即请求增援', hint: '超出能力，建议增援', report: '暂不可控 · 已输出资源缺口' }
 })
 // OPT-P1-01：失败原因按后端错误码准确归因——只有 429 才说限流，超时/鉴权/响应异常各说各话
-const VLM_ERROR_LABELS = {
-  rate_limited: '免费档限流(429)，稍后重传可获真实识别',
-  auth_failed: '鉴权失败，请检查 FIRE_VLM_API_KEY',
-  timeout_or_network: '网络超时或不可达',
-  empty_response: '模型返回空响应',
-  invalid_response: '模型响应异常',
-}
 const vlmNoteSource = computed(() => {
   const note = vlmNote.value
   if (!note) return ''
@@ -398,7 +408,7 @@ const evacuationSummary = computed(() => {
   return `模拟路径（演示网格 BFS）· 路线 ${eva.steps} 步 · 约 ${eva.estimated_minutes} 分钟 · 避开 ${eva.risk_cells} 个风险格`
 })
 // —— 疏散语音广播（FE-21，范式参考 firepatrol TTS）：有人分支路线生成即口播，可一键静音 ——
-const voiceOn = ref(true)
+const { voiceOn, toggleVoice, speakText } = useVoice({ addLog })
 const spokenEvacFor = ref('')
 watch(() => analysisResult.value && analysisResult.value.agent && analysisResult.value.agent.skill_chain
   ? analysisResult.value.agent.skill_chain.evacuation : null, (eva) => {
@@ -406,39 +416,6 @@ watch(() => analysisResult.value && analysisResult.value.agent && analysisResult
   spokenEvacFor.value = analysisId.value
   speakText(`人员区域请注意:现场发现火情,请立即沿疏散路线向出口撤离,全程约 ${eva.estimated_minutes} 分钟,共 ${eva.steps} 段路线,避开 ${eva.risk_cells} 个风险格,救援无人机将在上空引导。`)
 })
-const TTS_VOICE = 'zh-CN-XiaoxiaoNeural' // Edge TTS 神经音色（晓晓）；失败回落浏览器 TTS
-let edgeAudio = null
-function speakText(text) {
-  // 优先 Edge TTS 神经音色（FE-36）：后端合成 mp3；外网波动/未安装时回落浏览器 speechSynthesis
-  fetch(`/api/tts?text=${encodeURIComponent(text.slice(0, 300))}&voice=${TTS_VOICE}`)
-    .then((response) => {
-      if (!response.ok) throw new Error(`tts ${response.status}`)
-      return response.blob()
-    })
-    .then((blob) => {
-      if (edgeAudio) { edgeAudio.pause(); edgeAudio = null }
-      edgeAudio = new Audio(URL.createObjectURL(blob))
-      edgeAudio.play().catch(() => speakBrowserTts(text))
-    })
-    .catch(() => speakBrowserTts(text))
-}
-function speakBrowserTts(text) {
-  try {
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = 'zh-CN'
-    utterance.rate = 1.05
-    window.speechSynthesis.cancel()
-    window.speechSynthesis.speak(utterance)
-  } catch (error) { console.warn(error) }
-}
-function toggleVoice() {
-  voiceOn.value = !voiceOn.value
-  if (!voiceOn.value) {
-    try { window.speechSynthesis.cancel() } catch (error) { /* 浏览器不支持时静默 */ }
-    if (edgeAudio) { edgeAudio.pause(); edgeAudio = null }
-  }
-  addLog(`疏散语音广播${voiceOn.value ? '开启' : '已静音'}`)
-}
 
 const fireChange = computed(() => {
   const round = activeRounds.value.at(-1)
@@ -462,11 +439,6 @@ const navItems = [
   { id: 'logs', label: '任务日志', icon: Activity },
 ]
 
-const environmentStatus = computed(() => environment.value?.status || '未加载')
-const environmentSource = computed(() => environment.value?.source || '—')
-const environmentStale = computed(() => Boolean(environment.value?.stale))
-const environmentFallback = computed(() => environment.value?.fallback?.message || '')
-const environmentLocation = computed(() => environment.value?.location || environmentCoordinates.value)
 const mapProjection = computed(() => {
   const origin = pointCoordinates(environmentLocation.value) || environmentCoordinates.value
   const points = [origin, ...(environment.value?.water_sources || []), environment.value?.nearest_water, environment.value?.road_context?.nearest_transport, environment.value?.road_context?.nearest_vehicle_access_candidate]
@@ -502,24 +474,6 @@ function markerPosition(point) {
   const p = coordinates ? mapProjection.value.meters(coordinates) : relative
   const extent = mapProjection.value.extent
   return { x: `${Math.max(5, Math.min(95, 50 + (p.x / extent) * 42))}%`, y: `${Math.max(5, Math.min(95, 50 - (p.y / extent) * 42))}%` }
-}
-
-function waterTypeClass(typeText) {
-  const t = String(typeText || '')
-  if (t.includes('水库')) return 'reservoir'
-  if (t.includes('湖')) return 'lake'
-  if (t.includes('河')) return 'river'
-  if (t.includes('塘')) return 'pond'
-  return 'water'
-}
-
-function waterTypeLabel(water) {
-  const type = String(water?.type || water?.water_type || water?.category || '').toLowerCase()
-  if (type.includes('lake') || type.includes('湖')) return '湖泊'
-  if (type.includes('reservoir') || type.includes('水库')) return '水库'
-  if (type.includes('river') || type.includes('河')) return '河流'
-  if (type.includes('pond') || type.includes('塘')) return '池塘'
-  return water?.type || water?.water_type || '水源'
 }
 
 function waterLabel(water) {
@@ -652,7 +606,6 @@ const deploymentList = computed(() => {
 })
 
 // —— 指挥大屏（FE-19）：阶段轨 / KPI / 事件流（范式参考 firepatrol-agents，数据全部来自现有黑板状态） ——
-const SUBGROUP_COLORS = { reconnaissance: '#7fb3ff', suppression: '#e07856', support: '#5fbd92' }
 const deploymentGroups = computed(() => fleetGroups.value
   .map((group) => ({ key: group.key, label: group.label, rows: deploymentList.value.filter((row) => row.subgroup === group.key) }))
   .filter((group) => group.rows.length))
@@ -684,16 +637,6 @@ const screenKpis = computed(() => {
     { label: '监测轮次', value: String(activeRounds.value.length), unit: '轮', tone: 'slate', sub: round ? `最新 B ${round.after ? (round.after.fire_load_flp ?? round.after.flp) : '—'}` : `预计 ${controlWindow.value}` },
   ]
 })
-const STREAM_TYPE_META = {
-  system: ['系统', '#8fa39a'], scene: ['场景', '#7fb3ff'], fleet: ['集群', '#5fbd92'], ui: ['操作', '#b9a3e0'],
-  monitor: ['监测', '#f0a848'], mission: ['出动', '#e07856'], scenario: ['演训', '#e2b95d'], rules: ['规则引擎', '#5fbd92'],
-  perception: ['感知', '#7fb3ff'], analysis: ['研判', '#7fb3ff'], dispatch: ['调度', '#e07856'], approval: ['审批', '#f0a848'],
-}
-function streamType(log) {
-  const stage = typeof log === 'object' ? log.stage : ''
-  const meta = STREAM_TYPE_META[stage]
-  return meta ? { label: meta[0], color: meta[1] } : { label: stage || '事件', color: '#8fa39a' }
-}
 
 // 火情演化 sparkline：逐轮 after FLP
 const evolution = computed(() => {
@@ -766,61 +709,11 @@ const contourPaths = computed(() => {
   })
 })
 
-const environmentFeatures = computed(() => {
-  const raw = environment.value?.raw?.weather?.data || environment.value?.raw?.weather || {}
-  const terrain = environment.value?.terrain || {}
-  const land = environment.value?.landcover || {}
-  const water = environment.value?.nearest_water
-  const road = environment.value?.road_context?.nearest_transport || environment.value?.road_context?.nearest_vehicle_access_candidate
-  return [
-    { label: '天气', value: raw.temperature_c != null ? `${raw.temperature_c}°C · 湿度 ${raw.relative_humidity_pct ?? '—'}% · 降水 ${raw.precipitation_mm ?? '—'}mm · 阵风 ${raw.wind_gust_m_s ?? '—'}m/s` : (environment.value?.wind_speed != null ? `${environment.value.wind_speed} m/s · ${environment.value.wind_direction || '—'}` : '暂无'), tone: 'blue' },
-    { label: '地形', value: terrain.slope_deg != null ? `坡度 ${terrain.slope_deg}° · 上坡 ${terrain.upslope_direction || '—'} / 下坡 ${terrain.downslope_direction || '—'}` : (environment.value?.terrain || '暂无'), tone: 'green' },
-    { label: '土地覆盖', value: land.burnable_ratio != null ? `${land.dominant_class || land.class_name || '—'} · 可燃 ${(land.burnable_ratio * 100).toFixed(1)}% · ${land.fuel_possible ? '可能有燃料' : '燃料较少'}` : '暂无', tone: 'green' },
-    { label: '水源', value: water ? `${water.name || '未命名水源'} · ${water.distance_m ?? '—'}m · ${water.latitude ?? '—'}, ${water.longitude ?? '—'}` : '暂无', empty: !water, tone: 'blue' },
-    { label: '首选水源', value: (() => { const preferred = environment.value?.preferred_water; return preferred ? `${preferred.name || '未命名'} · ${preferred.distance_m ?? '—'}m · ${waterTypeLabel(preferred)}` : (water ? `${water.name || '未命名'}（最近）` : '暂无'); })(), tone: 'blue' },
-    { label: '道路', value: road ? `${road.name || '未命名道路'} · ${road.distance_m ?? '—'}m · ${road.nearest_point?.latitude ?? '—'}, ${road.nearest_point?.longitude ?? '—'}` : '暂无', empty: !road, tone: 'orange' },
-  ]
-})
-
-function applyCoordinates() {
-  const latitude = Number(coordinateDraft.value.latitude)
-  const longitude = Number(coordinateDraft.value.longitude)
-  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-    coordinateError.value = '纬度范围 -90 至 90，经度范围 -180 至 180，且必须为数字。'
-    return
-  }
-  coordinateError.value = ''
-  environmentCoordinates.value = { latitude, longitude }
-  loadEnvironment()
-  loadContours()
-  addLog(`火点坐标已更新 · ${latitude.toFixed(7)}, ${longitude.toFixed(7)}`)
-}
-
 // 地图选点（模拟发现火情）：把点击处的 WGS-84 坐标指为火点，走与环境面板相同的应用链
 function applyPickedCoords(picked) {
   coordinateDraft.value = { latitude: Number(picked.latitude.toFixed(6)), longitude: Number(picked.longitude.toFixed(6)) }
   pickMode.value = false
   applyCoordinates()
-}
-
-async function loadEnvironment() {
-  const requestToken = ++environmentRequestToken.value
-  environmentLoading.value = true
-  try {
-    const { latitude, longitude } = environmentCoordinates.value
-    const query = new URLSearchParams({ scene_id: scene.id, latitude: String(latitude), longitude: String(longitude), environment_mode: environmentMode.value, water_radius_m: '5000', road_radius_m: '5000' })
-    const response = await fetch(`/api/environment?${query}`)
-    if (!response.ok) throw new Error('环境接口不可用')
-    const payload = await response.json()
-    if (requestToken !== environmentRequestToken.value) return
-    environment.value = payload
-    addLog(`环境数据已刷新 · ${payload.source || 'unknown'}${payload.stale ? ' · stale' : ''}`)
-  } catch (error) {
-    if (requestToken === environmentRequestToken.value) addLog('环境数据刷新失败 · 保持当前状态')
-    console.warn(error)
-  } finally {
-    if (requestToken === environmentRequestToken.value) environmentLoading.value = false
-  }
 }
 
 async function loadContours() {
@@ -876,15 +769,6 @@ const todayLabel = computed(() => {
   return `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`
 })
 
-const MODULE_LABELS = { none: '无载荷', water_20l: '水剂 20L', co2_6kg: 'CO₂ 6kg', sup_10: '补给 10kg' }
-const LAYER_LABELS = { fire: '火点', water: '水源', road: '道路', drone: '无人机', contour: '等高线', evacuation: '疏散路线' }
-function moduleLabel(module) {
-  return MODULE_LABELS[module] || module || '—'
-}
-
-function formatNumber(value) {
-  return new Intl.NumberFormat('zh-CN').format(value)
-}
 
 function selectNav(id) {
   activeTab.value = id
@@ -899,19 +783,6 @@ function selectView(id) {
   else if (id === 'overview') activeTab.value = 'command'
   else if (id === 'agents') activeTab.value = 'logs'
   if (id === 'history') loadHistory()
-}
-
-function addLog(message, details = {}) {
-  logs.value.unshift({ timestamp: new Date().toISOString(), stage: 'ui', source: 'frontend', message, ...details })
-}
-
-function logText(log) {
-  return typeof log === 'string' ? log : log.message
-}
-
-function logTime(log, index) {
-  if (typeof log === 'object' && log.timestamp) return log.timestamp.slice(11, 19)
-  return `09:${String(20 - index).padStart(2, '0')}`
 }
 
 async function selectHistoryTask(task) {
@@ -1422,9 +1293,6 @@ async function runMonitor(auto = false) {
 
 // ---------- 出动推演（FE-17）：批准即动画，自动轮次推进，后端权威校准 ----------
 // 相位时间线与后端 simulate_monitor 状态机对齐（flying→working→returning→servicing→charging）
-const MISSION_MS_PER_MIN = 1200 // 1 仿真分钟 ≈ 1.2 实秒（一轮 5 仿真分钟 ≈ 6s）
-const MISSION_ROUND_MS = 6000
-const MISSION_PHASE_LABELS = { flying: '出动中', working: '喷洒作业', returning: '返航中', servicing: '基地补水', charging: '基地充电', orbit: '侦察盘旋', parked: '待命' }
 const mission = ref(null)
 const missionNow = ref(0)
 let missionTimer = null
@@ -1552,7 +1420,6 @@ function reconcileMission(after) {
 // ---------- 出动推演结束 ----------
 
 // ---------- 演训模拟（FE-18）：随机火情生成 + 开始模拟 ----------
-const ZIXIAHU_BASE_GPS = { latitude: 32.062229, longitude: 118.839016 } // 紫霞湖水库：机群基地真实锚点
 const scenario = ref(null)
 const scenarioBusy = ref(false)
 
