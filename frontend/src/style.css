@@ -57,7 +57,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-ui);f
 .eyebrow,.section-kicker{font:500 11px var(--font-data);letter-spacing:.8px;color:#7f8e9a}
 .scene-name{font-size:15px;font-weight:700;margin:8px 0 10px;color:#fff}
 .scene-meta{font:400 11px var(--font-data);color:#8b99a5}
-.scene-time{float:right;color:#64737f}
+.scene-time{float:right;color:#8b99a5}
 .live-dot{display:inline-block;width:7px;height:7px;background:#3ecf8e;border-radius:50%;box-shadow:0 0 0 3px #3ecf8e26;margin-right:7px}
 nav{display:grid;gap:4px}
 nav button{border:0;background:transparent;color:#93a1ad;text-align:left;border-radius:var(--radius-s);padding:12px 13px;display:flex;gap:12px;align-items:center;font:600 13.5px var(--font-ui);cursor:pointer;transition:background var(--speed) ease,color var(--speed) ease}
@@ -231,7 +231,7 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
 .roster-soc b{font:500 12px var(--font-data);color:var(--ink-2);width:36px;text-align:right}
 .roster-payload{font:400 12px var(--font-data);color:var(--ink-3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .roster-num{font:400 12px var(--font-data);color:var(--ink-2)}
-.roster-num small{color:#9aa6b0;margin-right:3px}
+.roster-num small{color:#6d7d8b;margin-right:3px}
 .roster-task{font-size:12.5px;color:var(--ink-2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .roster-row .outline-btn{margin-top:0;justify-self:end}
 .fleet-detail-extra{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:6px 14px;margin:4px 0 6px;padding:10px 12px;background:var(--surface-2);border-radius:var(--radius-s);font:400 12px var(--font-data);color:var(--ink-2)}
@@ -268,7 +268,7 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
 .full-logs>div{display:grid;grid-template-columns:86px 12px 1fr 72px;align-items:center;gap:10px;border-bottom:1px solid #eceff2;padding:14px 6px;color:var(--ink-2);font-size:13px}
 .full-logs i{width:7px;height:7px;background:#c5cdd2;border-radius:50%}
 .full-logs i.bright{background:var(--accent);box-shadow:0 0 0 4px #2563eb1c}
-.full-logs small{font:400 11.5px var(--font-data);color:#8b98a3;text-align:right}
+.full-logs small{font:400 11.5px var(--font-data);color:#6d7d8b;text-align:right}
 
 /* ---------- 响应式 ---------- */
 @media(max-width:1000px){
@@ -363,7 +363,7 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
 .environment-item:not(:has(strong.is-empty)){border:1px solid var(--line)}
 
 /* ---- 6. 决策建议框：左侧强调线，层级更清晰 ---- */
-.decision-callout{border-left:3px solid var(--accent);box-shadow:inset 0 1px 0 #fff}
+.decision-callout{border:1px solid var(--accent-line)}
 /* 次要来源注释对比度提升（小字可读） */
 .src-note,.plan-summary .src-note{color:#75828e}
 /* fleet 页「遥测」按钮降噪：12 个重复按钮弱化为紧凑次级样式 */

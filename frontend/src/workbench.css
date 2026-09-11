@@ -6,7 +6,7 @@
 /* ---------- 方案摘要 / 约束 / 审批 ---------- */
 .plan-summary,.people-risk{display:flex;gap:9px 12px;flex-wrap:wrap;align-items:center;margin:14px 0 0;padding:12px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-s);color:var(--ink-2);font:400 12.5px var(--font-data);line-height:1.6}
 .plan-summary b{color:var(--plan)}
-.plan-summary .src-note{color:#8b98a3;font-size:11.5px;white-space:normal;line-height:1.5}
+.plan-summary .src-note{color:#5f6b77;font-size:11.5px;white-space:normal;line-height:1.5}
 .plan-summary .src-note::before{content:"⌗ ";color:var(--plan)}
 /* 留白优化（FE-31 自查）：hero 内容少于同行的上传面板时不再被网格拉伸出大片空白 */
 .hero-panel{align-self:start}
@@ -311,6 +311,15 @@
 .scenario-actions .outline-btn{margin-top:0}
 .scenario-start{margin-top:0}
 /* Agent 协作时间线（AG-3） */
+/* FE-50：协作页教学式空态——六角色图例替代一行细提示 */
+.agents-empty{padding:6px 2px}
+.full-logs>div.agents-empty{display:block;grid-template-columns:none;border:1px dashed var(--line-strong);background:var(--surface);border-radius:var(--radius-s);padding:18px 20px}
+.agents-empty-lead{margin:0 0 14px;color:var(--ink-2);font-size:13px}
+.agents-empty-lead b{color:var(--ink);margin-right:6px}
+.agents-roles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.agents-role{padding:13px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-s)}
+.agents-role b{display:block;font-size:13px;color:var(--ink)}
+.agents-role span{display:block;margin-top:5px;font:400 11.5px var(--font-data);color:var(--ink-2)}
 .agent-timeline .agent-msg{display:grid;grid-template-columns:76px 96px 1fr 110px;align-items:center;gap:12px;border-bottom:1px solid #eceff2;padding:13px 6px}
 .agent-chip{font:500 11.5px var(--font-data);padding:4px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-line);white-space:nowrap;justify-self:start}
 .agent-chip.mt-FINDING{background:var(--fire-soft);color:var(--fire-deep);border-color:var(--fire-line)}
