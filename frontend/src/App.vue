@@ -721,7 +721,7 @@ async function loadContours() {
   contourLoading.value = true
   try {
     const { latitude, longitude } = environmentCoordinates.value
-    const query = new URLSearchParams({ latitude: String(latitude), longitude: String(longitude), radius_deg: '0.05', interval_m: '20', max_points: '240' })
+    const query = new URLSearchParams({ latitude: String(latitude), longitude: String(longitude), radius_deg: '0.07', interval_m: '20', max_points: '240' })
     const response = await fetch(`/api/terrain/contours?${query}`)
     if (!response.ok) throw new Error('等高线接口不可用')
     const payload = await response.json()
@@ -1049,7 +1049,7 @@ async function loadTerrainGrid() {
   terrainGrid.value = null
   terrainGridLoading.value = true
   try {
-    const query = new URLSearchParams({ latitude: String(latitude), longitude: String(longitude), radius_deg: '0.04', size: '141' })
+    const query = new URLSearchParams({ latitude: String(latitude), longitude: String(longitude), radius_deg: '0.06', size: '161' })
     const response = await fetch(`/api/terrain/grid?${query}`)
     if (!response.ok) throw new Error(String(response.status))
     const payload = await response.json()
@@ -1085,8 +1085,12 @@ const fleetAvgGps = computed(() => {
 const stations3d = computed(() => {
   const stations = []
   if (fleetAvgGps.value) stations.push({ name: '紫霞湖基地', gps: fleetAvgGps.value, color: '#f0a848' })
-  const preferred = environment.value && environment.value.preferred_water
-  if (preferred && preferred.latitude != null) stations.push({ name: preferred.name || '首选水源', gps: { latitude: Number(preferred.latitude), longitude: Number(preferred.longitude) }, color: '#5fb8d9' })
+  // BE-17：水源全部入三维（名称带距离），上限 4 处防杂乱
+  for (const water of waterSourcesList.value.slice(0, 4)) {
+    if (!water.coordinates || water.coordinates.longitude == null) continue
+    const name = `${water.preferred ? '★ ' : ''}${water.name || '水源'} · ${water.distance != null ? Math.round(water.distance) + 'm' : '距离?'}`.slice(0, 22)
+    stations.push({ name, gps: { latitude: Number(water.coordinates.latitude), longitude: Number(water.coordinates.longitude) }, color: water.preferred ? '#5fb8d9' : '#4a9ec2' })
+  }
   return stations
 })
 const evac3dPath = computed(() => {

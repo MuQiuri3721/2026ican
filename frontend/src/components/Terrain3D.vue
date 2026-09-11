@@ -533,10 +533,13 @@ function rebuildInner() {
   // 取景对准火点（无火时看场景中心）：仅首次放置，之后尊重用户拖拽的视角
   if (!entry.cameraPlaced) {
     entry.cameraPlaced = true
+    // 取景居中（FE-55）：注视点 = 火点与各标站的质心，火点/基地/水源同框不偏边
     const fireW = props.fireGps ? toWorld(props.fireGps.latitude, props.fireGps.longitude) : null
-    const focus = fireW || { x: 0, z: 0 }
-    entry.controls.target.set(focus.x, 260, focus.z)
-    entry.camera.position.set(focus.x - grid.scene_w * 0.42, grid.scene_w * 0.62, focus.z + grid.scene_w * 0.52)
+    const poi = [fireW, ...props.stations.map((s) => toWorld(s.gps.latitude, s.gps.longitude))].filter(Boolean)
+    const cx = poi.length ? poi.reduce((sum, p) => sum + p.x, 0) / poi.length : 0
+    const cz = poi.length ? poi.reduce((sum, p) => sum + p.z, 0) / poi.length : 0
+    entry.controls.target.set(cx, 300, cz)
+    entry.camera.position.set(cx - grid.scene_w * 0.34, grid.scene_w * 0.52, cz + grid.scene_w * 0.44)
   }
   buildTerrain(three, grid, world)
   buildContours(three, world, grid)
