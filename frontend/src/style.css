@@ -381,3 +381,34 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
 .tab-pills .selected::after{content:"";position:absolute;left:16px;right:16px;bottom:-1px;height:2px;background:var(--accent)}
 /* 任务徽章（等待二次审批/待命）更轻 */
 .task-badge{background:var(--warn-soft);border-color:#f0dfc0;color:var(--warn)}
+
+/* =====================================================================
+   UI-POLISH W2（FE-51）：侧栏重样式 + 各详情页卡片化——可见改版第二波
+   ===================================================================== */
+
+/* ---- 侧栏：纵向微渐变 + 场景卡提亮 + 导航 active 底色 ---- */
+.sidebar{background:linear-gradient(180deg,#151d26 0%,#131a23 62%,#101720 100%)}
+.scene-card{background:linear-gradient(180deg,#1f2c38,#19242e);border-color:#3a4c5b;box-shadow:inset 0 1px 0 #ffffff0f}
+.scene-name{letter-spacing:.02em}
+nav button{border-radius:9px}
+nav button.active{background:#20303f;box-shadow:inset 2px 0 0 var(--accent)}
+nav button:hover:not(.active){background:#1a2530;color:#dce5ec}
+.live-dot{box-shadow:0 0 0 3px #3ecf8e26,0 0 10px #3ecf8e55}
+
+/* ---- 任务日志页：条目卡片化 + 阶段徽章 ---- */
+.full-logs>div{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-s);padding:12px 14px;margin-bottom:8px}
+.full-logs>div:hover{border-color:var(--accent-line)}
+.full-logs .log-meta{display:inline-block;margin-left:8px;padding:2px 8px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;font:400 11px var(--font-data);color:var(--ink-2);white-space:nowrap}
+.full-logs .log-repeat{display:inline-block;padding:2px 8px;background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:999px;color:var(--accent);font:500 11px var(--font-data)}
+
+/* ---- 历史任务页：行卡片化 + 状态徽章 + 悬停引导 ---- */
+.history-row{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-s);padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:border-color var(--speed) ease,box-shadow var(--speed) ease}
+.history-row:hover{border-color:var(--accent-line);box-shadow:var(--shadow-1)}
+.history-row:hover strong{color:var(--accent)}
+.history-row small:last-child{display:inline-block;margin-left:auto;padding:2px 9px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;font:500 11px var(--font-data);color:var(--ink-2)}
+
+/* ---- 集群页：行节奏与分组标题 ---- */
+.roster-row{padding:13px 16px}
+.roster-group-head{margin-bottom:10px}
+.roster-group-head b{letter-spacing:.01em}
+.roster-table{box-shadow:var(--shadow-1)}
