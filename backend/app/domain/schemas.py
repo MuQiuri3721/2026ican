@@ -115,7 +115,7 @@ class MonitorInput(BaseModel):
     image_name: Optional[str] = None
     fleet_snapshot: Optional[List[Dict[str, Any]]] = None
     inventory: Optional[Dict[str, Any]] = None
-
+    idempotency_key: Optional[str] = Field(default=None, max_length=128)
 
 class TaskEvent(BaseModel):
     timestamp: str = Field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
@@ -161,7 +161,7 @@ class ReplanRequest(BaseModel):
     constraints: Optional[Dict[str, Any]] = None
     observation: Optional[Dict[str, Any]] = None
     people_status: Optional[PeopleStatus] = None
-
+    idempotency_key: Optional[str] = Field(default=None, max_length=128)
 
 class FeedbackRoundInput(BaseModel):
     round: int = Field(gt=0)

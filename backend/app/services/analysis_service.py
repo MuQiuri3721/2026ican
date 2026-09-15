@@ -336,6 +336,12 @@ class AnalysisService:
         }
 
     def monitor_and_update(self, analysis_id: str, request: MonitorInput) -> Dict[str, Any]:
+        # FE-65：幂等键重放防护——同键重复提交直接返回首次快照，不再推进仿真
+        if request.idempotency_key:
+            prior = analysis_store.idempotency_get(analysis_id, "monitor", request.idempotency_key)
+            if prior is not None:
+                return prior
+
         def calculate(item):
             if item.status not in {"executing"}:
                 raise ValueError("任务尚未批准执行，禁止监测")
@@ -381,7 +387,10 @@ class AnalysisService:
             # 结案回收（对照 firepatrol recover_round）：扑灭归档时把全部在外机撤回基地。
             self._recover_fleet_to_base(analysis_id, updated)
         self._persist_dispatch_report(analysis_id)
-        return {**updated.model_dump(), "action": updated.result["monitor"]["action"]}
+        response = {**updated.model_dump(), "action": updated.result["monitor"]["action"]}
+        if request.idempotency_key:
+            analysis_store.idempotency_put(analysis_id, "monitor", request.idempotency_key, response)
+        return response
 
     def approve(self, analysis_id: str, request) -> Dict[str, Any]:
         approved = analysis_store.approval(analysis_id, request.action, request.plan_id, request.constraints, request.reason, request.idempotency_key)
@@ -418,6 +427,11 @@ class AnalysisService:
         item = analysis_store.get(analysis_id)
         if not item: raise KeyError(analysis_id)
         if item.status in {"completed", "terminated", "failed"}: raise ValueError("终态任务禁止重规划")
+        # FE-65：幂等键重放防护
+        if request.idempotency_key:
+            prior = analysis_store.idempotency_get(analysis_id, "replan", request.idempotency_key)
+            if prior is not None:
+                return prior
         # Replanning invalidates the old reservation before generating a new plan.
         analysis_store.release_resources(analysis_id)
         analysis_store.update(analysis_id, status="replanning")
@@ -481,7 +495,10 @@ class AnalysisService:
         analysis_store.update(analysis_id, status="awaiting_confirmation", result=result, plan_versions=[*item.plan_versions, plan])
         analysis_store.add_event(analysis_id, "replan", "已基于当前资源和约束重新生成方案", "rules")
         self._persist_dispatch_report(analysis_id)
-        return self.get_plan(analysis_id)
+        plan_response = self.get_plan(analysis_id)
+        if request.idempotency_key:
+            analysis_store.idempotency_put(analysis_id, "replan", request.idempotency_key, plan_response)
+        return plan_response
 
     def add_round(self, analysis_id: str, request: FeedbackRoundInput) -> Dict[str, Any]:
         item = analysis_store.get(analysis_id)

@@ -159,6 +159,20 @@ class AnalysisStore:
         )
         return [json.loads(row[0]) for row in rows]
 
+    # FE-65：任务级幂等缓存（monitor/replan 重放防护），内存态、重启即清、上限 500 条
+    _idem_cache: dict = {}
+
+    def idempotency_get(self, task_id: str, scope: str, key: str):
+        with self._lock:
+            return self._idem_cache.get((task_id, scope, key))
+
+    def idempotency_put(self, task_id: str, scope: str, key: str, payload) -> None:
+        with self._lock:
+            self._idem_cache[(task_id, scope, key)] = payload
+            if len(self._idem_cache) > 500:
+                for stale_key in list(self._idem_cache.keys())[:250]:
+                    self._idem_cache.pop(stale_key, None)
+
     def add_event(self, analysis_id: str, stage: str, message: str, source: str = "system") -> AnalysisEnvelope:
         with self._lock:
             item = self._items.get(analysis_id)
