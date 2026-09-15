@@ -419,3 +419,37 @@ def test_T18_vlm_error_classification_matrix():
 
     for error, expected in cases:
         assert client._classify_error(error) == expected, f"{error} 应归类为 {expected}"
+
+
+def test_B6_road_network_capped_vehicle_first():
+    """B-6：road_context.roads 暴露有界路网数组——车辆可通行优先、去重、≤60 条上限；
+    graph.way_ids 保持全量身份；单条折线维持 ≤80 点。"""
+    from unittest import mock
+
+    from backend.app.services import environment_service as env_svc
+
+    def way(way_id, highway, distance_hint):
+        # 距离由折线与查询点算出：用微小经度偏移控制相对远近
+        lon = 118.84 + distance_hint
+        return {"type": "way", "id": way_id,
+                "tags": {"highway": highway, "name": f"road-{way_id}"},
+                "geometry": [{"lon": lon, "lat": 32.07}, {"lon": lon + 0.001, "lat": 32.071}]}
+
+    fixture = [way(1, "footway", 0.0001), way(2, "primary", 0.0002),
+               way(3, "residential", 0.0003), way(4, "secondary", 0.0004)]
+    with mock.patch.object(env_svc, "overpass_query", return_value=fixture):
+        context = env_svc.get_road_context(32.07, 118.84, search_radius_m=800)
+    assert context["road_count"] == 4 and context["found"]
+    road_ids = [road["way_id"] for road in context["roads"]]
+    # 车辆可通行优先（集合内按距离：primary<residential<secondary），footway 补尾
+    assert road_ids == ["way2", "way3", "way4", "way1"]
+    assert set(context["graph"]["way_ids"]) == {"way1", "way2", "way3", "way4"}
+    assert all(len(road["geometry"]) <= 80 for road in context["roads"])
+
+    # 上限裁剪：>60 条时 roads 恰好 60 且无重复
+    many = [way(1000 + i, "footway", 0.0001 * (i + 1)) for i in range(70)]
+    with mock.patch.object(env_svc, "overpass_query", return_value=many):
+        capped = env_svc.get_road_context(32.07, 118.84, search_radius_m=800)
+    assert len(capped["roads"]) == env_svc.B6_ROADS_MAX == 60
+    assert len({road["way_id"] for road in capped["roads"]}) == 60
+    assert len(capped["graph"]["way_ids"]) == 70

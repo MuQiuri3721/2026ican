@@ -537,6 +537,24 @@ def line_distance(latitude, longitude, geometry):
     }
 
 
+B6_ROADS_MAX = 60
+
+
+def _cap_roads(roads, vehicle_candidates):
+    """B-6 路网上限裁剪：车辆可通行优先（战术价值），余按距离补足，去重保序。"""
+    picked_set = set()
+    selected = []
+    for road in list(vehicle_candidates) + list(roads):
+        if len(selected) >= B6_ROADS_MAX:
+            break
+        way_id = road.get("way_id")
+        if way_id in picked_set:
+            continue
+        selected.append(road)
+        picked_set.add(way_id)
+    return selected
+
+
 def get_road_context(
     latitude,
     longitude,
@@ -599,6 +617,10 @@ def get_road_context(
         # 道路子图身份（OPT-P2-03）：way_id+geometry 可复建，坐标系与提供方如实标注
         "graph": {"provider": "osm", "coordinate_system": "WGS84",
                   "way_ids": [road["way_id"] for road in roads]},
+        # B-6 完整道路网：有界路网数组供地图/三维渲染（此前只回 nearest 两条，
+        # 抓到的折线全被丢弃）。车辆可通行道路优先（战术价值），余按距离补足；
+        # 单条折线 ≤80 点维持 OPT-P2-03 载荷契约，graph.way_ids 保持全量身份。
+        "roads": _cap_roads(roads, vehicle_candidates),
         "nearest_transport": roads[0] if roads else None,
         "nearest_vehicle_access_candidate": (
             vehicle_candidates[0]

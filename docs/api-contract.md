@@ -157,6 +157,7 @@ Query：`scene_id`（默认 `forest-demo-01`）、`latitude`、`longitude`、`en
 - `collected_at` 为数据装配/抓取时刻（ISO 秒级）；缓存命中时随缓存返回，即数据实际采集时间。
 - `real` 模式必须同时提供 `latitude` 与 `longitude`，否则 422 或 fallback（取决于模式）。
 - `offline` 请求模式返回 `mode=demo` 且 `metadata: {"offline": true, "network": "disabled"}`。
+- `road_context`（B-6）：`{found, road_count, graph{provider,coordinate_system,way_ids 全量}, roads[≤60], nearest_transport, nearest_vehicle_access_candidate}`——`roads` 为有界路网数组（车辆可通行优先、余按距离；每条 `{way_id, provider, geometry≤80 点 WGS84, name, highway, surface, access, motor_vehicle, distance_m, nearest_point}`），供地图/三维渲染路网；`graph.way_ids` 保持全量子图身份。
 
 ### 3.2 `GET /api/terrain/contours`
 
