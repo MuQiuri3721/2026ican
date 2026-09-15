@@ -8,16 +8,11 @@ const Terrain3D = defineAsyncComponent(() => import('./components/Terrain3D.vue'
 import PhaseStepper from './components/PhaseStepper.vue'
 import EvolutionChart from './components/EvolutionChart.vue'
 import {
-  AGENT_MSG_LABELS,
-  AGENT_SOURCE_LABELS,
   LAYER_LABELS,
   MISSION_MS_PER_MIN,
   MISSION_PHASE_LABELS,
   MISSION_ROUND_MS,
-  MODULE_LABELS,
-  STREAM_TYPE_META,
   SUBGROUP_COLORS,
-  TTS_VOICE,
   VLM_ERROR_LABELS,
   ZIXIAHU_BASE_GPS,
   statusLabels,
@@ -47,7 +42,6 @@ import {
   Droplets,
   FileImage,
   Flame,
-  Gauge,
   ListFilter,
   Map,
   MapPinned,
@@ -308,7 +302,6 @@ const result = computed(() => {
 })
 const displayStatus = computed(() => statusLabels[analysisEnvelope.value?.status] || analysisEnvelope.value?.status || taskStatus.value)
 const plan = computed(() => result.value.dispatch_plan || {})
-const planStatus = computed(() => analysisEnvelope.value?.status || (plan.value.feasibility === false ? 'awaiting_confirmation' : 'ready'))
 const resourceGap = computed(() => plan.value.resource_gap || result.value.resource_gap || [])
 // 契约字段为 earliest_minutes/latest_minutes/window_minutes（api-contract.md §7），旧 min/max 仅兜底。
 const controlWindow = computed(() => {
@@ -327,7 +320,6 @@ const planVersionLabel = computed(() => {
 const currentPlanId = computed(() => plan.value.plan_id || currentPlanVersion.value.plan_id || '')
 const peopleRisk = computed(() => peopleStatus.value === 'unknown' ? '人员情况不确定：禁止低空近距离作业，需先确认现场是否有人。' : peopleStatus.value === 'confirmed' ? '有人风险：已启用人员避让与人工复核，禁止自动投放。' : '已确认无人：仍需保持通信与撤离通道。')
 const activeRounds = computed(() => rounds.value.length ? rounds.value : (analysisEnvelope.value?.rounds || []))
-const latestRound = computed(() => activeRounds.value.at(-1))
 const monitorArea = computed(() => monitorResult.value?.next_fire_area_m2 ?? result.value.fire_assessment.fire_area_m2)
 const dataMode = computed(() => result.value.data_mode || '本地演示数据 · 规则引擎')
 // VLM 视觉解释（E-2 开发侧就绪）：vlm_explanation 由后端三级来源生成（vlm 直连 / 适配器 / 规则回退），来源随行标注
@@ -480,14 +472,6 @@ function markerPosition(point) {
   const p = coordinates ? mapProjection.value.meters(coordinates) : relative
   const extent = mapProjection.value.extent
   return { x: `${Math.max(5, Math.min(95, 50 + (p.x / extent) * 42))}%`, y: `${Math.max(5, Math.min(95, 50 - (p.y / extent) * 42))}%` }
-}
-
-function waterLabel(water) {
-  const coordinates = pointCoordinates(water)
-  const distance = Number(water?.distance_m)
-  const distanceText = Number.isFinite(distance) ? `${Math.round(distance)}m` : '距离未知'
-  const coordinateText = coordinates ? `${coordinates.longitude.toFixed(6)}°E, ${coordinates.latitude.toFixed(6)}°N` : relativePoint(water) ? `相对 ${Math.round(relativePoint(water).x)}, ${Math.round(relativePoint(water).y)}` : '坐标缺失'
-  return `${waterTypeLabel(water)} · ${water?.name || '未命名'} · ${distanceText} · ${coordinateText}`
 }
 
 const mapRoutes = computed(() => {
@@ -644,18 +628,6 @@ const screenKpis = computed(() => {
   ]
 })
 
-// 火情演化 sparkline：逐轮 after FLP
-const evolution = computed(() => {
-  const rounds = activeRounds.value
-  if (!rounds.length) return null
-  const values = rounds.map((round) => Number(round.after?.fire_load_flp ?? round.after?.flp ?? NaN)).filter((v) => Number.isFinite(v))
-  if (!values.length) return null
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  const span = Math.max(max - min, 1e-6)
-  const points = values.map((value, index) => `${(index / Math.max(values.length - 1, 1)) * 100},${28 - ((value - min) / span) * 24}`).join(' ')
-  return { points, single: values.length < 2, first: values[0], last: values[values.length - 1] }
-})
 const terrainVisual = computed(() => {
   const terrain = environment.value?.terrain || {}
   const elevation = Number(terrain.elevation_m ?? environment.value?.altitude ?? scene.altitude)

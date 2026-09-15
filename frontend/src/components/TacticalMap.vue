@@ -5,6 +5,7 @@
 // 由父组件回退到等高线示意图，演示不因 Key 问题中断。
 import { onBeforeUnmount, onMounted, shallowRef, watch } from 'vue'
 import AMapLoader from '@amap/amap-jsapi-loader'
+import { MISSION_MS_PER_MIN, MISSION_PHASE_LABELS } from '../constants'
 
 const props = defineProps({
   result: { type: Object, default: null },
@@ -492,17 +493,7 @@ function syncActiveClasses() {
   }
 }
 
-function setDroneClasses() {
-  for (const [id, overlay] of markerIndex) {
-    const el = overlay?.getContent?.()
-    const root = el instanceof Node ? el : null
-    if (root && root.dataset?.drone) root.classList.toggle('selected', props.selectedUavs.includes(id))
-  }
-}
-
 // ---------- 出动推演动画（FE-17）：rAF 时钟驱动 setPosition，相位与后端 simulate_monitor 状态机对齐 ----------
-const MISSION_MS_PER_MIN = 1200
-const MISSION_PHASE_LABELS = { flying: '出动中', working: '喷洒作业', returning: '返航中', servicing: '基地补水', charging: '基地充电', orbit: '侦察盘旋', parked: '待命' }
 let missionRaf = 0
 let missionFallbackTimer = 0
 let missionLastTickMs = 0
