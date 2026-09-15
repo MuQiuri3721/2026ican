@@ -351,6 +351,10 @@ Form 字段（全部为 multipart 表单字段，显式 `Form(...)` 绑定）：
 
 ### 5.8 `GET /api/tasks/{task_id}/report` · `GET /api/tasks/{task_id}/report/download`
 
+### 5.8a `GET /api/tasks/{task_id}/report/export`（FE-59）
+
+独立 HTML 图文报告下载（`text/html` + `Content-Disposition: attachment`），内联 CSS 零依赖，浏览器打开后「打印 → 另存为 PDF」即可产出 A4 报告。内容：三态结论横幅、火情研判、处置方案、任务分配、资源缺口、轮次账本（含分钟级 FLP 账本）、资源消耗、事件时间线（≤80 条）与后端版本溯源。任务不存在 404。
+
 - report：`{"task_id", "input", "status", "plan_versions", "rounds", "events", "result"}`，读取时同步刷新落盘。
 - download：返回文件 `dispatch_plan.json`（`application/json`）。报告落盘路径：`data/reports/{task_id}/dispatch_plan.json`（原子写：临时文件 + replace；目录已列入 `.gitignore`）。任务不存在 404。
 
