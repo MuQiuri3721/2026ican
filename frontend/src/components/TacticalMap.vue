@@ -375,10 +375,48 @@ function renderDrones() {
   })
 }
 
+// 道路分级样式（B-6 路网上图）：主干粗实、次干中、支路细、步道虚线
+const ROAD_CLASS_STYLE = {
+  major: { color: '#8a6d3b', weight: 4, opacity: 0.9, style: 'solid' },
+  mid: { color: '#a08050', weight: 2.6, opacity: 0.8, style: 'solid' },
+  minor: { color: '#b09a72', weight: 1.6, opacity: 0.7, style: 'solid' },
+  path: { color: '#b3a890', weight: 1.2, opacity: 0.55, style: 'dashed' },
+}
+function roadClass(highway) {
+  if (['motorway', 'trunk', 'primary'].includes(highway)) return 'major'
+  if (['secondary', 'tertiary'].includes(highway)) return 'mid'
+  if (['unclassified', 'residential', 'service', 'track'].includes(highway)) return 'minor'
+  return 'path'
+}
+
 function renderRoad() {
   clearLayer('road')
   if (!props.layerVisibility.road) return
-  const road = props.environment?.road_context?.nearest_transport || props.environment?.road_context?.nearest_vehicle_access_candidate
+  const context = props.environment?.road_context
+  const AMap = AMapNS.value
+
+  // B-6：真实路网折线（roads 有界数组，≤40 条上图防绘制开销；旧缓存无 roads 时回退 0 条仅保留战术高亮）
+  const network = Array.isArray(context?.roads) ? context.roads.slice(0, 40) : []
+  for (const road of network) {
+    const points = (road.geometry || [])
+      .map(([lng, lat]) => {
+        const gcj = wgs2gcj(Number(lat), Number(lng))
+        return Number.isFinite(gcj.lng) && Number.isFinite(gcj.lat) ? [gcj.lng, gcj.lat] : null
+      })
+      .filter(Boolean)
+    if (points.length < 2) continue
+    const style = ROAD_CLASS_STYLE[roadClass(road.highway)]
+    addOverlay('road', new AMap.Polyline({
+      path: points, strokeColor: style.color, strokeWeight: style.weight,
+      strokeStyle: style.style, strokeOpacity: style.opacity, zIndex: 48,
+      extData: { wayId: road.way_id },
+    }))
+  }
+  const mapHost = document.querySelector('.tactical-amap')
+  if (mapHost) mapHost.dataset.roadCount = String(network.length)
+
+  // 最近道路战术高亮（保留既有火点连线 + 道路名牌交互）
+  const road = context?.nearest_transport || context?.nearest_vehicle_access_candidate
   const point = road?.nearest_point
   if (!point) return
   const gcjRoad = wgs2gcj(Number(point.latitude), Number(point.longitude))

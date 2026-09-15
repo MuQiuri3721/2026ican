@@ -71,6 +71,21 @@ def main() -> int:
         drones = page.locator(".tmap-drone").count()
         ok &= report(10, "无人机标记 12 架", drones == 12, f"drones={drones}")
 
+        # B-6 完整道路网：后端 roads 有界数组在场即验（宽容——Overpass 抖动时不硬挂）
+        env = session.api("GET", "/api/environment?latitude=32.0725&longitude=118.8415&mode=real")
+        rc = env.get("road_context") or {}
+        roads = rc.get("roads") or []
+        roads_ok = True
+        roads_detail = f"road_count={rc.get('road_count')} roads={len(roads)}"
+        if rc.get("found"):
+            roads_ok = 1 <= len(roads) <= 60 and all(
+                isinstance(r.get("geometry"), list) and 2 <= len(r["geometry"]) <= 80 for r in roads)
+            drawn = page.evaluate("document.querySelector('.tactical-amap')?.dataset?.roadCount")
+            if drawn is not None:
+                roads_ok = roads_ok and int(drawn) >= 1
+                roads_detail += f" 上图={drawn}"
+        ok &= report(10, "道路网数据契约(B-6)", roads_ok, roads_detail)
+
         # 光标经纬度读数（高德模式下 GCJ→WGS 反算）；需多步移动才触发 AMap mousemove
         box = page.locator(".tactical-amap").bounding_box()
         cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2

@@ -193,6 +193,13 @@ function buildContours(three, world, grid) {
 // ---------- 最近道路 draped（P2-03 道路子图：nearest_transport / vehicle_candidate 带 geometry） ----------
 function roadEntries(roadContext) {
   if (!roadContext) return []
+  // B-6：优先消费路网数组（≤20 条防绘制开销）；旧缓存无 roads 时回退 nearest 两条
+  if (Array.isArray(roadContext.roads) && roadContext.roads.length) {
+    return roadContext.roads
+      .filter((r) => r && Array.isArray(r.geometry) && r.geometry.length >= 2)
+      .slice(0, 20)
+      .map((r) => ({ ...r, geometry: { type: 'LineString', coordinates: r.geometry } }))
+  }
   const out = []
   for (const key of ['nearest_transport', 'nearest_vehicle_access_candidate']) {
     const value = roadContext[key]
@@ -205,7 +212,9 @@ function roadEntries(roadContext) {
 function buildRoads(three, world, grid) {
   const halfW = grid.scene_w / 2 + grid.scene_w * 0.02
   const halfH = grid.scene_h / 2 + grid.scene_h * 0.02
-  for (const road of roadEntries(props.roadContext)) {
+  const entries = roadEntries(props.roadContext)
+  const labelLimit = entries.length <= 6 // 路网批量上图时停用逐路名牌，防标签刷屏
+  for (const road of entries) {
     const geometry = road.geometry
     const segments = geometry.type === 'LineString' ? [geometry.coordinates]
       : geometry.type === 'MultiLineString' ? (geometry.coordinates || []) : []
@@ -220,7 +229,7 @@ function buildRoads(three, world, grid) {
       world.add(new THREE.Line(
         new THREE.BufferGeometry().setFromPoints(points),
         new THREE.LineBasicMaterial({ color: '#c9cdd4', transparent: true, opacity: 0.7 })))
-      if (road.name) {
+      if (road.name && labelLimit) {
         const mid = points[Math.floor(points.length / 2)]
         const tag = textSprite(String(road.name).slice(0, 12), '#c9cdd4', 0.42)
         tag.position.copy(mid).setY(mid.y + 24)
