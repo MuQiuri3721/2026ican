@@ -50,8 +50,10 @@ def main() -> int:
         after = session.page.locator(".logs").inner_text()
         ok &= report(5, "审批事件实时上屏", "方案审批：approve" in after and after != before, "")
 
-        # 报告在线查看：打开 → JSON 含 task_id 与 plan_versions → 收起
+        # 报告在线查看：打开 → 展开原始 JSON → 含 task_id 与 plan_versions → 收起
         session.page.get_by_role("button", name="在线查看报告").click()
+        session.page.locator(".report-viewer").wait_for(timeout=30000)
+        session.page.locator(".report-raw summary").click()
         session.page.locator(".report-viewer pre").wait_for(timeout=30000)
         session.page.wait_for_function(
             "document.querySelector('.report-viewer pre')?.textContent?.includes('plan_versions')",

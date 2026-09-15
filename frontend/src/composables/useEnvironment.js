@@ -10,6 +10,15 @@ export function useEnvironment({ sceneId, addLog, onCoordinateApplied }) {
   const coordinateError = ref('')
   const environmentRequestToken = ref(0)
 
+  const environmentAgeText = computed(() => {
+    const ts = environment.value?.collected_at
+    if (!ts) return ''
+    const seconds = Math.round((Date.now() - new Date(ts).getTime()) / 1000)
+    if (!Number.isFinite(seconds) || seconds < 0) return ''
+    if (seconds < 60) return `${seconds} 秒前`
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} 分钟前`
+    return `${Math.floor(seconds / 3600)} 小时前`
+  })
   const environmentStatus = computed(() => environment.value?.status || '未加载')
   const environmentSource = computed(() => environment.value?.source || '—')
   const environmentStale = computed(() => Boolean(environment.value?.stale))
@@ -73,6 +82,7 @@ export function useEnvironment({ sceneId, addLog, onCoordinateApplied }) {
     environmentCoordinates,
     coordinateDraft,
     coordinateError,
+    environmentAgeText,
     environmentStatus,
     environmentSource,
     environmentStale,

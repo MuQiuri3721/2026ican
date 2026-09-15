@@ -383,6 +383,8 @@ select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .report-events li{display:flex;gap:8px;align-items:baseline;font:400 12px var(--font-data);color:var(--ink-2)}
 .report-events li b{color:var(--ink-3);font-weight:500;flex-shrink:0}
 .report-raw pre{margin:6px 0 0}
+.report-error{margin:8px 0 0;font:400 12.5px var(--font-ui);color:var(--warn,var(--ink-2))}
+.report-viewer-head .viewer-download{margin-left:auto;padding:3px 10px;font-size:11.5px}
 .chat-panel{grid-column:1/-1}
 .llm-tag{font:500 11.5px/1.2 var(--font-data);padding:6px 10px;border-radius:999px;border:1px solid var(--line-strong);color:var(--ink-3);white-space:nowrap}
 .llm-tag.on{color:var(--ok);border-color:var(--ok-line);background:var(--ok-soft)}
