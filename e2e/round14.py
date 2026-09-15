@@ -20,7 +20,7 @@ def main() -> int:
         ok &= report(14, "后端随机场景生成", 300 <= scenario_body["fire_area_m2"] <= 6000
                      and -1000 <= scenario_body["fire_origin"]["y"] <= 800, str(scenario_body)[:100])
 
-        # scenario 驱动研判（agents/graph 编排）
+        # scenario 驱动研判（pipeline 规则编排）
         payload = {
             "scene_id": "forest-demo-01",
             "latitude": scenario_body["fire_origin_gps"]["latitude"],
