@@ -82,9 +82,6 @@ def _normalize_scenario(raw: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any
     return normalized
 
 
-_ADD_ROUND_SEQ = 0
-
-
 def _file_sha16(path: Optional[str]) -> Optional[str]:
     """输入文件 SHA-256 前 16 位（溯源用）；文件缺失/不可读返回 None，不阻断分析。"""
     if not path:
@@ -508,9 +505,6 @@ class AnalysisService:
         if item.status in {"completed", "terminated", "failed"}: raise ValueError("终态任务禁止反馈")
         if request.round != item.monitor_round + 1:
             raise ValueError("轮次必须按任务当前轮次递增")
-        global _ADD_ROUND_SEQ
-        _ADD_ROUND_SEQ += 1
-        print(f"[add-round-dbg] #{_ADD_ROUND_SEQ} tid={analysis_id[-6:]} round={request.round} status={item.status}")
         # 将本轮观测显式注入闭环计算，避免继续使用首轮固定参数。
         current = analysis_store.get(analysis_id)
         # before is always the Store-owned state, never client supplied values.
@@ -621,9 +615,6 @@ class AnalysisService:
             judgment = SIMULATOR.judge(analysis_id, snapshot)
             # GLM replan 建议最低从第 2 轮起生效：首轮单样本噪声大，直接打断刚起步的推演
             # （失能演练、持续压制演示都会被截断）；建议本身仍落协作流可审计。
-            # BE-12：再加趋势闸门（累计涨幅 ≥10% 或连涨 ≥3 轮）——压制轮次天然有
-            # 「作业轮降、补给轮升」的锯齿，GLM 看到连涨 1-2 轮就建议 replan 会反复
-            # 打断作业节奏（实测一次任务被打断 7 次）；硬安全网（相对基线 20%）不受影响。
             # BE-12：再加趋势闸门（相对当前方案基线累计 ≥10% 或连涨 ≥3 轮）——压制作业
             # 天然锯齿（作业轮降、补给轮升），GLM 看到连涨 1-2 轮就建议 replan 会反复
             # 打断作业节奏（实测一次任务被打断 7 次）；硬安全网（相对基线 20%）不受影响。

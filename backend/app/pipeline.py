@@ -13,12 +13,8 @@ from .rules.engine import (
     simulate_monitor, v1_config, ZIXIAHU_BASE_GPS,
 )
 
-from .agents.graph import MissionGraph
 from .agents.recon import RECON
 from .agents.suppression import SUPPRESSION
-from .agents.support import SUPPORT
-# 原生轻量任务图（AG-5）：recon 研判 / suppression 调度 / support 分支
-_MISSION_GRAPH = MissionGraph(RECON, SUPPRESSION, SUPPORT)
 
 
 

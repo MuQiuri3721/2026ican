@@ -1,6 +1,5 @@
 from typing import Any, Dict
 
-from ..domain.models import AnalysisPlan
 from .registry import SkillRegistry, build_skill_registry
 
 

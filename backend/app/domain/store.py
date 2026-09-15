@@ -326,9 +326,5 @@ class AnalysisStore:
             self._persist(analysis_id)
             return item.model_copy(deep=True)
 
-    def list_events(self, analysis_id: str) -> List[TaskEvent]:
-        item = self.get(analysis_id)
-        return item.events if item else []
-
 
 analysis_store = AnalysisStore()

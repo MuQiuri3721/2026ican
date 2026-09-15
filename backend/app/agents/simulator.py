@@ -21,15 +21,6 @@ class SimulatorAgent(BaseAgent):
     prompt = SIMULATOR_PROMPT
     tools: Dict[str, Any] = {}
 
-    def execute_round(self, analysis: Dict[str, Any], elapsed_minutes: int,
-                      extinguishing_liters: float = 40, fleet_snapshot=None, inventory_snapshot=None) -> Dict[str, Any]:
-        """轮次执行：调用 rules.simulate_monitor（1 分钟步长状态机，冻结）。"""
-        from ..rules.engine import simulate_monitor
-
-        return simulate_monitor(analysis, elapsed_minutes,
-                                extinguishing_liters=extinguishing_liters,
-                                fleet_snapshot=fleet_snapshot, inventory_snapshot=inventory_snapshot)
-
     def judge(self, analysis_id: str, snapshot: Dict[str, Any]) -> Dict[str, Any]:
         """每轮自主研判：返回并落库结构化研判 {situation, severity, decision, reason, source}。"""
         brief = {

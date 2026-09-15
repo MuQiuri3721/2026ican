@@ -44,11 +44,8 @@ class EnvironmentCache:
                 self._items.popitem(last=False)
         return value
 
-    def delete(self, key: str) -> None:
-        with self._lock:
-            self._items.pop(key, None)
-
     def clear(self) -> None:
+        # 测试清场入口（test_environment_swr 每用例重置缓存态）
         with self._lock:
             self._items.clear()
 
