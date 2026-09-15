@@ -107,7 +107,7 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
 .severity span{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--fire);margin-right:7px}
 
 /* Hero：处置结论状态带（排版层级，最大元素 = 结论） */
-.hero-note{margin:16px 0 18px;color:var(--ink-3);font-size:13px}
+.hero-note{margin:12px 0 12px;color:var(--ink-3);font-size:13px}
 .hero-note b{color:var(--ink-2);font-weight:600}
 .hero-footer{display:flex;gap:0;align-items:stretch;border-top:1px solid var(--line);padding-top:16px}
 .hero-footer>div{padding-right:28px}
@@ -169,11 +169,11 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
 .drone-icon.blue{background:var(--accent-soft);color:var(--accent)}
 .drone-icon.orange{background:var(--fire-soft);color:var(--fire)}
 .drone-icon.green{background:var(--ok-soft);color:var(--ok)}
-.drone-name{width:150px}
+.drone-name{width:132px}
 .drone-name strong{font-size:13px}
 .drone-name strong span{font-weight:400;color:var(--ink-3);margin-left:5px}
 .drone-name small{display:block;font:400 11.5px var(--font-data);color:#8b98a3;margin-top:3px}
-.battery{display:flex;align-items:center;gap:10px;width:170px}
+.battery{display:flex;align-items:center;gap:10px;width:140px}
 .battery-bar{height:6px;background:#e8ecef;border-radius:4px;flex:1}
 .battery-bar i{display:block;height:100%;background:#27ae83;border-radius:4px}
 .battery span{font:400 12px var(--font-data);color:var(--ink-2)}
@@ -236,6 +236,9 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
 .roster-row .outline-btn{margin-top:0;justify-self:end}
 .fleet-detail-extra{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:6px 14px;margin:4px 0 6px;padding:10px 12px;background:var(--surface-2);border-radius:var(--radius-s);font:400 12px var(--font-data);color:var(--ink-2)}
 .drone-telemetry,.fleet-detail-meta{display:flex;gap:8px;flex-wrap:wrap;color:var(--ink-3);font:400 12px var(--font-data)}
+/* 指挥中枢名册行遥测固定 2×2（OPT 收尾 UX）：窄列下不再随宽度参差折行，行高节奏一致 */
+.dashboard .drone-telemetry{display:grid;grid-template-columns:1fr 1fr;gap:4px 6px;flex:1;min-width:0}
+.dashboard .drone-telemetry span{padding:2px 6px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .drone-telemetry span,.fleet-detail-meta span{padding:3px 7px;background:var(--surface-2);border-radius:5px}
 .drone-telemetry b,.fleet-detail-meta b{color:var(--ink-2);font-weight:500}
 .drone-telemetry{grid-column:4;align-items:center}

@@ -56,6 +56,18 @@ def main():
         session.page.wait_for_timeout(1200)
         session.page.screenshot(path=str(OUT / "2-command-analyzed.png"), full_page=True)
 
+        # 批准并推 3 轮，截"推演中"状态（轮次账本/三态/监测结果的真实呈现）
+        if aid:
+            try:
+                session.page.locator(".approval-actions button", has_text="批准主方案").click()
+                session.page.wait_for_timeout(1500)
+                for _ in range(3):
+                    session.page.locator("button.monitor-btn").click()
+                    session.page.wait_for_timeout(2500)
+                session.page.screenshot(path=str(OUT / "2b-command-running.png"), full_page=True)
+            except Exception as error:
+                print("推演态截图失败:", str(error)[:80])
+
         session.page.get_by_role("button", name="无人机集群").click()
         session.page.wait_for_timeout(1200)
         session.page.screenshot(path=str(OUT / "3-fleet.png"), full_page=True)
