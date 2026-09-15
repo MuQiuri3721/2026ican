@@ -315,9 +315,11 @@ Form 字段（全部为 multipart 表单字段，显式 `Form(...)` 绑定）：
 
 ### 5.6 `POST /api/tasks/{task_id}/replan`
 
-请求体 `ReplanRequest`：`triggers: string[]`（重规划原因）、`constraints`（可选，覆盖约束）、`observation`（可选，键 `fire_area_m2 / smoke_area_m2 / growth_rate / fire_load_flp` 注入火情）、`people_status`（可选）。
+请求体 `ReplanRequest`：`triggers: string[]`（重规划原因）、`constraints`（可选，覆盖约束）、`observation`（可选，键 `fire_area_m2 / smoke_area_m2 / growth_rate / fire_load_flp` 注入火情）、`people_status`（可选）、`idempotency_key`（可选，≤128 字符）。
 
 行为：释放旧资源锁 → `status=replanning` → 基于任务内当前 fleet/inventory 快照重新运行 V1 调度 → 新 `plan_version`（旧版本+1）、`replan_trigger=triggers` → `status=awaiting_confirmation`。响应同 §5.4 plan 信封。终态任务 409。
+
+**幂等键（FE-65）**：`replan`/`monitor`（§5.9）可选携带 `idempotency_key`；同任务同接口同键的重复提交直接返回首次响应快照——不推进轮次、不释放/重取资源锁、不新增方案版本。缓存为内存态（重启即清，容量 500 条 LRU），跨重启不保证幂等。
 
 ### 5.7 `POST /api/tasks/{task_id}/rounds`
 
@@ -360,7 +362,7 @@ Form 字段（全部为 multipart 表单字段，显式 `Form(...)` 绑定）：
 
 ### 5.9 `POST /api/monitor/{analysis_id}`（旧兼容接口）
 
-请求体 `MonitorInput`：`elapsed_minutes`（默认 5）、`extinguishing_liters`（默认 40）、`image_name`、`fleet_snapshot`、`inventory`（后两者兼容保留，不覆盖任务快照）。
+请求体 `MonitorInput`：`elapsed_minutes`（默认 5）、`extinguishing_liters`（默认 40）、`image_name`、`fleet_snapshot`、`inventory`（后两者兼容保留，不覆盖任务快照）、`idempotency_key`（可选，幂等语义同 §5.6）。
 
 行为与 §5.7 的底层监测一致：仅允许 `executing` 状态（否则 409）；旧 `extinguishing_liters` 仅在入口作为 W20 喷洒输入，不把旧面积口径写入领域模型。响应：`{**AnalysisEnvelope, "action": "continue|resupply|reinforce|return|finish"}`，监测细节在 `result.monitor`（含 `next_fire_load_flp`、`replan_triggers`、`resource_consumed`——BE-13 起按药剂单位分键 `{water_liters: 升, co2_kg: 千克, module}`、`availability`、`battery_plan`、`next_fleet`、`next_inventory`）。
 
