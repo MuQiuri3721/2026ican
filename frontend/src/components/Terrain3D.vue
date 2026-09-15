@@ -451,7 +451,7 @@ function missionTick(three, ts) {
   }
   const fire = props.fireGps
   if (!fire) return
-  const now = (Date.now() - mission.startedAt) / MISSION_MS_PER_MIN
+  const now = (Date.now() - mission.startedAt) / (mission.msPerMin || MISSION_MS_PER_MIN)
   const mpl = metersPerLat()
   const mpg = metersPerLng(fire.latitude)
   for (const unit of mission.units) {

@@ -538,7 +538,7 @@ function missionTick(ts) {
   const fire = fireGps()
   const metersPerLat = 111320
   const metersPerLng = 111320 * Math.cos((fire.latitude * Math.PI) / 180)
-  const tNow = (Date.now() - mission.startedAt) / MISSION_MS_PER_MIN
+  const tNow = (Date.now() - mission.startedAt) / (mission.msPerMin || MISSION_MS_PER_MIN)
   for (const unit of mission.units) {
     const overlay = markerIndex.get(unit.id)
     if (!overlay) continue

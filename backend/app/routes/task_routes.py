@@ -148,6 +148,22 @@ def download_task_report(task_id: str):
     return FileResponse(path, media_type="application/json", filename="dispatch_plan.json")
 
 
+@router.get("/api/tasks/{task_id}/report/export")
+def export_task_report_html(task_id: str):
+    """独立 HTML 图文报告（FE-59，服务 E-3/P5 素材冻结）：浏览器打开即可打印为 PDF。"""
+    from fastapi.responses import Response
+    from ..services.report_html import build_report_html
+    try:
+        item = analysis_store.get(task_id)
+        if item is None:
+            raise KeyError(task_id)
+        payload = build_report_html(item)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="任务不存在") from error
+    return Response(content=payload, media_type="text/html; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="report-{task_id}.html"'})
+
+
 @router.get("/api/tasks/{task_id}/events/stream")
 async def stream_task_events(task_id: str, once: bool = Query(False), request: Request = None):
     """SSE 事件流：先推全量快照，再增量推送新事件；终态后发送 done 并结束（客户端自动重连可续）。

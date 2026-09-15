@@ -508,3 +508,22 @@ def test_dispatch_and_monitor_share_scene_origin_frame():
 
     result = run_demo_analysis("forest-demo-01", "demo.jpg")
     assert result["scene"]["fire_origin"] == origin
+
+
+def test_report_export_html(monkeypatch):
+    """FE-59：独立 HTML 图文报告导出——200、text/html、含结论与任务 ID。"""
+    from fastapi.testclient import TestClient
+    client = TestClient(app)
+    created = client.post("/api/analyze", json={
+        "scene_id": "forest-demo-01", "image_name": "exp.jpg",
+        "environment_mode": "offline", "people_status": "absent",
+        "scenario": {"fire_origin": {"x": 200, "y": 200}, "fire_area_m2": 300, "growth_rate": 0.2},
+    })
+    assert created.status_code == 200
+    task_id = created.json()["analysis_id"]
+    response = client.get(f"/api/tasks/{task_id}/report/export")
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "attachment" in response.headers.get("content-disposition", "")
+    body = response.text
+    assert task_id in body and "任务报告" in body and "处置方案" in body
