@@ -66,15 +66,14 @@ def main() -> int:
         if pre_clean_aid:
             try:
                 session.page.get_by_text("历史任务").first.click()
-                session.page.wait_for_timeout(2500)
+                session.page.locator(".history-row").first.wait_for(timeout=10000)
                 rows = session.page.locator(".history-row")
-                if rows.count():
-                    rows.first.click()
-                    session.page.wait_for_timeout(1800)
-                    session.page.get_by_role("button", name="指挥中枢").click()
-                    session.page.wait_for_timeout(800)
-                else:
-                    print("历史列表为空或选择器未命中")
+                print(f"[诊断] 历史行数={rows.count()} 第一行={rows.first.inner_text()[:60] if rows.count() else '无'}")
+                rows.first.click()
+                session.page.wait_for_timeout(2500)
+                session.page.get_by_role("button", name="指挥中枢").click()
+                session.page.wait_for_timeout(1000)
+                print(f"[诊断] plan-summary={session.page.locator('.plan-summary').count()} evacuation-summary={session.page.locator('.evacuation-summary').count()} 任务状态徽标={session.page.locator('.task-badge').first.inner_text() if session.page.locator('.task-badge').count() else '无'}")
             except Exception as error:
                 print("恢复任务失败:", str(error)[:80])
 
@@ -121,12 +120,13 @@ def main() -> int:
         session.page.get_by_role("button", name="指挥中枢").click()
         session.page.wait_for_timeout(800)
         summary = session.page.locator(".evacuation-summary")
-        if summary.count():
-            text = summary.inner_text()
+        try:
+            summary.first.wait_for(timeout=8000)  # 历史恢复渲染异步，等元素出现而非立即读
+            text = summary.first.inner_text()
             ok &= report("F", "疏散标注模拟路径", "模拟路径" in text, text[:60])
             findings["evacuation_summary"] = text[:80]
-        else:
-            ok &= report("F", "疏散摘要（confirmed 任务）", False, "未找到 .evacuation-summary")
+        except Exception:
+            ok &= report("F", "疏散标注模拟路径", False, ".evacuation-summary 未在 8s 内渲染")
 
         # —— 3. 环境面板决策作用说明 ——
         note = session.page.locator(".environment-note")

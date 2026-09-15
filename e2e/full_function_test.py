@@ -51,12 +51,16 @@ def record(group, name, ok, detail="", warn=False, soft=False):
 
 
 def pre_clean():
-    """终止历史遗留的待确认/执行中任务,释放资源锁（同 acceptance_six 前置清场）。"""
-    code, rows = call("GET", "/api/analyzes?limit=100&slim=1")
+    """终止历史遗留的待确认/执行中任务,释放资源锁（同 acceptance_six 前置清场）。
+
+    注意用非 slim 列表——slim 行不含 analysis_id（历史教训），清场会静默失效。
+    """
+    code, rows = call("GET", "/api/analyzes?limit=100")
     items = rows.get("items", rows) if isinstance(rows, dict) else rows
     for t in items:
-        if t.get("status") in ("awaiting_confirmation", "executing"):
-            call("POST", f"/api/tasks/{t['analysis_id']}/approval", {"action": "terminate", "reason": "全功能测试前置清场"})
+        aid = t.get("analysis_id") or t.get("id")
+        if aid and t.get("status") in ("awaiting_confirmation", "executing", "approved", "replanning"):
+            call("POST", f"/api/tasks/{aid}/approval", {"action": "terminate", "reason": "全功能测试前置清场"})
 
 
 def upload_image(filename, use_vlm="false"):

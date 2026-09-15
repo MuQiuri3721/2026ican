@@ -127,6 +127,10 @@ def scenario_b(record):
     approve(aid)
     records, final = rounds_until_done(aid, max_rounds=12)
     nets = [r["flp_ledger"]["net_change_flp"] for r in records if r.get("flp_ledger")]
+    try:
+        call("POST", f"/api/tasks/{aid}/approval", {"action": "terminate", "reason": "验收 B 清场"})
+    except Exception:
+        pass  # 已终态时忽略；慢压推演任务不终止会占资源锁污染后续测试
     record["B"].update({
         "task_id": aid,
         "final_status": final.get("status"),

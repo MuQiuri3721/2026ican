@@ -4,6 +4,7 @@ import TacticalMap from './components/TacticalMap.vue'
 import ChatPanel from './components/ChatPanel.vue'
 import ReportViewer from './components/ReportViewer.vue'
 import ReplayPanel from './components/ReplayPanel.vue'
+import ComparePanel from './components/ComparePanel.vue'
 const Terrain3D = defineAsyncComponent(() => import('./components/Terrain3D.vue'))
 import PhaseStepper from './components/PhaseStepper.vue'
 import EvolutionChart from './components/EvolutionChart.vue'
@@ -195,6 +196,13 @@ const stages = ref([])
 const eventsRequestToken = ref(0)
 const historyTasks = ref([])
 const historyLoading = ref(false)
+// FE-68 多任务对比：历史行勾选（≤4），≥2 个出现「对比所选」
+const compareSel = ref([])
+const compareOpen = ref(false)
+watch(compareSel, (next) => {
+  if (next.length > 4) compareSel.value = next.slice(-4)
+  if (next.length < 2) compareOpen.value = false
+})
 const taskStatus = ref('待命')
 const currentStage = ref('等待影像接入')
 const agentMessages = ref([])
@@ -1631,7 +1639,7 @@ onMounted(() => {
 
       <section v-else-if="viewTab === 'agents'" class="detail-view"><div class="detail-heading"><div><h2>Agent 协作</h2><p>指挥官 · 侦察研判 · 灭火调度 · 支援保障 · 仿真评估 · 交互审批 的实时协作消息流（黑板协议，可回放）。</p></div><span class="status-tag" :class="llmInfo?.available ? '' : 'orange'">{{ llmInfo?.available ? 'GLM 在线研判' : 'LLM 离线 · 确定性降级' }}</span></div><div class="full-logs agent-timeline"><div v-if="!agentMessages.length" class="agents-empty"><p class="agents-empty-lead"><b>暂无协作消息</b>启动研判或演训模拟后，六个角色通过黑板协议实时协作，消息流将按时间显示在这里。</p><div class="agents-roles"><div class="agents-role"><b>指挥官</b><span>建案派任务 · 审批仲裁</span></div><div class="agents-role"><b>侦察单元</b><span>态势发现 · 影像判读</span></div><div class="agents-role"><b>灭火单元</b><span>主力压制 · 补位接替</span></div><div class="agents-role"><b>支援单元</b><span>物资补给 · 通信中继</span></div><div class="agents-role"><b>仿真评估</b><span>逐轮研判 · 趋势闸门</span></div><div class="agents-role"><b>交互审批</b><span>方案确认 · 驳回调整</span></div></div></div><div v-for="message in agentMessages" :key="message.seq" class="agent-msg"><span class="agent-avatar" :class="'av-' + message.frm">{{ String(message.frm || '?').slice(0, 1).toUpperCase() }}</span><span class="log-time">{{ message.ts?.slice(11) || message.ts }}</span><b class="agent-chip" :class="'mt-' + message.msg_type">{{ agentMsgLabel(message.msg_type) }}</b><div class="agent-msg-body"><strong>{{ message.frm }} → {{ message.to }}</strong><p>{{ message.content }}</p></div><small class="agent-source" :class="'src-' + message.source">{{ agentSourceLabel(message.source) }}</small></div></div></section>
 
-      <section v-else-if="viewTab === 'history'" class="detail-view"><div class="detail-heading"><div><h2>历史任务</h2><p>任务记录来自后端 /api/analyzes，点击任务可恢复主显示结果。{{ historyTasks.length > 50 ? " 最近 50 条优先显示" : "" }}</p></div><button class="outline-btn" @click="loadHistory"><RefreshCw :size="14" /> 刷新</button></div><div class="full-logs"><div v-if="historyLoading"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div><div v-else-if="!historyTasks.length" class="empty-hint"><b>还没有历史任务</b>点击右上角「开始任务」上传影像，完成研判后任务会自动归档到这里。</div><div v-for="task in historyTasks.slice(0, 50)" :key="task.analysis_id" class="history-row" @click="selectHistoryTask(task)"><span class="log-time">{{ task.created_at?.slice(0, 19).replace('T', ' ') }}</span><i></i><span><strong>{{ task.analysis_id }}</strong> · {{ task.input?.image_name || '未命名影像' }}</span><small>{{ task.status }}</small></div></div></section>
+      <section v-else-if="viewTab === 'history'" class="detail-view"><div class="detail-heading"><div><h2>历史任务</h2><p>任务记录来自后端 /api/analyzes，点击任务可恢复主显示结果。勾选 2–4 个任务可横向对比。{{ historyTasks.length > 50 ? " 最近 50 条优先显示" : "" }}</p></div><button v-if="compareSel.length >= 2" class="outline-btn" @click="compareOpen = !compareOpen">{{ compareOpen ? '收起对比' : `对比所选（${compareSel.length}）` }}</button><button class="outline-btn" @click="loadHistory"><RefreshCw :size="14" /> 刷新</button></div><ComparePanel v-if="compareOpen && compareSel.length >= 2" :ids="compareSel" @error="errorMessage = $event" /><div class="full-logs"><div v-if="historyLoading"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div><div v-else-if="!historyTasks.length" class="empty-hint"><b>还没有历史任务</b>点击右上角「开始任务」上传影像，完成研判后任务会自动归档到这里。</div><div v-for="task in historyTasks.slice(0, 50)" :key="task.analysis_id" class="history-row" @click="selectHistoryTask(task)"><label class="cmp-pick" title="勾选参与对比（2–4 个）" @click.stop><input type="checkbox" :value="task.analysis_id" v-model="compareSel"><span>比</span></label><span class="log-time">{{ task.created_at?.slice(0, 19).replace('T', ' ') }}</span><i></i><span><strong>{{ task.analysis_id }}</strong> · {{ task.input?.image_name || '未命名影像' }}</span><small>{{ task.status }}</small></div></div></section>
 
       <section v-else class="detail-view"><div class="detail-heading"><div><h2>任务日志</h2><p>记录当前演示任务的输入、分析阶段和调度决策。</p></div><span class="status-tag"><Activity :size="14" /> {{ logs.length }} 条记录</span></div><div class="full-logs"><div v-for="(log, index) in foldedLogs" :key="log.message + log.timestamp + index"><span class="log-time">{{ logTime(log, index) }}</span><i :class="{ bright: index === 0 }"></i><span>{{ logText(log) }}</span><small v-if="typeof log === 'object'" class="log-meta">{{ log.stage }} · {{ log.source }}</small><b v-if="log.repeat > 1" class="log-repeat">×{{ log.repeat }}</b><small>{{ index === 0 ? 'LATEST' : 'EVENT' }}</small></div></div></section>
     </main>

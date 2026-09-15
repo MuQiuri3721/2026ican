@@ -281,6 +281,7 @@ Form 字段（全部为 multipart 表单字段，显式 `Form(...)` 绑定）：
 - 列表：`{"items": [AnalysisEnvelope...]}`（新任务在前）。查询参数 `limit`（1–1000，截取最新 N 条）与 `slim=1`（只含 analysis_id/status/created_at/updated_at/monitor_round/resource_locks/input 摘要字段，不含 result/stages 等重负载；完整信封经 `GET /api/analyze/{id}` 按需获取）。缺省不传时行为不变（全量完整信封）。
 - 单个：`AnalysisEnvelope`；不存在 404。
 - 事件：`{"analysis_id": "...", "events": [TaskEvent...]}`，`TaskEvent = {timestamp, stage, message, source}`。
+- 对比（FE-68）：`GET /api/analyzes/compare?ids=a,b,c`——逗号分隔任务 ID（≤6 个，去重保序，空 422，未知 ID 404 并列出）。返回 `{"items": [...]}`，逐任务紧凑指标：`{analysis_id, status, created_at, updated_at, review{initial_flp, final_flp, flp_delta, extinguished, round_count, plan_version_count, approval_event_count}, fire{level, label, growth_rate}, verdict{can_control, verdict, reason_code}, plan_units, replan_rounds, resources{water_liters, co2_kg}, people_status}`。数字全部出自 Store 记录（复盘档案 §9 + 方案三态 + 逐轮 `resource_consumed` 求和），无独立口径；供前端对比看板一次请求替代 N×全量报告拉取。
 
 ### 5.4 `GET /api/tasks/{task_id}/plan`
 

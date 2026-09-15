@@ -409,6 +409,13 @@ nav button:hover:not(.active){background:#1a2530;color:#dce5ec}
 .history-row:hover{border-color:var(--accent-line);box-shadow:var(--shadow-1)}
 .history-row:hover strong{color:var(--accent)}
 .history-row small:last-child{display:inline-block;margin-left:auto;padding:2px 9px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;font:500 11px var(--font-data);color:var(--ink-2)}
+/* FE-68 历史行对比勾选芯片（真实 input 保持可点，FE-49 教训） */
+.cmp-pick{display:inline-flex;align-items:center;flex-shrink:0;cursor:pointer}
+.cmp-pick span{display:none}
+.cmp-pick input{appearance:none;width:17px;height:17px;margin:0;border:1px solid var(--line-strong);border-radius:5px;background:var(--surface);cursor:pointer;display:grid;place-items:center}
+.cmp-pick input:hover{border-color:var(--accent)}
+.cmp-pick input:checked{background:var(--accent);border-color:var(--accent)}
+.cmp-pick input:checked::after{content:'✓';color:#fff;font:700 12px var(--font-ui)}
 
 /* ---- 集群页：行节奏与分组标题 ---- */
 .roster-row{padding:13px 16px}

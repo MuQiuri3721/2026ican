@@ -852,6 +852,50 @@ class AnalysisService:
         self._persist_dispatch_report(analysis_id)
         return report
 
+    def compare(self, analysis_ids: List[str]) -> List[Dict[str, Any]]:
+        """多任务对比（FE-68）：逐任务聚合紧凑指标，替代前端 N×全量报告拉取。
+
+        数字全部出自 Store 记录（review 复盘档案 + 方案三态 + 逐轮资源消耗），无新口径。
+        """
+        items = []
+        for analysis_id in analysis_ids:
+            item = analysis_store.get(analysis_id)
+            if not item:
+                raise KeyError(analysis_id)
+            result = item.result or {}
+            plan = result.get("dispatch_plan") or {}
+            fire = result.get("fire_assessment") or {}
+            rounds = item.rounds or []
+            fleet_now = (rounds[-1].get("after") or {}).get("fleet") if rounds else None
+            fleet_now = fleet_now or result.get("fleet") or []
+            water = co2 = 0.0
+            for rnd in rounds:
+                consumed = (rnd.get("after") or {}).get("resource_consumed") or {}
+                water += float(consumed.get("water_liters") or 0)
+                co2 += float(consumed.get("co2_kg") or 0)
+            items.append({
+                "analysis_id": analysis_id,
+                "status": item.status,
+                "created_at": item.created_at,
+                "updated_at": item.updated_at,
+                "review": self._build_review(item),
+                "fire": {
+                    "level": fire.get("level"),
+                    "label": fire.get("label"),
+                    "growth_rate": fire.get("growth_rate"),
+                },
+                "verdict": {
+                    "can_control": plan.get("can_control"),
+                    "verdict": plan.get("control_verdict"),
+                    "reason_code": plan.get("control_reason_code"),
+                },
+                "plan_units": len(plan.get("selected_uavs") or plan.get("firefighting_uavs") or []),
+                "replan_rounds": sum(1 for rnd in rounds if rnd.get("replan_triggers")),
+                "resources": {"water_liters": round(water, 1), "co2_kg": round(co2, 2)},
+                "people_status": plan.get("people_branch"),
+            })
+        return items
+
     def report_path(self, analysis_id: str) -> Path:
         item = analysis_store.get(analysis_id)
         if not item:

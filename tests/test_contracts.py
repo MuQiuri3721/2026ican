@@ -527,3 +527,34 @@ def test_report_export_html(monkeypatch):
     assert "attachment" in response.headers.get("content-disposition", "")
     body = response.text
     assert task_id in body and "任务报告" in body and "处置方案" in body
+
+
+def test_analyzes_compare_contract():
+    """FE-68：多任务对比端点——结构齐全、去重保序、未知 404、空 422。"""
+    from fastapi.testclient import TestClient
+    client = TestClient(app)
+    ids = []
+    for index in range(2):
+        created = client.post("/api/analyze", json={
+            "scene_id": "forest-demo-01", "image_name": f"cmp-{index}.jpg",
+            "environment_mode": "offline", "people_status": "absent",
+            "scenario": {"fire_origin": {"x": 200, "y": 200}, "fire_area_m2": 300 + index * 100, "growth_rate": 0.2},
+        })
+        assert created.status_code == 200
+        ids.append(created.json()["analysis_id"])
+
+    body = client.get(f"/api/analyzes/compare?ids={ids[0]},{ids[1]},{ids[0]}")
+    assert body.status_code == 200, body.text
+    items = body.json()["items"]
+    assert [row["analysis_id"] for row in items] == [ids[0], ids[1]]
+    for row in items:
+        for key in ("status", "created_at", "review", "fire", "verdict", "plan_units", "replan_rounds", "resources", "people_status"):
+            assert key in row, key
+        assert {"initial_flp", "final_flp", "flp_delta", "extinguished", "round_count", "plan_version_count"} <= set(row["review"])
+        assert {"can_control", "verdict", "reason_code"} <= set(row["verdict"])
+        assert {"water_liters", "co2_kg"} <= set(row["resources"])
+
+    missing = client.get("/api/analyzes/compare?ids=no-such-task")
+    assert missing.status_code == 404 and "no-such-task" in missing.json()["detail"]
+    empty = client.get("/api/analyzes/compare?ids=,")
+    assert empty.status_code == 422

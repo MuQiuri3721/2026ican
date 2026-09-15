@@ -263,6 +263,18 @@ def list_analyses(limit: int | None = Query(None, gt=0, le=1000), slim: bool = Q
     return {"items": items}
 
 
+@router.get("/api/analyzes/compare")
+def compare_analyses(ids: str = Query(..., description="逗号分隔的任务 ID，≤6 个，去重保序")):
+    """多任务对比（FE-68）：逐任务聚合紧凑指标（复盘档案+三态裁决+资源消耗），单次请求。"""
+    id_list = list(dict.fromkeys(part.strip() for part in ids.split(",") if part.strip()))[:6]
+    if not id_list:
+        raise HTTPException(status_code=422, detail="ids 不能为空")
+    try:
+        return {"items": analysis_service.compare(id_list)}
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=f"任务不存在: {error.args[0]}") from error
+
+
 @router.get("/api/analyze/{analysis_id}")
 def get_analysis(analysis_id: str):
     return _envelope(analysis_id)

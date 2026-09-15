@@ -84,7 +84,8 @@
   "terrain_requests": 1,
   "terrain_key_reload": "A 基线→切 B→最后请求=B（键控清缓存重载）",
   "evacuation_summary": "疏散：模拟路径（演示网格 BFS）· 路线 12 步 · 约 6.67 分钟 · 避开 5 个风险格",
-  "environment_note": "坡度→K_slope · 燃料→K_fuel · 风速→K_wind/风档（参与 FLP 计算）；温湿度为背景信息"
+  "environment_note": "坡度→K_slope · 燃料→K_fuel · 风速→K_wind/风档（参与 FLP 计算）；温湿度为背景信息",
+  "executed_at": "2026-09-15T20:27:14"
  },
  "final_gate": {
   "pytest": "180 passed",
