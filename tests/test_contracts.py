@@ -558,3 +558,32 @@ def test_analyzes_compare_contract():
     assert missing.status_code == 404 and "no-such-task" in missing.json()["detail"]
     empty = client.get("/api/analyzes/compare?ids=,")
     assert empty.status_code == 422
+
+
+def test_commander_token_gate(monkeypatch):
+    """FE-71：配置 FIREOPS_COMMANDER_TOKEN 后全部 POST 变更路由要求 X-Commander-Token；
+    未配置 = 开放模式；GET 只读端点始终开放。"""
+    from fastapi.testclient import TestClient
+    client = TestClient(app)
+    body = {"scene_id": "forest-demo-01", "image_name": "gate.jpg", "environment_mode": "offline"}
+
+    # 开放模式（未配置口令）：直接放行
+    assert client.post("/api/analyze", json=body).status_code == 200
+
+    # 开启口令门：无头 401、错头 401、对头 200；GET 保持开放
+    monkeypatch.setenv("FIREOPS_COMMANDER_TOKEN", "demo-secret")
+    denied = client.post("/api/analyze", json=body)
+    assert denied.status_code == 401 and "指挥员口令" in denied.json()["detail"]
+    assert client.post("/api/analyze", json=body, headers={"X-Commander-Token": "wrong"}).status_code == 401
+    created = client.post("/api/analyze", json=body, headers={"X-Commander-Token": "demo-secret"})
+    assert created.status_code == 200
+    task_id = created.json()["analysis_id"]
+    assert client.get(f"/api/analyzes?limit=1&slim=1").status_code == 200
+    # 审批门同样受保护
+    plan = client.get(f"/api/tasks/{task_id}/plan").json()["plan"]
+    denied_approval = client.post(f"/api/tasks/{task_id}/approval", json={"action": "approve", "plan_id": plan["plan_id"]})
+    assert denied_approval.status_code == 401
+
+    # 回到开放模式（E2E/演示默认态）
+    monkeypatch.delenv("FIREOPS_COMMANDER_TOKEN")
+    assert client.post("/api/analyze", json=body).status_code == 200

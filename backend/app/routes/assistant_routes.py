@@ -11,7 +11,9 @@ import asyncio
 import json
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends
+
+from .guard import require_commander, HTTPException
 from pydantic import BaseModel
 
 from ..agentkit import audit_numbers, chat, llm_available, llm_status
@@ -73,7 +75,7 @@ async def knowledge_endpoint(query: str = "", top_k: int = 3):
     return knowledge_stats()
 
 
-@router.post("/api/tasks/{task_id}/chat")
+@router.post("/api/tasks/{task_id}/chat", dependencies=[Depends(require_commander)])
 async def task_chat(task_id: str, payload: ChatQuestion):
     question = payload.question.strip()[:300]  # 防超长输入撑爆上下文
     if not question:

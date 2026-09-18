@@ -13,12 +13,13 @@ from pathlib import Path
 from typing import List, Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 
 from ..domain.schemas import AnalysisInput, MonitorInput, ApprovalRequest, ReplanRequest, FeedbackRoundInput
 from ..domain.store import analysis_store
 from ..services.analysis_service import AnalysisService
+from .guard import require_commander
 from ..skills.orchestrator import SkillExecutionError, SkillOrchestrator
 from ..skills.registry import build_skill_registry
 
@@ -75,7 +76,7 @@ def list_skills():
     return {"skills": skill_registry.list()}
 
 
-@router.post("/api/skills/{skill_name}/run")
+@router.post("/api/skills/{skill_name}/run", dependencies=[Depends(require_commander)])
 def run_skill(skill_name: str, request: AnalysisInput):
     try:
         return {"skill": skill_name, **skill_orchestrator.run(skill_name, request.model_dump())}
@@ -112,21 +113,21 @@ def task_plan(task_id: str):
     except KeyError as error: raise HTTPException(status_code=404, detail="任务或方案不存在") from error
 
 
-@router.post("/api/tasks/{task_id}/approval")
+@router.post("/api/tasks/{task_id}/approval", dependencies=[Depends(require_commander)])
 def task_approval(task_id: str, request: ApprovalRequest):
     try: return analysis_service.approve(task_id, request)
     except KeyError as error: raise HTTPException(status_code=404, detail="任务不存在") from error
     except ValueError as error: raise HTTPException(status_code=409, detail=str(error)) from error
 
 
-@router.post("/api/tasks/{task_id}/replan")
+@router.post("/api/tasks/{task_id}/replan", dependencies=[Depends(require_commander)])
 def task_replan(task_id: str, request: ReplanRequest):
     try: return analysis_service.replan(task_id, request)
     except KeyError as error: raise HTTPException(status_code=404, detail="任务不存在") from error
     except ValueError as error: raise HTTPException(status_code=409, detail=str(error)) from error
 
 
-@router.post("/api/tasks/{task_id}/rounds")
+@router.post("/api/tasks/{task_id}/rounds", dependencies=[Depends(require_commander)])
 def task_round(task_id: str, request: FeedbackRoundInput):
     try: return analysis_service.add_round(task_id, request)
     except KeyError as error: raise HTTPException(status_code=404, detail="任务不存在") from error
@@ -286,7 +287,7 @@ def get_analysis_events(analysis_id: str):
     return {"analysis_id": analysis_id, "events": payload["events"]}
 
 
-@router.post("/api/analyze")
+@router.post("/api/analyze", dependencies=[Depends(require_commander)])
 def analyze(request: AnalysisInput):
     try:
         return analysis_service.create_and_run(request)
@@ -337,7 +338,7 @@ def _extract_video_frames(video_path: Path, max_frames: int = 4) -> List[Path]:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
-@router.post("/api/analyze/upload")
+@router.post("/api/analyze/upload", dependencies=[Depends(require_commander)])
 async def analyze_upload(
     scene_id: str = Form("forest-demo-01"),
     use_vlm: bool = Form(False),
@@ -423,7 +424,7 @@ async def analyze_upload(
                 frame_target.unlink(missing_ok=True)
 
 
-@router.post("/api/monitor/{analysis_id}")
+@router.post("/api/monitor/{analysis_id}", dependencies=[Depends(require_commander)])
 def monitor(analysis_id: str, request: MonitorInput):
     try:
         return analysis_service.monitor_and_update(analysis_id, request)
