@@ -503,3 +503,9 @@ nav button:hover:not(.active){background:#1a2530;color:#dce5ec}
 .mr-cell b{font:600 12px var(--font-data);color:var(--ink);white-space:nowrap}
 .mr-cell.mr-wide b{font-weight:500;white-space:normal;max-width:340px}
 .mr-reason{margin-left:auto;display:flex;align-items:center;font:500 11.5px var(--font-data);color:var(--warn)}
+
+/* FE-71 指挥员口令输入条 */
+.auth-gate{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:90;display:flex;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--warn);border-radius:var(--radius-s);box-shadow:var(--shadow-2);padding:10px 14px}
+.auth-gate span{font:600 12.5px var(--font-ui);color:var(--ink-2);white-space:nowrap}
+.auth-gate input{width:180px;padding:6px 10px;border:1px solid var(--line-strong);border-radius:var(--radius-s);font:500 12.5px var(--font-data)}
+.auth-gate .primary{padding:6px 14px;font-size:12.5px}
