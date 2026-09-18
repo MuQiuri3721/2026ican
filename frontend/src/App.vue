@@ -6,6 +6,7 @@ import ReportViewer from './components/ReportViewer.vue'
 import ReplayPanel from './components/ReplayPanel.vue'
 import ComparePanel from './components/ComparePanel.vue'
 import HistoryPanel from './components/HistoryPanel.vue'
+import UploadPanel from './components/UploadPanel.vue'
 const Terrain3D = defineAsyncComponent(() => import('./components/Terrain3D.vue'))
 import PhaseStepper from './components/PhaseStepper.vue'
 import EvolutionChart from './components/EvolutionChart.vue'
@@ -67,7 +68,6 @@ const monitoring = ref(false)
 const uploaded = ref(false)
 const selectedFile = ref(null)
 const previewUrl = ref('')
-const fileInput = ref(null)
 const progress = ref(0)
 const errorMessage = ref('')
 const analysisEnvelope = ref(null)
@@ -1137,10 +1137,6 @@ async function loadServiceStatus() {
   }
 }
 
-function openFilePicker() {
-  fileInput.value?.click()
-}
-
 function acceptFile(fileList) {
   errorMessage.value = ''
   const list = Array.from(fileList || [])
@@ -1163,15 +1159,6 @@ function acceptFile(fileList) {
   uploaded.value = true
   progress.value = 0
   addLog(`已接收航拍影像 · ${primary.name}${selectedFrames.value.length ? ` · 序列共 ${selectedFrames.value.length + 1} 帧` : ''}`)
-}
-
-function handleFileChange(event) {
-  acceptFile(event.target.files)
-  event.target.value = ''
-}
-
-function handleDrop(event) {
-  acceptFile(event.dataTransfer.files)
 }
 
 function sleep(ms) {
@@ -1622,7 +1609,7 @@ onMounted(() => {
       <div v-if="activeTab === 'command'" class="dashboard">
         <section class="hero-panel"><div class="panel-heading"><h2>{{ scene.incident }}</h2><span class="severity"><span></span>{{ result.fire_assessment.label }}</span></div><p class="hero-note">火点 <b>{{ scene.coordinates }}</b> · 现场风 <b>{{ result.environment.wind_direction || '—' }} {{ result.environment.wind_speed ?? '—' }} m/s</b> · 最近水源 <b>{{ result.environment.nearest_water?.name || '—' }} {{ result.environment.nearest_water?.distance_m ?? result.environment.nearest_water_distance_m ?? '' }}</b></p><div v-if="result?.fire_assessment" class="fire-sense"><div :class="['fs-level', 'lv-' + fireLevelNum]"><b>{{ result.fire_assessment.label }}</b><span>{{ fireLevelWord }}</span></div><div class="fs-cell" title="FLP = 标准化火情处置负荷，综合面积/燃料/坡度/风速按冻结公式折算；过火面积另有 m² 直读"><small>火势负荷 FLP</small><b>{{ formatNumber(fireFlpNow) }}</b><em v-if="fireTrend != null" :class="fireTrend < 0 ? 'down' : 'up'">{{ fireTrend < 0 ? '▼' : '▲' }} {{ Math.abs(Math.round(fireTrend * 100) / 100) }} 较上轮</em><em v-else>首轮基准</em></div><div class="fs-cell"><small>过火面积</small><b>{{ formatNumber(result.fire_assessment.fire_area_m2) }}</b><em>m²</em></div><div class="fs-cell"><small>蔓延速率</small><b>{{ Math.round((result.fire_assessment.growth_rate || 0) * 100) }}%</b><em>/h</em></div><div v-if="fireTrendText" :class="['fs-verdict', fireTrendText.down ? 'down' : 'up']">{{ fireTrendText.text }}<small>{{ fireTrendText.detail }}</small></div></div><div class="hero-footer" :class="controlVerdictView.tone"><div><small>当前处置结论</small><strong>{{ controlVerdictView.hero }}</strong></div><div class="hero-stat"><small>预计处置时间</small><strong>{{ result.dispatch_plan.estimated_minutes ?? '—' }} <em>MIN</em></strong></div><div class="hero-stat"><small>下次评估</small><strong>05 <em>MIN</em></strong></div></div></section>
 
-        <section class="upload-panel"><div class="panel-heading"><h2>现场影像接入</h2><FileImage :size="19" class="muted-icon" /></div><input ref="fileInput" class="visually-hidden" type="file" accept="image/jpeg,image/png,video/mp4" multiple @change="handleFileChange"><div class="dropzone" :class="{ uploaded }" @click="openFilePicker" @dragover.prevent @drop.prevent="handleDrop"><div v-if="previewUrl && selectedFile?.type.startsWith('image/')" class="preview-thumb"><img :src="previewUrl" alt="已选择的火灾影像预览"></div><div v-else class="upload-orb"><Upload :size="22" /></div><strong>{{ uploaded ? (selectedFrames.length ? `影像已接入 · 序列 ${selectedFrames.length + 1} 帧` : '影像已接入') : '拖入航拍图像或视频' }}</strong><span>{{ uploaded ? `${selectedFile.name}${selectedFrames.length ? ` + ${selectedFrames.length} 帧序列` : ''} · ${(selectedFile.size / 1024 / 1024).toFixed(1)} MB` : '支持 JPG / PNG / MP4 · 多选图片组成序列 · 最大 200MB' }}</span><button type="button" @click.stop="openFilePicker">{{ uploaded ? '更换文件' : '选择文件' }}</button></div><div class="process"><div class="process-row"><span>分析管线</span><b>{{ progress }}%</b></div><div class="progress"><i :style="{ width: progress + '%' }"></i></div><div class="pipeline"><span :class="{ done: progress >= 24 }">视觉识别</span><ChevronRight :size="13" /><span :class="{ done: progress >= 48 }">环境融合</span><ChevronRight :size="13" /><span :class="{ done: progress >= 72 }">风险评估</span><ChevronRight :size="13" /><span :class="{ done: progress >= 90 }">调度生成</span></div><div class="model-status"><span title="YOLO 检测接收面已就绪（协议+mock 全链验证），真实 PWM-YOLO 权重到位即插即用">YOLO <b>{{ projectStatus.yolo === 'pending' ? '对接就绪' : projectStatus.yolo === 'configured' ? '已配置' : '在线' }}</b></span><span>VLM <b>{{ projectStatus.vlm === 'pending' ? '待接入' : projectStatus.vlm === 'configured' ? '已配置' : '在线' }}</b></span><span>场景数据 <b>{{ projectStatus.geo_data }}</b></span><label class="vlm-toggle"><input type="checkbox" v-model="useVlm"> 上传时调用 VLM 解释</label></div><div class="fire-coord-note">火点将定位至 <b>{{ environmentCoordinates.longitude.toFixed(6) }}°E, {{ environmentCoordinates.latitude.toFixed(6) }}°N</b> · 可在地图「指定火点」选点或在现场环境面板输入坐标修改</div></div><button v-if="uploaded" class="reset-link" @click="resetAnalysis"><RefreshCw :size="13" /> 清空并重新接入</button><div class="scenario-block"><div class="scenario-head"><b>演训模拟</b><small>无需影像 · 随机生成紫金山火情</small></div><div v-if="!scenario" class="scenario-empty">点击生成一处在紫金山范围内随机出现的火情，随后开始模拟集群调度推演。</div><div v-else class="scenario-facts"><span>火点 <b>{{ scenario.fireGps.longitude }}°E, {{ scenario.fireGps.latitude }}°N</b></span><span>面积 <b>{{ scenario.areaM2 }} m²</b></span><span>增长率 <b>{{ scenario.growthRate }}/h</b></span><span>人员 <b>{{ scenario.people === 'confirmed' ? '在场' : scenario.people === 'absent' ? '不在场' : '情况不明' }}</b></span><span v-if="scenario.failureRound" class="scenario-drill">⚔ 含单机失能演练（第 {{ scenario.failureRound }} 轮）</span><span v-if="scenario.windShift" class="scenario-drill">🌪 风变演练（第 {{ scenario.windShift.round }} 轮 · {{ scenario.windShift.speed }} m/s）</span></div><div class="scenario-actions"><button class="outline-btn" :disabled="scenarioBusy || analyzing" @click="generateScenario">{{ scenario ? '重新生成火情' : '生成随机火情' }}</button><button v-if="scenario" class="primary scenario-start" :disabled="scenarioBusy || analyzing" @click="startScenarioSimulation"><Bot :size="16" /> 开始模拟</button></div></div></section>
+        <UploadPanel :analyzing="analyzing" :progress="progress" :uploaded="uploaded" :preview-url="previewUrl" :selected-file="selectedFile" :selected-frames="selectedFrames" :project-status="projectStatus" :environment-coordinates="environmentCoordinates" :scenario="scenario" :scenario-busy="scenarioBusy" v-model:use-vlm="useVlm" @files="acceptFile" @reset="resetAnalysis" @generate-scenario="generateScenario" @start-scenario="startScenarioSimulation" />
 
         <section class="environment-panel panel"><div class="panel-heading"><h2>现场环境</h2><button class="outline-btn environment-refresh" :disabled="environmentLoading" @click="loadEnvironment"><RefreshCw :size="14" /> {{ environmentLoading ? '刷新中…' : '刷新环境' }}</button></div><div class="environment-controls"><label>模式 <select v-model="environmentMode" @change="loadEnvironment"><option value="real">真实数据</option><option value="auto">自动</option><option value="offline">离线演示（不联网）</option><option value="demo">演示数据</option></select></label><div class="coordinate-editor"><label>纬度 <input v-model="coordinateDraft.latitude" inputmode="decimal" aria-label="纬度"></label><label>经度 <input v-model="coordinateDraft.longitude" inputmode="decimal" aria-label="经度"></label><button class="outline-btn" type="button" @click="applyCoordinates">应用</button></div><span>{{ environmentCoordinates.latitude.toFixed(6) }}, {{ environmentCoordinates.longitude.toFixed(6) }}</span></div><div v-if="coordinateError" class="coordinate-error" role="alert">{{ coordinateError }}</div><div class="environment-note src-note">决策作用 · 坡度→K_slope · 燃料→K_fuel · 风速→K_wind/风档（参与 FLP 计算）；温湿度为背景信息不参与计算</div><div class="environment-meta"><span>采集 · {{ environment?.collected_at?.slice(0, 19).replace('T', ' ') || '—' }}{{ environmentAgeText ? '（' + environmentAgeText + '）' : '' }}</span><span>状态 · {{ environmentStatus }}</span><span>来源 · {{ environmentSource }}</span><span v-if="environmentStale">stale / 缓存</span><span v-if="environmentFallback">fallback · {{ environmentFallback }}</span></div><div class="environment-grid"><div v-for="item in environmentFeatures" :key="item.label" class="environment-item"><span>{{ item.label }}</span><strong :class="['tone-' + item.tone, { 'is-empty': item.empty }]">{{ item.value }}</strong></div></div></section>
         <section class="metrics-grid"><article v-for="metric in metrics" :key="metric.label" class="metric-card"><div class="metric-top"><span>{{ metric.label }}</span><component :is="metric.icon" :size="17" :class="'tone-' + metric.tone" /></div><div class="metric-value" :key="metric.label + metric.value">{{ metric.value }} <small>{{ metric.unit }}</small></div><div :class="['metric-change', 'tone-' + metric.tone]">{{ metric.change }}</div></article></section>
