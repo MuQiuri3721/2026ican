@@ -125,7 +125,6 @@
 .contour-note b{color:#5d4c3d}.contour-note small{color:#8b7c6c}
 .slope-badge{right:18px;top:66px;gap:8px;padding:8px 11px;border-radius:var(--radius-s)}
 .slope-badge span{color:#8b7c6c}.slope-badge b{font-weight:500}.slope-badge i{height:14px;border-left:1px solid #ddd2c2}
-.large-map .route-line{background:#bd763e;box-shadow:0 0 0 3px #bd763e26}
 .large-map .map-node{border-color:#d4c8bd}
 .large-map .map-node.fire{box-shadow:0 0 0 4px #d9541e22,var(--shadow-1)}
 .large-map .map-node.water{color:#1f7fa0}

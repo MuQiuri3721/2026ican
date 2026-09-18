@@ -39,3 +39,11 @@ export const FLEET_GROUP_META = [
   { key: 'suppression', label: '灭火单元', role: '主力灭火 · 水剂 / 干粉模块' },
   { key: 'support', label: '支援单元', role: '物资补给与中继保障' },
 ]
+
+// B-6 道路分级配色（AMap 折线与 SVG 回退图共用同一语义分级）
+export const ROAD_CLASS_STYLE = {
+  major: { color: '#8a6d3b', weight: 4, opacity: 0.9, style: 'solid' },
+  mid: { color: '#a08050', weight: 2.6, opacity: 0.8, style: 'solid' },
+  minor: { color: '#b09a72', weight: 1.6, opacity: 0.7, style: 'solid' },
+  path: { color: '#b3a890', weight: 1.2, opacity: 0.55, style: 'dashed' },
+}

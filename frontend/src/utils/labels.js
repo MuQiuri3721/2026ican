@@ -56,3 +56,11 @@ export function logTime(log, index) {
   if (typeof log === 'object' && log.timestamp) return log.timestamp.slice(11, 19)
   return `09:${String(20 - index).padStart(2, '0')}`
 }
+
+// 道路等级归类（B-6 路网上图的四级语义）
+export function roadClass(highway) {
+  if (['motorway', 'trunk', 'primary'].includes(highway)) return 'major'
+  if (['secondary', 'tertiary'].includes(highway)) return 'mid'
+  if (['unclassified', 'residential', 'service', 'track'].includes(highway)) return 'minor'
+  return 'path'
+}

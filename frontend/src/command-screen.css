@@ -220,7 +220,6 @@
 .map-view.screen .map-controls button{background:var(--scr-panel-2);border-color:var(--scr-line2);color:var(--scr-muted)}
 .map-view.screen .map-controls button:hover{background:#20302a}
 .map-view.screen .map-scale i{border-color:var(--scr-muted)}
-.map-view.screen .route-line{background:#c98a4b;box-shadow:0 0 0 3px #c98a4b26}
 .map-view.screen .map-node{background:#17221dee;border-color:var(--scr-line2);color:var(--scr-muted);box-shadow:0 2px 8px #00000066}
 .map-view.screen .map-node.fire{color:#ff9c72}
 .map-view.screen .map-node.water{color:#7fd0e8}

@@ -5,7 +5,8 @@
 // 由父组件回退到等高线示意图，演示不因 Key 问题中断。
 import { onBeforeUnmount, onMounted, shallowRef, watch } from 'vue'
 import AMapLoader from '@amap/amap-jsapi-loader'
-import { MISSION_MS_PER_MIN, MISSION_PHASE_LABELS } from '../constants'
+import { MISSION_MS_PER_MIN, MISSION_PHASE_LABELS, ROAD_CLASS_STYLE } from '../constants'
+import { roadClass } from '../utils/labels'
 
 const props = defineProps({
   result: { type: Object, default: null },
@@ -375,19 +376,6 @@ function renderDrones() {
   })
 }
 
-// 道路分级样式（B-6 路网上图）：主干粗实、次干中、支路细、步道虚线
-const ROAD_CLASS_STYLE = {
-  major: { color: '#8a6d3b', weight: 4, opacity: 0.9, style: 'solid' },
-  mid: { color: '#a08050', weight: 2.6, opacity: 0.8, style: 'solid' },
-  minor: { color: '#b09a72', weight: 1.6, opacity: 0.7, style: 'solid' },
-  path: { color: '#b3a890', weight: 1.2, opacity: 0.55, style: 'dashed' },
-}
-function roadClass(highway) {
-  if (['motorway', 'trunk', 'primary'].includes(highway)) return 'major'
-  if (['secondary', 'tertiary'].includes(highway)) return 'mid'
-  if (['unclassified', 'residential', 'service', 'track'].includes(highway)) return 'minor'
-  return 'path'
-}
 
 function renderRoad() {
   clearLayer('road')
