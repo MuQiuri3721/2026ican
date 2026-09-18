@@ -307,6 +307,17 @@ def assess_fire(state: Dict[str, Any], fire_area: Optional[float] = None, smoke_
     }
 
 
+def _water_source_id(entry: Dict[str, Any], idx: int = 0) -> str:
+    """水源稳定 ID（OPT-P2-02，FE-73 统一实现）：osm_id 优先，库存 id 次之，
+    场景演示水源回退 scene:name#idx。
+
+    FE-73 修复的潜伏错位：此前规划端生成 `scene:{name}#{idx}`、执行端生成
+    `scene:{name}` 且两端都不读库存 `id`——无 osm_id 的水源（演示场景全部
+    如此）批准的 source_id 在执行端永远匹配不上，基地水耗尽时就地取水静默
+    失败并触发不必要的重规划。两端必须共用本函数。"""
+    return str(entry.get("osm_id") or entry.get("id") or f"scene:{entry.get('name', 'water')}#{idx}")
+
+
 def _evaluate_water_plan(scene: Dict[str, Any], inventory: Dict[str, Any], base_distance_m: float = 0.0) -> Dict[str, Any]:
     """就地取水六条件评估（规则 V1 §5.3）：六条件真实评估，全部通过才就地补给。
 
@@ -325,10 +336,6 @@ def _evaluate_water_plan(scene: Dict[str, Any], inventory: Dict[str, Any], base_
     onsite_fill = float(refill_cfg.get("onsite", 8))
     speed_mps = 8.0
     base_fly_minutes = 2.0 * float(base_distance_m or 0) / speed_mps / 60.0
-
-    def _sid(entry, idx):
-        # 候选 ID（OPT-P2-02）：osm_id 优先；场景演示水源回退 scene:name#index
-        return str(entry.get("osm_id") or f"scene:{entry.get('name', 'water')}#{idx}")
 
     def _checks(entry, idx):
         distance_m = float(entry.get("distance_m", 0) or 0)
@@ -358,21 +365,26 @@ def _evaluate_water_plan(scene: Dict[str, Any], inventory: Dict[str, Any], base_
     if passing:
         passing.sort(key=lambda item: item[0])  # 就近优先
         distance_m, idx, source, checks, saving_minutes, soc_after_cycle = passing[0]
+        # FE-73：持久化全部通过候选（就近优先），执行端逐个降级、全败才判水源失效
+        candidates = [{"source_id": _water_source_id(item[2], item[1]), "distance_m": round(item[0], 1),
+                       "checks": item[3]} for item in passing]
         detail = {"checks": checks, "saving_minutes": round(saving_minutes, 1),
                   "soc_after_cycle": round(soc_after_cycle, 1),
-                  "source_id": _sid(source, idx), "candidates_evaluated": len(sources)}
-        return {"mode": "onsite", "source_id": _sid(source, idx), "source_name": source.get("name"),
+                  "source_id": _water_source_id(source, idx), "candidates": candidates,
+                  "candidates_evaluated": len(sources)}
+        return {"mode": "onsite", "source_id": _water_source_id(source, idx), "source_name": source.get("name"),
                 "fill_minutes": onsite_fill,
                 "distance_m": distance_m, "reason": "就地水源通过六条件评估且节省≥5分钟", **detail}
     # base 模式：保留冻结回归要求的顶层六条件判定与节省/SOC 数字（取自就近候选）
     _, idx, source, checks, saving_minutes, soc_after_cycle = nearest if nearest else (0, 0, {}, {}, 0.0, 0.0)
     failed = "、".join(name for name, ok in checks.items() if not ok) if checks else "无候选"
+    candidates = [{"source_id": _water_source_id(source, idx), "distance_m": round(nearest[0], 1),
+                   "checks": checks}] if source else []
     detail = {"checks": checks, "saving_minutes": round(saving_minutes, 1),
               "soc_after_cycle": round(soc_after_cycle, 1),
-              "source_id": _sid(source, idx) if source else None,
+              "source_id": _water_source_id(source, idx) if source else None,
+              "candidates": candidates,
               "candidates_evaluated": len(sources)}
-    return {"mode": "base", "fill_minutes": base_fill,
-            "reason": f"优先基地补给；就地取水六条件未全通过（{failed}）", **detail}
     return {"mode": "base", "fill_minutes": base_fill,
             "reason": f"优先基地补给；就地取水六条件未全通过（{failed}）", **detail}
 
@@ -625,22 +637,22 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
 
 
 def _pick_water_source(stock: Dict[str, Any], quantity: float,
-                       approved_source_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+                       approved_source_ids: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
     """规则 V1 §5.3：从库存水源中挑一处可用且安全、剩余容量足够的水源（就近优先）。
 
-    执行约束（OPT-P2-02）：
+    执行约束（OPT-P2-02，FE-73 多候选化）：
     - 安全未核验（safe is None/False）不放行——unknown ≠ true，防未知水源放行；
     - 容量未知（null）不放行（未知 ≠ 充足），0 表示已知耗尽；
-    - 已批准 source_id 时只允许该水源——失效返回 None（由调用方记水源失效并触发
-      重规划），禁止临时换成未经批准的候选。
+    - approved_source_ids 为批准候选列表（方案 candidates 就近排序）：只允许列表内
+      水源、按距离逐个尝试；None = 方案未规划水源不设约束；[] = 无批准候选全拒绝。
+      全部失效返回 None（调用方记水源失效并触发重规划），禁止换未经批准的候选。
     """
-    def _sid(source: Dict[str, Any]) -> str:
-        return str(source.get("osm_id") or f"scene:{source.get('name', 'water')}")
+    approved = {str(sid) for sid in approved_source_ids} if approved_source_ids is not None else None
 
     sources = []
     for source in stock.get("water_sources") or []:
-        if approved_source_id is not None and _sid(source) != str(approved_source_id):
-            continue  # 只用已批准水源，失效不换候选
+        if approved is not None and _water_source_id(source) not in approved:
+            continue  # 只用方案批准过的候选，失效不换未经批准水源
         if not source.get("available"):
             continue
         if source.get("safe") is not True:  # None=未核验 / False=不安全，均不放行

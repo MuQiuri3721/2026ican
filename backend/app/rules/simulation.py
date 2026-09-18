@@ -32,6 +32,18 @@ from .engine import _agent_kappa, _module_agent, _pick_water_source, v1_config
 SERVICE_TIMERS = ("_swap_left", "_refill_left", "_c6_left")
 
 
+def _approved_water_source_ids(plan: Dict[str, Any]) -> Optional[List[str]]:
+    """方案批准的就地取水候选 ID 列表（FE-73）：candidates 就近排序优先；
+    旧方案仅 source_id 时降级为单元素；方案未规划水源返回 None（执行不设约束）。"""
+    water_plan = plan.get("water_source_plan")
+    if not water_plan:
+        return None
+    candidates = [str(item["source_id"]) for item in (water_plan.get("candidates") or []) if item.get("source_id")]
+    if not candidates and water_plan.get("source_id"):
+        candidates = [str(water_plan["source_id"])]
+    return candidates
+
+
 def create_simulation_state(
     fleet: List[Dict[str, Any]],
     inventory: Dict[str, Any],
@@ -106,8 +118,9 @@ def create_simulation_state(
         "base_refill_minutes": float(refill_cfg.get("base", 4)),
         "onsite_refill_minutes": float(refill_cfg.get("onsite", 8)),
         "return_soc_percent": float(config.get("return_soc_percent", 25)),
-        # 已批准就地取水水源（OPT-P2-02）：执行只允许该水源，失效不临时换候选
-        "approved_water_source_id": (plan.get("water_source_plan") or {}).get("source_id"),
+        # 已批准就地取水候选（OPT-P2-02 / FE-73 多候选化）：执行按列表逐个降级、全败才判失效；
+        # 旧方案无 candidates 键时降级为单 ID；方案未规划水源（None）不设批准约束
+        "approved_water_source_ids": _approved_water_source_ids(plan),
         "water_source_invalid": False,
         # BE-14：充电速率读冻结配置（基地 base_soc_per_hour；前向点 60%/h 留待前向补能流程）
         "base_charge_per_minute": float(charging_cfg.get("base_soc_per_hour", 100)) / 60.0,
@@ -275,9 +288,9 @@ def advance_one_minute(state: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str,
                         drone["_refill_count"] = int(drone.get("_refill_count", 0)) + 1
                     else:
                         # 基地不足 → 就地取水（规则 V1 §5.3）：扣水源容量，装满后归队
-                        source = _pick_water_source(stock, dcap, state.get("approved_water_source_id"))
-                        if source is None and state.get("approved_water_source_id") is not None:
-                            # 已批准水源失效（耗尽/不再满足条件）：不临时换候选，标记失效触发重规划
+                        source = _pick_water_source(stock, dcap, state.get("approved_water_source_ids"))
+                        if source is None and state.get("approved_water_source_ids"):
+                            # 批准候选全部失效（耗尽/不再满足条件）：不换未经批准水源，标记失效触发重规划
                             state["water_source_invalid"] = True
                         if source is not None:
                             source["capacity_liters"] = round(float(source.get("capacity_liters", 0)) - dcap, 2)

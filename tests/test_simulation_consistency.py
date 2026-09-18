@@ -559,9 +559,9 @@ def test_T13_water_candidate_ids_stable_and_unverified_not_executable():
     ]}
     picked = _pick_water_source(stock, 20.0)
     assert picked is not None and picked["osm_id"] == "w222", "只能取已核验且容量充足的水源"
-    # 已批准 ID 约束：批准 w222 时不会错选同名 w111；批准未核验的 w111 时取不到水
-    assert _pick_water_source(stock, 20.0, approved_source_id="w222")["osm_id"] == "w222"
-    assert _pick_water_source(stock, 20.0, approved_source_id="w111") is None
+    # 已批准 ID 约束（FE-73 列表语义）：批准 w222 时不会错选同名 w111；批准未核验的 w111 时取不到水
+    assert _pick_water_source(stock, 20.0, approved_source_ids=["w222"])["osm_id"] == "w222"
+    assert _pick_water_source(stock, 20.0, approved_source_ids=["w111"]) is None
 
 
 def test_T14_approved_water_source_failure_triggers_replan_not_swap():
@@ -613,3 +613,88 @@ def test_T05_spray_semantics_auto_vs_explicit_cap():
     assert capped["consumed_water"] == pytest.approx(5.0, abs=0.01), "限额模式喷洒不超过 5L"
     halted = run(0.0)         # 核心层限额 0 = 停止喷洒（新语义）；monitor 入口的 0 才转自动（兼容层）
     assert halted["consumed_water"] == 0.0 and halted["fleet"][0]["status"] != "working"
+
+def test_FE73_multi_candidate_fallback_uses_next_approved():
+    """FE-73：方案批准候选列表逐个降级——首选耗尽后自动取用列表内第二候选，
+    不置 water_source_invalid（全败才失效）。"""
+    from backend.app.rules.engine import _pick_water_source
+
+    stock = {"water_sources": [
+        {"name": "水源A", "osm_id": "wA", "available": True, "safe": True,
+         "capacity_liters": 0.0, "distance_m": 100},   # 首选已耗尽
+        {"name": "水源B", "osm_id": "wB", "available": True, "safe": True,
+         "capacity_liters": 500.0, "distance_m": 150},  # 列表内第二候选
+    ]}
+    picked = _pick_water_source(stock, 20.0, approved_source_ids=["wA", "wB"])
+    assert picked is not None and picked["osm_id"] == "wB", "首选耗尽应降级到列表内第二候选"
+    # 列表外的再好也不行（T14 不变量）
+    assert _pick_water_source(stock, 20.0, approved_source_ids=["wA"]) is None
+
+
+def test_FE73_all_candidates_fail_sets_invalid_flag():
+    """FE-73：方案批准候选全败时 _pick 返回 None，执行端（simulation）按列表非空置
+    water_source_invalid——语义与 T14 相同，但此刻 B 也在批准列表内且同样耗尽。"""
+    from backend.app.rules.simulation import advance_one_minute, create_simulation_state
+
+    fleet = [_drone("E1", soc=30.0, agent=20.0, status="available")]
+    plan = {"firefighting_uavs": ["E1"], "selected_uavs": ["E1"],
+            "material_module": "water_20l", "growth_rate_per_hour": 0.0,
+            "water_source_plan": {"mode": "onsite", "source_id": "wA",
+                                  "candidates": [{"source_id": "wA"}, {"source_id": "wB"}]},
+            "battery_plan": [{"uav_id": "E1", "outbound_minutes": 0.5}]}
+    stock = _inventory(water_liters=0.0, battery_packs=48,
+                       water_sources=[
+                           {"name": "水源A", "osm_id": "wA", "available": True, "safe": True,
+                            "capacity_liters": 0.0, "distance_m": 100},
+                           {"name": "水源B", "osm_id": "wB", "available": True, "safe": True,
+                            "capacity_liters": 0.0, "distance_m": 150},  # 列表内但同样耗尽
+                       ])
+    state = create_simulation_state(fleet, stock, plan, 40.0, fire_type="vegetation")
+    assert state["approved_water_source_ids"] == ["wA", "wB"]
+    for _ in range(10):
+        advance_one_minute(state, plan)
+    e1 = next(d for d in state["fleet"] if d["uav_id"] == "E1")
+    assert e1["agent_remaining"] == 0.0
+    assert state.get("water_source_invalid") is True, "批准候选全败必须置失效标记"
+
+
+def test_FE73_planner_executor_source_id_unified():
+    """FE-73：无 osm_id、走库存 id 的水源（演示场景形态）规划端绑定值与执行端
+    端点一致——修复此前 `scene:name#idx` vs `scene:name` 的潜伏错位。"""
+    from backend.app.rules.engine import _evaluate_water_plan, _water_source_id
+    from backend.app.rules.simulation import advance_one_minute, create_simulation_state
+
+    source = {"id": "reservoir-zixiahu", "name": "紫霞湖水库", "available": True,
+              "safe": True, "capacity_liters": 1200, "distance_m": 300}
+    plan_eval = _evaluate_water_plan({"water_route_safe": True}, {"water_sources": [source]}, base_distance_m=2500.0)
+    assert plan_eval["source_id"] == "reservoir-zixiahu" == _water_source_id(source)
+    assert [c["source_id"] for c in plan_eval["candidates"]] == ["reservoir-zixiahu"]
+
+    # 执行端：同一 id 的水源能被批准列表匹配取到（旧实现 scene:name#idx ≠ scene:name 必失败）
+    fleet = [_drone("E1", soc=30.0, agent=20.0, status="available")]
+    plan = {"firefighting_uavs": ["E1"], "selected_uavs": ["E1"],
+            "material_module": "water_20l", "growth_rate_per_hour": 0.0,
+            "water_source_plan": plan_eval,
+            "battery_plan": [{"uav_id": "E1", "outbound_minutes": 0.5}]}
+    stock = _inventory(water_liters=0.0, battery_packs=48, water_sources=[source])
+    state = create_simulation_state(fleet, stock, plan, 40.0, fire_type="vegetation")
+    assert state["approved_water_source_ids"] == ["reservoir-zixiahu"]
+    for _ in range(10):
+        advance_one_minute(state, plan)
+    e1 = next(d for d in state["fleet"] if d["uav_id"] == "E1")
+    assert e1["agent_remaining"] == 20.0, "id 键水源应被批准列表匹配并完成就地取水"
+    assert state.get("water_source_invalid") is not True
+
+
+def test_FE73_base_mode_binds_single_nearest_candidate():
+    """FE-73：base 模式绑定单元素 candidates（就近候选）——保持既有语义：基地
+    耗尽时该候选仍可就地取用；无 water_source_plan 的方案执行不设批准约束。"""
+    from backend.app.rules.simulation import _approved_water_source_ids
+
+    base_plan = {"mode": "base", "source_id": "scene:蓄水池#0",
+                 "candidates": [{"source_id": "scene:蓄水池#0", "distance_m": 900.0}]}
+    assert _approved_water_source_ids({"water_source_plan": base_plan}) == ["scene:蓄水池#0"]
+    # 旧方案兼容：只有 source_id 无 candidates
+    assert _approved_water_source_ids({"water_source_plan": {"mode": "onsite", "source_id": "wA"}}) == ["wA"]
+    # 未规划水源 = None（不设约束，保持 test_4 行为）
+    assert _approved_water_source_ids({}) is None
