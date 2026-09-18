@@ -474,3 +474,32 @@ nav button:hover:not(.active){background:#1a2530;color:#dce5ec}
 .resource-strip{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:10px;padding:9px 13px;background:var(--ok-soft);border:1px solid var(--ok-line);border-radius:var(--radius-s);font:400 12px var(--font-data);color:var(--ink-2)}
 .resource-strip b{color:var(--ok);font-size:13px}
 .resource-strip small{margin-left:auto;color:var(--ink-3)}
+
+/* =====================================================================
+   FE-70 火情态势可视化：等级徽章四档色阶 + FLP 趋势 + 判读；监测结果分卡
+   ===================================================================== */
+.fire-sense{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;margin:12px 0}
+.fs-level{display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:92px;padding:10px 14px;border-radius:var(--radius-s);color:#fff}
+.fs-level b{font:800 22px/1.1 var(--font-ui)}
+.fs-level span{font:500 11px var(--font-data);opacity:.92;margin-top:2px}
+.fs-level.lv-1{background:linear-gradient(140deg,#2f8f5b,#3fae72)}
+.fs-level.lv-2{background:linear-gradient(140deg,#b98a1c,#d4a437)}
+.fs-level.lv-3{background:linear-gradient(140deg,#cf5b22,#e8763c)}
+.fs-level.lv-4{background:linear-gradient(140deg,#b3261e,#d9541e)}
+.fs-cell{flex:1 1 110px;padding:8px 12px;border:1px solid var(--line);border-radius:var(--radius-s);display:flex;flex-direction:column;gap:2px;background:var(--surface)}
+.fs-cell small{font:400 10.5px var(--font-data);color:var(--ink-3);white-space:nowrap}
+.fs-cell b{font:700 19px var(--font-data);color:var(--ink)}
+.fs-cell em{font:600 11px var(--font-data);font-style:normal;white-space:nowrap}
+.fs-cell em.down{color:var(--ok)}
+.fs-cell em.up{color:var(--fire)}
+.fs-verdict{flex:1 1 180px;padding:8px 12px;border-radius:var(--radius-s);display:flex;flex-direction:column;justify-content:center;gap:2px;font:700 13px var(--font-ui)}
+.fs-verdict.down{background:var(--ok-soft);color:var(--ok)}
+.fs-verdict.up{background:var(--fire-soft);color:var(--fire)}
+.fs-verdict small{font:400 11px var(--font-data);color:var(--ink-3)}
+.monitor-result{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap;margin-top:10px;padding:9px 12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-s)}
+.mr-head{display:flex;align-items:center;font:600 12px var(--font-ui);color:var(--ink-2);padding-right:4px}
+.mr-cell{display:flex;flex-direction:column;gap:1px;padding:2px 10px;border-left:2px solid var(--line)}
+.mr-cell small{font:400 10.5px var(--font-data);color:var(--ink-3);white-space:nowrap}
+.mr-cell b{font:600 12px var(--font-data);color:var(--ink);white-space:nowrap}
+.mr-cell.mr-wide b{font-weight:500;white-space:normal;max-width:340px}
+.mr-reason{margin-left:auto;display:flex;align-items:center;font:500 11.5px var(--font-data);color:var(--warn)}
