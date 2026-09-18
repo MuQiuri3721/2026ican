@@ -513,3 +513,33 @@ nav button:hover:not(.active){background:#1a2530;color:#dce5ec}
 .svg-road.rl-mid{stroke:#a08050;stroke-width:2.2;opacity:.85}
 .svg-road.rl-minor{stroke:#b09a72;stroke-width:1.4;opacity:.75}
 .svg-road.rl-path{stroke:#b3a890;stroke-width:1.1;opacity:.6;stroke-dasharray:5 4}
+
+/* =====================================================================
+   FE-60 大屏投影样式层（2026-09-18 补齐——此前 toggle 只挂 html.projection
+   类但无任何规则，投影实为空操作；本项目 CSS 禁用 zoom，防 AMap 坐标偏移）
+   ===================================================================== */
+html.projection header h1{font-size:26px}
+html.projection header p{font-size:13.5px}
+html.projection nav button{font-size:13.5px}
+html.projection .toolbar .tab-pills button{font-size:14px}
+html.projection .hero-panel h2{font-size:26px}
+html.projection .hero-note{font-size:13.5px}
+html.projection .hero-footer strong{font-size:24px}
+html.projection .hero-footer small{font-size:12px}
+html.projection .metric-value{font-size:32px}
+html.projection .metric-change{font-size:12.5px}
+html.projection .decision-callout strong{font-size:18px}
+html.projection .decision-callout p{font-size:14px}
+html.projection .plan-summary{font-size:13.5px}
+html.projection .task-badge{font-size:13.5px}
+html.projection .sim-clock{font-size:13.5px}
+html.projection .sim-speed{font-size:13px}
+html.projection .monitor-result{font-size:13.5px}
+html.projection .round-list{font-size:13.5px}
+html.projection .task-chips span{font-size:13px}
+html.projection .fire-sense .fs-level b{font-size:28px}
+html.projection .fire-sense .fs-cell b{font-size:24px}
+html.projection .fire-sense .fs-verdict{font-size:15.5px}
+html.projection .screen-kpis .skpi b{font-size:30px}
+html.projection .deploy-row span{font-size:13px}
+html.projection .stream-rows{font-size:13px}
