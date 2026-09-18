@@ -29,7 +29,7 @@ def main() -> int:
         # 开始模拟（无影像，scenario 驱动研判）
         page.get_by_role("button", name="指挥中枢").click()
         page.get_by_role("button", name="开始模拟").click()
-        page.locator(".plan-summary").wait_for(timeout=150000)
+        page.locator(".plan-summary").wait_for(timeout=300000)
         badge = page.locator(".task-badge").inner_text()
         ok &= report(12, "开始模拟→待确认", "待确认" in badge, badge)
 

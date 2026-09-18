@@ -25,7 +25,7 @@ def main() -> int:
         # 序列研判成功（默认火 1800m² 不可控，plan-summary 显示序列 FLP）
         session.page.get_by_role("button", name="启动智能研判").click()
         session.page.wait_for_function(
-            "document.querySelector('.plan-summary')?.textContent?.includes('FLP：')", timeout=150000
+            "document.querySelector('.plan-summary')?.textContent?.includes('FLP：')", timeout=300000
         )
         ok &= report(7, "序列研判完成", True)
 

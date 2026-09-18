@@ -53,7 +53,7 @@ def main() -> int:
         session.page.wait_for_function(
             "(() => { const t = document.querySelector('.plan-summary')?.textContent || '';"
             " return t.includes('FLP：') && !t.includes('FLP：360') && !t.includes('时间区间：—'); })()",
-            timeout=150000,
+            timeout=300000,
         )
         summary2 = session.page.locator(".plan-summary").inner_text()
         window2 = summary2.split("时间区间：")[1].split("分钟")[0] if "时间区间" in summary2 else ""

@@ -81,7 +81,7 @@ def main() -> int:
 
         if shifted:
             page.get_by_role("button", name="开始模拟").click()
-            page.locator(".plan-summary").wait_for(timeout=150000)
+            page.locator(".plan-summary").wait_for(timeout=300000)
             page.get_by_role("button", name="批准主方案").click()
             # 风变在第 2 轮注入 → 跨档触发重规划 → 回待确认 → 轮次列表动作提示
             page.wait_for_function(

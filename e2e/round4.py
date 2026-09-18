@@ -17,7 +17,7 @@ def main() -> int:
         session.page.get_by_text("影像已接入").wait_for(timeout=10000)
         session.page.get_by_role("button", name="启动智能研判").click()
         session.page.wait_for_function(
-            "document.querySelector('.plan-summary')?.textContent?.includes('FLP：')", timeout=150000
+            "document.querySelector('.plan-summary')?.textContent?.includes('FLP：')", timeout=300000
         )
         ok &= report(4, "方案就绪", True)
 

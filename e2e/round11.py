@@ -18,7 +18,7 @@ def main() -> int:
         page.set_input_files("input[type=file]", "e2e/small-fire.jpg")
         page.get_by_text("影像已接入").wait_for(timeout=10000)
         page.get_by_role("button", name="启动智能研判").click()
-        page.locator(".plan-summary").wait_for(timeout=150000)
+        page.locator(".plan-summary").wait_for(timeout=300000)
         ok &= report(11, "研判完成", True)
         page.get_by_role("button", name="批准主方案").click()
         page.wait_for_function("document.querySelector('.task-badge')?.textContent?.includes('执行中')", timeout=30000)

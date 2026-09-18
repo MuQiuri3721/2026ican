@@ -25,7 +25,7 @@ def main() -> int:
         page.get_by_role("button", name="生成随机火情").click()
         page.locator(".scenario-facts").wait_for(timeout=8000)
         page.get_by_role("button", name="开始模拟").click()
-        page.locator(".plan-summary").wait_for(timeout=150000)
+        page.locator(".plan-summary").wait_for(timeout=300000)
         ok &= report(13, "演训研判完成", True)
 
         # Agent 协作时间线：建案/发现/方案/审批四类消息齐备

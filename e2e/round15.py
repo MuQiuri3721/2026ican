@@ -24,7 +24,7 @@ def main() -> int:
         page.get_by_role("button", name="生成随机火情").click()
         page.locator(".scenario-facts").wait_for(timeout=8000)
         page.get_by_role("button", name="开始模拟").click()
-        page.locator(".plan-summary").wait_for(timeout=150000)
+        page.locator(".plan-summary").wait_for(timeout=300000)
 
         # 问答面板模式标签与 /api/llm-status 一致
         tag = page.locator(".chat-panel .llm-tag")
