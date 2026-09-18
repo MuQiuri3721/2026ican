@@ -95,9 +95,9 @@ def main() -> int:
         session.assert_clean_console("round16")
         ok &= report(16, "控制台无错误", True)
         session.screenshot("round16")
-    except AssertionError as error:
+    except (AssertionError, Exception) as error:
         ok = False
-        detail = str(error)[:300]
+        detail = f"{type(error).__name__}: {str(error)[:260]}"
         session.screenshot("round16_failure")
     finally:
         session.cleanup_task()
