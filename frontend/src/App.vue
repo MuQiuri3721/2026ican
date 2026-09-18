@@ -1510,6 +1510,8 @@ async function startScenarioSimulation() {
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '演训模拟失败，请重试。'
     addLog('演训模拟失败 · 请重试')
+    taskStatus.value = '待命'
+    currentStage.value = '等待重新开始模拟'
     console.warn(error)
   } finally {
     scenarioBusy.value = false
