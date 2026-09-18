@@ -14,6 +14,8 @@ export function moduleLabel(module) {
 }
 
 export function formatNumber(value) {
+  // 空值显示「—」不伪造 0（Intl.format(null) 会渲染成 "0"）
+  if (value == null || Number.isNaN(Number(value))) return '—'
   return new Intl.NumberFormat('zh-CN').format(value)
 }
 

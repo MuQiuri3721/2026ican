@@ -1593,6 +1593,7 @@ onMounted(() => {
       <span>后端已开启指挥员口令校验</span>
       <input v-model="authTokenInput" type="password" placeholder="输入指挥员口令" @keyup.enter="saveCommanderToken">
       <button class="primary" @click="saveCommanderToken">保存并继续</button>
+      <button class="outline-btn" @click="authRequired = false">稍后</button>
     </div>
     <div v-if="alarms.length" class="alarm-stack" role="alert">
       <div v-for="alarm in alarms" :key="alarm.id" :class="['alarm-card', alarm.level]">
