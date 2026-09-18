@@ -1339,6 +1339,14 @@ function generateScenario() {
   scenario.value = { fireOrigin, fireGps, areaM2, growthRate, people, failureRound, windShift }
   const peopleLabel = people === 'confirmed' ? '在场' : people === 'absent' ? '不在场' : '情况不明'
   addLog(`随机火情已生成 · 面积 ${areaM2}m² · 人员${peopleLabel} · 演训模拟就绪`, { stage: 'scenario', source: 'local' })
+  // 环境预取（随机坐标必缓存未命中，实抓气象/水源/路网可耗时 1-2 分钟）：
+  // 生成即后台拉取，开始模拟时命中缓存或在途请求合并（后端 single-flight 去重），
+  // 演训与演示都不再在「开始模拟」后长等。fire-and-forget，失败静默（分析端有兜底）。
+  fetch(`/api/environment?latitude=${fireGps.latitude}&longitude=${fireGps.longitude}&environment_mode=real`)
+    .then((response) => {
+      if (response.ok) addLog('演训火点环境数据已就绪', { stage: 'scenario', source: 'local' })
+    })
+    .catch(() => {})
 }
 
 const scenarioPreview = computed(() => {
