@@ -40,7 +40,6 @@ import {
   Bell,
   Bot,
   ChevronRight,
-  CloudRain,
   Crosshair,
   Droplets,
   Flame,
@@ -50,7 +49,6 @@ import {
   MonitorUp,
   Radio,
   RefreshCw,
-  ShieldCheck,
   Wind,
   Zap,
 } from 'lucide-vue-next'
@@ -446,12 +444,21 @@ const fireChange = computed(() => {
   const delta = ((after - before) / before) * 100
   return `${delta > 0 ? '+' : ''}${delta.toFixed(1)}%`
 })
-const metrics = computed(() => [
-  { label: '火焰面积', value: formatNumber(result.value.fire_assessment.fire_area_m2), unit: 'm²', change: fireChange.value, tone: 'orange', icon: Flame },
-  { label: '烟雾覆盖', value: formatNumber(result.value.fire_assessment.smoke_area_m2), unit: 'm²', change: `增长率 ${Math.round((result.value.fire_assessment.growth_rate || 0) * 100)}%`, tone: 'slate', icon: CloudRain },
-  { label: '风速 / 风向', value: result.value.environment.wind_speed, unit: `m/s · ${result.value.environment.wind_direction}`, change: '扩散预警', tone: 'blue', icon: Wind },
-  { label: '研判置信度', value: Math.round(result.value.fire_assessment.confidence * 100), unit: '%', change: '高可信', tone: 'green', icon: ShieldCheck },
-])
+// FE-74 英雄决策条（审计§六）：结论优先——评委一眼看到 三态结论/地点/火势趋势/出动规模/时间区间+数据可信
+const decisionUnits = computed(() => {
+  const units = (plan.value.firefighting_uavs || plan.value.selected_uavs || [])
+  const peopleLabel = { confirmed: '有人', absent: '无人', unknown: '不确定' }[peopleStatus.value] || '不确定'
+  const trend = fireTrendText.value
+  return {
+    verdict: controlVerdictView.value,
+    location: scene.coordinates,
+    trend: trend ? { down: trend.down, text: trend.text.replace(' · ', ''), sub: trend.detail } : { down: null, text: '首轮基准', sub: '待首轮监测' },
+    units: `${units.length}/12`,
+    peopleLabel,
+    window: controlWindow.value,
+    trust: dataMode.value,
+  }
+})
 
 const navItems = [
   { id: 'command', label: '指挥中枢', icon: Crosshair },
@@ -1490,7 +1497,7 @@ onMounted(() => {
         <UploadPanel :analyzing="analyzing" :progress="progress" :uploaded="uploaded" :preview-url="previewUrl" :selected-file="selectedFile" :selected-frames="selectedFrames" :project-status="projectStatus" :environment-coordinates="environmentCoordinates" :scenario="scenario" :scenario-busy="scenarioBusy" v-model:use-vlm="useVlm" @files="acceptFile" @reset="resetAnalysis" @generate-scenario="generateScenario" @start-scenario="startScenarioSimulation" />
 
         <section class="environment-panel panel"><div class="panel-heading"><h2>现场环境</h2><button class="outline-btn environment-refresh" :disabled="environmentLoading" @click="loadEnvironment"><RefreshCw :size="14" /> {{ environmentLoading ? '刷新中…' : '刷新环境' }}</button></div><div class="environment-controls"><label>模式 <select v-model="environmentMode" @change="loadEnvironment"><option value="real">真实数据</option><option value="auto">自动</option><option value="offline">离线演示（不联网）</option><option value="demo">演示数据</option></select></label><div class="coordinate-editor"><label>纬度 <input v-model="coordinateDraft.latitude" inputmode="decimal" aria-label="纬度"></label><label>经度 <input v-model="coordinateDraft.longitude" inputmode="decimal" aria-label="经度"></label><button class="outline-btn" type="button" @click="applyCoordinates">应用</button></div><span>{{ environmentCoordinates.latitude.toFixed(6) }}, {{ environmentCoordinates.longitude.toFixed(6) }}</span></div><div v-if="coordinateError" class="coordinate-error" role="alert">{{ coordinateError }}</div><div class="environment-note src-note">决策作用 · 坡度→K_slope · 燃料→K_fuel · 风速→K_wind/风档（参与 FLP 计算）；温湿度为背景信息不参与计算</div><div class="environment-meta"><span>采集 · {{ environment?.collected_at?.slice(0, 19).replace('T', ' ') || '—' }}{{ environmentAgeText ? '（' + environmentAgeText + '）' : '' }}</span><span>状态 · {{ environmentStatus }}</span><span>来源 · {{ environmentSource }}</span><span v-if="environmentStale">stale / 缓存</span><span v-if="environmentFallback">fallback · {{ environmentFallback }}</span></div><div class="environment-grid"><div v-for="item in environmentFeatures" :key="item.label" class="environment-item"><span>{{ item.label }}</span><strong :class="['tone-' + item.tone, { 'is-empty': item.empty }]">{{ item.value }}</strong></div></div></section>
-        <section class="metrics-grid"><article v-for="metric in metrics" :key="metric.label" class="metric-card"><div class="metric-top"><span>{{ metric.label }}</span><component :is="metric.icon" :size="17" :class="'tone-' + metric.tone" /></div><div class="metric-value" :key="metric.label + metric.value">{{ metric.value }} <small>{{ metric.unit }}</small></div><div :class="['metric-change', 'tone-' + metric.tone]">{{ metric.change }}</div></article></section>
+        <section :class="['metrics-grid', 'hero-decision', 'hd-' + decisionUnits.verdict.tone]"><div class="hd-verdict"><small>处置结论</small><b>{{ decisionUnits.verdict.hero }}</b><span>{{ decisionUnits.verdict.callout }}</span></div><div class="hd-cell"><small>地点</small><b class="hd-loc">{{ decisionUnits.location }}</b><span>紫金山演示林区</span></div><div class="hd-cell"><small>火势趋势</small><b :class="decisionUnits.trend.down === true ? 't-down' : decisionUnits.trend.down === false ? 't-up' : ''">{{ decisionUnits.trend.text }}</b><span>{{ decisionUnits.trend.sub }}</span></div><div class="hd-cell"><small>出动规模</small><b>{{ decisionUnits.units }} <small>架</small></b><span>人员口径 · {{ decisionUnits.peopleLabel }}</span></div><div class="hd-cell"><small>控制时间区间</small><b>{{ decisionUnits.window }}</b><span>数据 · {{ decisionUnits.trust }}</span></div></section>
         <section class="fleet-panel panel"><div class="panel-heading"><h2>无人机集群状态</h2><button class="text-btn" @click="selectNav('fleet')">查看详情 <ChevronRight :size="14" /></button></div><div class="fleet-list"><template v-if="!drones.length"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></template><div v-for="drone in drones" :key="drone.id" class="drone-row"><div :class="['drone-icon', drone.color]"><Zap :size="17" /></div><div class="drone-name"><strong>{{ drone.id }} <span>{{ drone.label }}</span></strong><small>{{ drone.subgroup }} · {{ drone.status }}</small></div><div class="battery"><div :class="['battery-bar', drone.soc < 30 ? 'soc-low' : drone.soc < 60 ? 'soc-mid' : '']"><i :style="{ width: drone.soc + '%' }"></i></div><span>SOC {{ drone.soc }}%</span></div><div class="drone-telemetry"><span>模块 {{ moduleLabel(drone.module) }}</span><span>药剂 {{ drone.payload }}</span><span>信号 {{ drone.signal }}%</span><span>健康 {{ drone.health }}%</span></div><span :class="['drone-status', drone.status === '执行中' ? 'active-status' : '', { 'st-fault': drone.status === '故障', 'st-warn': drone.status === '已完成' }]"><i></i>{{ drone.status }}</span></div></div></section>
         <DecisionPanel :analysis-result="analysisResult" :disable-options="disableOptions" :max-drones-options="maxDronesOptions" :result="result" :analysis-envelope="analysisEnvelope" :analysis-id="analysisId" :active-rounds="activeRounds" :monitor-result="monitorResult" :monitor-area="monitorArea" :data-mode="dataMode" :control-verdict-view="controlVerdictView" :plan-version-label="planVersionLabel" :current-plan-id="currentPlanId" :control-window="controlWindow" :resource-gap="resourceGap" :evacuation-summary="evacuationSummary" :people-risk="peopleRisk" :vlm-note="vlmNote" :vlm-note-source="vlmNoteSource" :vlm-note-body="vlmNoteBody" :vlm-note-facts="vlmNoteFacts" :vlm-note-issues="vlmNoteIssues" :frame-trend-text="frameTrendText" :input-provenance-text="inputProvenanceText" :mission-active="mission?.active" :mission-now="missionNow" :approval-busy="approvalBusy" :monitoring="monitoring" v-model:people-status="peopleStatus" v-model:max-drones="maxDrones" v-model:target-minutes="targetMinutes" v-model:disabled-uavs="disabledUavs" v-model:reason-input="reasonInput" v-model:sim-speed="simSpeed" v-model:report-open="reportViewer.open" @approval="submitApproval" @monitor="runMonitor()" @set-speed="setSimSpeed" @error="errorMessage = $event" />
         <section class="chat-panel panel"><ChatPanel :task-id="analysisId" :enabled="chatEnabled" /></section>

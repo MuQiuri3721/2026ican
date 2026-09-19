@@ -543,3 +543,24 @@ html.projection .fire-sense .fs-verdict{font-size:15.5px}
 html.projection .screen-kpis .skpi b{font-size:30px}
 html.projection .deploy-row span{font-size:13px}
 html.projection .stream-rows{font-size:13px}
+
+/* =====================================================================
+   FE-74 英雄决策条（审计§六）：结论优先主区，替代四张指标小卡
+   ===================================================================== */
+.hero-decision{display:grid;grid-template-columns:1.7fr 1fr 1fr 1fr 1.1fr;gap:0;padding:0;overflow:hidden}
+.hd-verdict{padding:14px 18px;display:flex;flex-direction:column;gap:3px;color:#fff}
+.hd-verdict small{font:500 11px var(--font-data);opacity:.85}
+.hd-verdict b{font:800 20px/1.2 var(--font-ui)}
+.hd-verdict span{font:400 11.5px var(--font-data);opacity:.92;line-height:1.45}
+.hero-decision.hd-ok .hd-verdict{background:linear-gradient(140deg,#2f8f5b,#3fae72)}
+.hero-decision.hd-mid .hd-verdict{background:linear-gradient(140deg,#b98a1c,#d4a437)}
+.hero-decision.hd-bad .hd-verdict{background:linear-gradient(140deg,#b3261e,#d9541e)}
+.hd-cell{padding:13px 16px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:3px;background:var(--surface)}
+.hd-cell small{font:400 10.5px var(--font-data);color:var(--ink-3);white-space:nowrap}
+.hd-cell b{font:700 17px var(--font-data);color:var(--ink);white-space:nowrap}
+.hd-cell b small{font-size:12px;color:var(--ink-3)}
+.hd-cell b.hd-loc{font-size:14px;white-space:normal;line-height:1.3}
+.hd-cell b.t-down{color:var(--ok)}
+.hd-cell b.t-up{color:var(--fire)}
+.hd-cell span{font:400 11px var(--font-data);color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:1100px){.hero-decision{grid-template-columns:1fr 1fr}.hd-verdict{grid-column:1/-1}.hd-cell{border-top:1px solid var(--line)}}
