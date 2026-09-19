@@ -223,8 +223,9 @@ def vlm_analyze_images(
         return parsed
 
     parsed = _attempt()
-    # 限流退避重试（交付 §7-2）：真实结果优先于降级——429/瞬断时 15s/40s 各重试一次
-    for delay in (15.0, 40.0):
+    # 限流退避重试（交付 §7-2）：真实结果优先于降级——429/瞬断时按 BACKOFF_DELAYS 各重试一次
+    # （审计 P1：曾写死 (15.0, 40.0) 绕过常量，conftest 置零失效拖慢套件）
+    for delay in BACKOFF_DELAYS:
         if parsed is not None:
             break
         time.sleep(delay)

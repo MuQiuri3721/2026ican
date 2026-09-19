@@ -1,3 +1,5 @@
+import math
+
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -108,6 +110,28 @@ class AnalysisInput(BaseModel):
     constraints: Optional[Dict[str, Any]] = None
     scenario: Optional[Dict[str, Any]] = None
 
+    @model_validator(mode="after")
+    def _check_constraints(self):
+        _validate_constraints_payload(self.constraints)
+        return self
+
+
+def _validate_constraints_payload(constraints: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """constraints 白名单键校验（审计 P1）：target_minutes 非法（负数/NaN/Inf/非数值）
+    直接 422，不再由引擎静默置空（调用方误以为约束生效）。0 = 立即截止，合法（冻结口径）。"""
+    if not constraints:
+        return constraints
+    raw = constraints.get("target_minutes")
+    if raw is None:
+        return constraints
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        raise ValueError("constraints.target_minutes 必须是数值")
+    if math.isnan(value) or math.isinf(value) or value < 0:
+        raise ValueError("constraints.target_minutes 必须为非负有限数值（0=立即截止）")
+    return constraints
+
 
 class MonitorInput(BaseModel):
     elapsed_minutes: float = Field(default=5, gt=0, le=120)
@@ -153,6 +177,7 @@ class ApprovalRequest(BaseModel):
     def validate_action(self):
         if self.action not in {"approve", "reject", "adjust", "terminate"}:
             raise ValueError("action 必须是 approve、reject、adjust 或 terminate")
+        _validate_constraints_payload(self.constraints)
         return self
 
 
@@ -162,6 +187,11 @@ class ReplanRequest(BaseModel):
     observation: Optional[Dict[str, Any]] = None
     people_status: Optional[PeopleStatus] = None
     idempotency_key: Optional[str] = Field(default=None, max_length=128)
+
+    @model_validator(mode="after")
+    def validate_constraints(self):
+        _validate_constraints_payload(self.constraints)
+        return self
 
 class FeedbackRoundInput(BaseModel):
     round: int = Field(gt=0)

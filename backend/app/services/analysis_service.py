@@ -63,7 +63,9 @@ def _normalize_scenario(raw: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any
     normalized = {
         "fire_origin": {"x": min(max(x, -500.0), 700.0), "y": min(max(y, -1000.0), 800.0)},
         "fire_area_m2": min(max(area, 200.0), 12000.0),
-        "growth_rate": min(max(growth, 0.05), 1.5),
+        # growth_rate=0（不蔓延火）是合法值（审计 P0）：下限曾为 0.05 会把 0 抬高；
+        # 统一仿真核心对 0 增长天然安全（growth_per_min=0，余烬触发器另有 ≥20 FLP 下限）
+        "growth_rate": min(max(growth, 0.0), 1.5),
     }
     if failure_round is not None:
         try:

@@ -587,3 +587,46 @@ def test_commander_token_gate(monkeypatch):
     # 回到开放模式（E2E/演示默认态）
     monkeypatch.delenv("FIREOPS_COMMANDER_TOKEN")
     assert client.post("/api/analyze", json=body).status_code == 200
+
+
+def test_zero_growth_rate_is_preserved_end_to_end():
+    """审计 P0 验收：growth_rate=0（不蔓延火）是合法值——场景入口不得用
+    `or 默认值` 覆盖成 0.42；完整 API 链中每分钟自然增长必须为 0。"""
+    from fastapi.testclient import TestClient
+    client = TestClient(app)
+    created = client.post("/api/analyze", json={
+        "scene_id": "forest-demo-01", "image_name": "zero-growth.jpg",
+        "environment_mode": "offline", "people_status": "absent",
+        "scenario": {"fire_origin": {"x": 200, "y": 200}, "fire_area_m2": 400, "growth_rate": 0},
+    })
+    assert created.status_code == 200, created.text
+    body = created.json()
+    growth = body["result"]["fire_assessment"]["growth_rate"]
+    assert growth == 0, f"合法零增长被覆盖为 {growth}"
+    plan_growth = body["result"]["dispatch_plan"]["growth_rate_per_hour"]
+    assert plan_growth == 0, f"方案增长率被覆盖为 {plan_growth}"
+    task_id = body["analysis_id"]
+    plan = client.get(f"/api/tasks/{task_id}/plan").json()["plan"]
+    approved = client.post(f"/api/tasks/{task_id}/approval", json={"action": "approve", "plan_id": plan["plan_id"]})
+    assert approved.status_code == 200
+    rnd = client.post(f"/api/tasks/{task_id}/rounds", json={"round": 1, "elapsed_minutes": 5})
+    assert rnd.status_code == 200, rnd.text
+    ledger = (rnd.json().get("after") or {}).get("flp_ledger") or {}
+    assert ledger.get("growth_flp") == 0, f"零增长火每分钟自然增长必须为 0，实际 {ledger.get('growth_flp')}"
+
+
+def test_target_minutes_validation_422_and_zero_legal():
+    """审计 P1 验收：非法 target_minutes（负数/NaN/字符串）入口 422 而非静默忽略；
+    0=立即截止合法（冻结口径）。"""
+    from fastapi.testclient import TestClient
+    client = TestClient(app)
+    base = {"scene_id": "forest-demo-01", "image_name": "tlimit.jpg",
+            "environment_mode": "offline", "people_status": "absent"}
+    for bad in (-5, "abc"):
+        payload = {**base, "constraints": {"target_minutes": bad}}
+        response = client.post("/api/analyze", json=payload)
+        assert response.status_code == 422, f"target_minutes={bad!r} 应 422，实际 {response.status_code}"
+    good = client.post("/api/analyze", json={**base, "constraints": {"target_minutes": 0}})
+    assert good.status_code == 200, good.text
+    client.post(f"/api/tasks/{good.json()['analysis_id']}/approval",
+                json={"action": "terminate", "reason": "探针清理"})

@@ -66,11 +66,16 @@ class FirePerceptionSkill(BaseSkill):
         scenario = context.get("scenario")
         if scenario:
             # 演训模拟（FE-18）：跳过影像识别，由场景参数直接合成观测
-            area = float(scenario.get("fire_area_m2") or 800)
+            # 合法零值守卫（审计 P0）：`or 默认值` 会把 growth_rate=0（不蔓延火）等
+            # 合法 0 覆盖为默认增长率——改显式 None 判断，0 语义保留。
+            raw_area = scenario.get("fire_area_m2")
+            area = float(raw_area) if raw_area is not None else 800.0
+            raw_growth = scenario.get("growth_rate")
+            growth_rate = float(raw_growth) if raw_growth is not None else 0.42
             return {"observation": {
                 "fire_area_m2": area,
                 "smoke_area_m2": round(area * 2.33, 1),
-                "growth_rate": float(scenario.get("growth_rate") or 0.42),
+                "growth_rate": growth_rate,
                 "confidence": 0.9,
                 "fire_center": context.get("fire_center") or {"latitude": 32.0688, "longitude": 118.8432},
                 "detector": "scenario-synthetic",
@@ -101,7 +106,7 @@ class FirePerceptionSkill(BaseSkill):
             if explanation.get("mode") == "real":
                 observation = apply_vlm_fire_params(observation, explanation)
         observation_out = {"fire_area_m2": observation.get("fire_area_m2", metrics_data.get("fire_area_m2", 1800)), "smoke_area_m2": observation.get("smoke_area_m2", metrics_data.get("smoke_area_m2", 4200)), "growth_rate": observation.get("growth_rate", 0.42), "confidence": observation.get("confidence", 0.91), "fire_center": context.get("fire_center") or observation.get("fire_center") or {"latitude": 32.04, "longitude": 118.78}, "source": observation.get("source", "vision-observation-fixture"), "detector": result, "metrics": metrics}
-        for provenance_key in ("fire_params_source", "fire_params_scale"):
+        for provenance_key in ("fire_params_source", "fire_params_scale", "fire_params_mapping_version", "fire_params_presence"):
             if observation.get(provenance_key):
                 observation_out[provenance_key] = observation[provenance_key]
         return {"observation": observation_out, "explanation": explanation, "vlm_used": bool(context.get("use_vlm", True))}
