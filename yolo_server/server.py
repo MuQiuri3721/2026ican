@@ -25,8 +25,8 @@ from ultralytics import YOLO
 
 MODEL_NAME = "yolo11n-dfire-v1"
 SOURCE = "local-yolo-service"
-# D-Fire 类别序（训练 data.yaml 生成时锁定）：0=fire 1=smoke
-CLASS_NAMES = {0: "fire", 1: "smoke"}
+# D-Fire 类别序（训练 data.yaml 锁定；WEB05512 画框目检实证）：0=smoke 1=fire
+CLASS_NAMES = {0: "smoke", 1: "fire"}
 
 app = FastAPI(title="local-yolo-service")
 _model: YOLO | None = None

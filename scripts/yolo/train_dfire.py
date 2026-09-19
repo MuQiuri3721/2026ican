@@ -20,19 +20,22 @@ DATA_YAML = {
     "path": ".",  # 相对 yaml 所在目录
     "train": "images/train",
     "val": "images/val",
-    "names": {0: "fire", 1: "smoke"},
+    "names": {0: "smoke", 1: "fire"},  # 目检实证（WEB05512 画框）：0=smoke 1=fire
 }
 
 
 def verify_class_ids(labels_dir: Path, sample: int = 200) -> set:
-    """抽样校验标注类别 id ∈ {0,1}，防止镜像类别序漂移。"""
+    """抽样校验标注类别 id ∈ {0,1}，防止镜像类别序漂移。跳过 ._ AppleDouble 垃圾文件。"""
     ids = set()
-    files = sorted(labels_dir.glob("*.txt"))[:sample]
+    files = [p for p in sorted(labels_dir.glob("*.txt")) if not p.name.startswith("._")][:sample]
     for txt in files:
-        for line in txt.read_text(encoding="utf-8").splitlines():
+        for line in txt.read_text(encoding="utf-8", errors="ignore").splitlines():
             parts = line.split()
             if parts:
-                ids.add(int(parts[0]))
+                try:
+                    ids.add(int(parts[0]))
+                except ValueError:
+                    continue
     return ids
 
 
@@ -54,7 +57,7 @@ def prepare(split_root: Path, work_dir: Path, val_ratio: float = 0.05) -> Path:
         (images_dir / sub).mkdir(parents=True, exist_ok=True)
         (labels_dir / sub).mkdir(parents=True, exist_ok=True)
 
-    jpgs = sorted(images_src.glob("*.jpg"))
+    jpgs = sorted(p for p in images_src.glob("*.jpg") if not p.name.startswith("._"))
     random.seed(42)
     val_ids = set(random.sample(range(len(jpgs)), max(1, int(len(jpgs) * val_ratio))))
     copied = 0
@@ -62,6 +65,8 @@ def prepare(split_root: Path, work_dir: Path, val_ratio: float = 0.05) -> Path:
         label = labels_src / (img.stem + ".txt")
         if not label.exists():
             continue  # 无标注图跳过（D-Fire 负样本若需保留可换 empty label）
+        if label.name.startswith("._"):
+            continue
         sub = "val" if index in val_ids else "train"
         shutil.copy2(img, images_dir / sub / img.name)
         shutil.copy2(label, labels_dir / sub / label.name)
@@ -102,7 +107,9 @@ def main() -> None:
     print("data.yaml:", yaml_path)
 
     from ultralytics import YOLO
-    model = YOLO("yolo11n.pt")  # 官方预训练权重自动下载
+    # 预训练权重：仓库根已有则用（官方 GitHub 直链在受限网络下不可靠，已从 HF 镜像预取）
+    pretrained = Path(__file__).resolve().parents[2] / "yolo11n.pt"
+    model = YOLO(str(pretrained) if pretrained.exists() else "yolo11n.pt")
     results = model.train(
         data=str(yaml_path), epochs=args.epochs, imgsz=args.imgsz,
         batch=args.batch, device=0, project="runs/dfire", name="yolo11n_v1",
