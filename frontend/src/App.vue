@@ -244,13 +244,17 @@ const drones = ref([
   { id: 'E2', label: '灭火单元', role: 'firefighting', subgroup: 'suppression', battery: 86, soc: 86, status: '待命', module: 'water_20l', payload: '20 L', signal: 88, health: 100, color: 'orange', task: '待命' },
   { id: 'E3', label: '灭火单元', role: 'firefighting', subgroup: 'suppression', battery: 79, soc: 79, status: '待命', module: 'co2_6kg', payload: '6 kg', signal: 86, health: 97, color: 'orange', task: '待命' },
   { id: 'E4', label: '灭火单元', role: 'firefighting', subgroup: 'suppression', battery: 74, soc: 74, status: '待命', module: 'water_20l', payload: '20 L', signal: 84, health: 96, color: 'orange', task: '待命' },
+  { id: 'E5', label: '灭火单元', role: 'firefighting', subgroup: 'suppression', battery: 90, soc: 90, status: '待命', module: 'water_20l', payload: '20 L', signal: 91, health: 100, color: 'orange', task: '待命' },
+  { id: 'E6', label: '灭火单元', role: 'firefighting', subgroup: 'suppression', battery: 84, soc: 84, status: '待命', module: 'water_20l', payload: '20 L', signal: 87, health: 98, color: 'orange', task: '待命' },
   { id: 'S1', label: '支援单元', role: 'support', subgroup: 'support', battery: 95, soc: 95, status: '待命', module: 'sup_10', payload: '10 kg', signal: 98, health: 100, color: 'green', task: '待命' },
   { id: 'S2', label: '支援单元', role: 'support', subgroup: 'support', battery: 90, soc: 90, status: '待命', module: 'sup_10', payload: '10 kg', signal: 95, health: 99, color: 'green', task: '待命' },
+  { id: 'S3', label: '支援单元 · 多用途', role: 'support', subgroup: 'support', battery: 93, soc: 93, status: '待命', module: 'water_20l', payload: '20 L', signal: 96, health: 100, color: 'green', task: '待命' },
+  { id: 'S4', label: '支援单元 · 多用途', role: 'support', subgroup: 'support', battery: 88, soc: 88, status: '待命', module: 'water_20l', payload: '20 L', signal: 93, health: 99, color: 'green', task: '待命' },
 ])
 
 const FLEET_GROUP_META = [
   { key: 'reconnaissance', label: '侦察单元', role: '火情侦察与态势回传' },
-  { key: 'suppression', label: '灭火单元', role: '主力灭火 · 水剂 / 干粉模块' },
+  { key: 'suppression', label: '灭火单元', role: '主力灭火 · W20 水剂 / C6 二氧化碳模块' },
   { key: 'support', label: '支援单元', role: '物资补给与中继保障' },
 ]
 const fleetGroups = computed(() => FLEET_GROUP_META
@@ -280,7 +284,7 @@ const fallbackResult = {
     resource_gap: [],
     alternative_plan: [],
     replan_trigger: ['fire_load_increase_over_20_percent', 'wind_band_changed', 'soc_below_return_threshold'],
-    estimated_control_time: { earliest_minutes: 12, latest_minutes: 17, window_minutes: [12, 17], unit: 'min', simulated: false },
+    estimated_control_time: { earliest_minutes: 12, latest_minutes: 17, window_minutes: [12, 17], unit: 'min', simulated: true },
     estimated_minutes: null,
     tasks: [
       { drone_id: 'R1', task: '持续侦察', branch: 'reconnaissance' },
@@ -820,7 +824,9 @@ async function selectHistoryTask(task) {
   }
   applyEnvelope(full)
   monitorResult.value = full.result?.monitor || null
-  currentStage.value = full.stages?.at(-1)?.stage || full.stages?.at(-1)?.name || '历史任务已恢复'
+  // 阶段对象字段为 {id,label,status,source}（审计 P1）：优先 label，兼容旧 stage/name
+  const lastStage = full.stages?.at(-1)
+  currentStage.value = lastStage?.label || lastStage?.stage || lastStage?.name || '历史任务已恢复'
   if (Array.isArray(full.stages)) stages.value = full.stages
   if (Array.isArray(full.result?.fleet)) updateDrones(full.result)
   loadEvents(task.analysis_id)
