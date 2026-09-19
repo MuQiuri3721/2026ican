@@ -89,6 +89,8 @@ def main() -> None:
     parser.add_argument("--epochs", type=int, default=40)
     parser.add_argument("--imgsz", type=int, default=640)
     parser.add_argument("--batch", type=int, default=-1)  # -1 = 自动 batch
+    # Windows 上 DataLoader 多进程 worker 实测崩溃（batch 66 处 worker exited unexpectedly）→ 默认 0 主进程加载
+    parser.add_argument("--workers", type=int, default=0 if sys.platform == "win32" else 8)
     args = parser.parse_args()
 
     snapshot = Path(args.data_root)
@@ -113,7 +115,7 @@ def main() -> None:
     results = model.train(
         data=str(yaml_path), epochs=args.epochs, imgsz=args.imgsz,
         batch=args.batch, device=0, project="runs/dfire", name="yolo11n_v1",
-        patience=10, plots=True,
+        patience=10, plots=True, workers=args.workers,
     )
     best = Path(results.save_dir) / "weights" / "best.pt"
     target = Path(__file__).resolve().parents[2] / "yolo_server" / "best.pt"
