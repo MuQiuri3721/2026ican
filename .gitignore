@@ -21,3 +21,10 @@ data/vlm-testcases/CASE-*/images/
 data/audit_store.db
 # e2e/_real_images/ 检验图片与结果已按用户指令入库（2026-09-10）；网络来源版权不明，仅作测试 fixture
 e2e/e2e/
+
+# E-1 替代：本地 YOLO 训练产物与数据集（CC BY 4.0，权重走队内渠道不入库）
+yolo_server/best.pt
+runs/
+data/dfire/
+data/dfire_yolo/
+data/yolo_sample/

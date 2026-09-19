@@ -464,7 +464,13 @@ def detect_fire(image_name: str = "default", image_path: Optional[str] = None, s
             request = urllib.request.Request(endpoint, data=payload, headers={"Content-Type": "application/octet-stream"})
             with urllib.request.urlopen(request, timeout=5) as response:
                 result = _validate_external_payload(json.loads(response.read().decode()), ("detections",), "detect_fire")
-            result.update({"mode": "real", "source": "pwm-yolo-adapter", "image_name": image_name, "image_path": image_path})
+            # 来源/模型透传（BE-19）：服务声明优先（如 local-yolo-service），缺省保持 pwm-yolo-adapter 口径
+            result.update({
+                "mode": "real",
+                "source": result.get("source") or "pwm-yolo-adapter",
+                "model": result.get("model") or "pwm-yolo",
+                "image_name": image_name, "image_path": image_path,
+            })
             return result
         except Exception as error:
             if strict_real:

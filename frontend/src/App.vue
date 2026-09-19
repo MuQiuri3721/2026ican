@@ -1172,6 +1172,12 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+function onCapture(file) {
+  acceptFile([file])
+  addLog('现场采集完成 · 自动进入真实检测与研判链路', { stage: 'ingest', source: 'frontend' })
+  startAnalysis()
+}
+
 async function startAnalysis() {
   if (analyzing.value) return
   if (!selectedFile.value) {
@@ -1311,6 +1317,13 @@ const { mission, missionNow, simSpeed, setSimSpeed, startMission, stopMission, s
 })
 
 // ---------- 演训模拟（FE-18）：随机火情生成 + 开始模拟 ----------
+// BE-19 真实检测状态（阶段一）：observation.detector.data 的 mode/model/source 上屏
+const detectorStatus = computed(() => {
+  const envelope = analysisResult.value?.observation?.detector
+  const data = envelope?.data || {}
+  if (data.mode !== 'real') return null
+  return { mode: data.mode, model: data.model || 'pwm-yolo', source: data.source || 'pwm-yolo-adapter' }
+})
 const scenario = ref(null)
 const scenarioBusy = ref(false)
 
@@ -1494,7 +1507,7 @@ onMounted(() => {
       <div v-if="activeTab === 'command'" class="dashboard">
         <section class="hero-panel"><div class="panel-heading"><h2>{{ scene.incident }}</h2><span class="severity"><span></span>{{ result.fire_assessment.label }}</span></div><p class="hero-note">火点 <b>{{ scene.coordinates }}</b> · 现场风 <b>{{ result.environment.wind_direction || '—' }} {{ result.environment.wind_speed ?? '—' }} m/s</b> · 最近水源 <b>{{ result.environment.nearest_water?.name || '—' }} {{ result.environment.nearest_water?.distance_m ?? result.environment.nearest_water_distance_m ?? '' }}</b></p><div v-if="result?.fire_assessment" class="fire-sense"><div :class="['fs-level', 'lv-' + fireLevelNum]"><b>{{ result.fire_assessment.label }}</b><span>{{ fireLevelWord }}</span></div><div class="fs-cell" title="FLP = 标准化火情处置负荷，综合面积/燃料/坡度/风速按冻结公式折算；过火面积另有 m² 直读"><small>火势负荷 FLP</small><b>{{ formatNumber(fireFlpNow) }}</b><em v-if="fireTrend != null" :class="fireTrend < 0 ? 'down' : 'up'">{{ fireTrend < 0 ? '▼' : '▲' }} {{ Math.abs(Math.round(fireTrend * 100) / 100) }} 较上轮</em><em v-else>首轮基准</em></div><div class="fs-cell"><small>过火面积</small><b>{{ formatNumber(result.fire_assessment.fire_area_m2) }}</b><em>m²</em></div><div class="fs-cell"><small>蔓延速率</small><b>{{ Math.round((result.fire_assessment.growth_rate || 0) * 100) }}%</b><em>/h</em></div><div v-if="fireTrendText" :class="['fs-verdict', fireTrendText.down ? 'down' : 'up']">{{ fireTrendText.text }}<small>{{ fireTrendText.detail }}</small></div></div><div class="hero-footer" :class="controlVerdictView.tone"><div><small>当前处置结论</small><strong>{{ controlVerdictView.hero }}</strong></div><div class="hero-stat"><small>预计处置时间</small><strong>{{ result.dispatch_plan.estimated_minutes ?? '—' }} <em>MIN</em></strong></div><div class="hero-stat"><small>下次评估</small><strong>05 <em>MIN</em></strong></div></div></section>
 
-        <UploadPanel :analyzing="analyzing" :progress="progress" :uploaded="uploaded" :preview-url="previewUrl" :selected-file="selectedFile" :selected-frames="selectedFrames" :project-status="projectStatus" :environment-coordinates="environmentCoordinates" :scenario="scenario" :scenario-busy="scenarioBusy" v-model:use-vlm="useVlm" @files="acceptFile" @reset="resetAnalysis" @generate-scenario="generateScenario" @start-scenario="startScenarioSimulation" />
+        <UploadPanel :analyzing="analyzing" :progress="progress" :uploaded="uploaded" :preview-url="previewUrl" :selected-file="selectedFile" :selected-frames="selectedFrames" :project-status="projectStatus" :environment-coordinates="environmentCoordinates" :scenario="scenario" :scenario-busy="scenarioBusy" v-model:use-vlm="useVlm" :detector-status="detectorStatus" @files="acceptFile" @capture="onCapture" @reset="resetAnalysis" @generate-scenario="generateScenario" @start-scenario="startScenarioSimulation" />
 
         <section class="environment-panel panel"><div class="panel-heading"><h2>现场环境</h2><button class="outline-btn environment-refresh" :disabled="environmentLoading" @click="loadEnvironment"><RefreshCw :size="14" /> {{ environmentLoading ? '刷新中…' : '刷新环境' }}</button></div><div class="environment-controls"><label>模式 <select v-model="environmentMode" @change="loadEnvironment"><option value="real">真实数据</option><option value="auto">自动</option><option value="offline">离线演示（不联网）</option><option value="demo">演示数据</option></select></label><div class="coordinate-editor"><label>纬度 <input v-model="coordinateDraft.latitude" inputmode="decimal" aria-label="纬度"></label><label>经度 <input v-model="coordinateDraft.longitude" inputmode="decimal" aria-label="经度"></label><button class="outline-btn" type="button" @click="applyCoordinates">应用</button></div><span>{{ environmentCoordinates.latitude.toFixed(6) }}, {{ environmentCoordinates.longitude.toFixed(6) }}</span></div><div v-if="coordinateError" class="coordinate-error" role="alert">{{ coordinateError }}</div><div class="environment-note src-note">决策作用 · 坡度→K_slope · 燃料→K_fuel · 风速→K_wind/风档（参与 FLP 计算）；温湿度为背景信息不参与计算</div><div class="environment-meta"><span>采集 · {{ environment?.collected_at?.slice(0, 19).replace('T', ' ') || '—' }}{{ environmentAgeText ? '（' + environmentAgeText + '）' : '' }}</span><span>状态 · {{ environmentStatus }}</span><span>来源 · {{ environmentSource }}</span><span v-if="environmentStale">stale / 缓存</span><span v-if="environmentFallback">fallback · {{ environmentFallback }}</span></div><div class="environment-grid"><div v-for="item in environmentFeatures" :key="item.label" class="environment-item"><span>{{ item.label }}</span><strong :class="['tone-' + item.tone, { 'is-empty': item.empty }]">{{ item.value }}</strong></div></div></section>
         <section :class="['metrics-grid', 'hero-decision', 'hd-' + decisionUnits.verdict.tone]"><div class="hd-verdict"><small>处置结论</small><b>{{ decisionUnits.verdict.hero }}</b><span>{{ decisionUnits.verdict.callout }}</span></div><div class="hd-cell"><small>地点</small><b class="hd-loc">{{ decisionUnits.location }}</b><span>紫金山演示林区</span></div><div class="hd-cell"><small>火势趋势</small><b :class="decisionUnits.trend.down === true ? 't-down' : decisionUnits.trend.down === false ? 't-up' : ''">{{ decisionUnits.trend.text }}</b><span>{{ decisionUnits.trend.sub }}</span></div><div class="hd-cell"><small>出动规模</small><b>{{ decisionUnits.units }} <small>架</small></b><span>人员口径 · {{ decisionUnits.peopleLabel }}</span></div><div class="hd-cell"><small>控制时间区间</small><b>{{ decisionUnits.window }}</b><span>数据 · {{ decisionUnits.trust }}</span></div></section>
