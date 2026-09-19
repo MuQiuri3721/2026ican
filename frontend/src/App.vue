@@ -1317,10 +1317,9 @@ const { mission, missionNow, simSpeed, setSimSpeed, startMission, stopMission, s
 })
 
 // ---------- 演训模拟（FE-18）：随机火情生成 + 开始模拟 ----------
-// BE-19 真实检测状态（阶段一）：observation.detector.data 的 mode/model/source 上屏
+// BE-19 真实检测状态（阶段一）：skill_chain.fire_perception.observation.detector.data 上屏
 const detectorStatus = computed(() => {
-  const envelope = analysisResult.value?.observation?.detector
-  const data = envelope?.data || {}
+  const data = analysisResult.value?.agent?.skill_chain?.fire_perception?.observation?.detector?.data || {}
   if (data.mode !== 'real') return null
   return { mode: data.mode, model: data.model || 'pwm-yolo', source: data.source || 'pwm-yolo-adapter' }
 })
