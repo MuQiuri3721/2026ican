@@ -29,3 +29,6 @@ data/dfire/
 data/dfire_yolo/
 data/yolo_sample/
 data/wheels/
+data/yolo_sample_check/
+yolo11n.pt
+yolo26n.pt
