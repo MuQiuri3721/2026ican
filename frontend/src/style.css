@@ -575,3 +575,23 @@ html.projection .stream-rows{font-size:13px}
 .camera-pane video{display:block;width:100%;max-height:260px;object-fit:cover}
 .camera-actions{display:flex;gap:8px;padding:10px 12px;justify-content:center;background:var(--surface)}
 .camera-error{margin:8px 0 0;font:400 12px var(--font-data);color:var(--fire)}
+
+/* FE-76 演示一键脚本行 */
+.demo-scripts{display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 12px;background:var(--accent-soft);border:1px dashed var(--accent-line);border-radius:var(--radius-s)}
+.demo-scripts span{font:600 11.5px var(--font-ui);color:var(--ink-3);white-space:nowrap}
+.demo-scripts button{padding:4px 10px;font-size:11.5px;white-space:nowrap}
+
+/* =====================================================================
+   FE-75 视觉证据窗（审计§六步骤 3）：原图+检测框叠加，研判阶段画面主角
+   ===================================================================== */
+.evidence-window{margin:12px 0;border:1px solid var(--line);border-radius:var(--radius-s);overflow:hidden;background:var(--surface)}
+.ew-head{display:flex;align-items:baseline;gap:10px;padding:9px 13px;background:var(--surface-2)}
+.ew-head b{font:700 12.5px var(--font-ui);color:var(--ink)}
+.ew-head span{font:400 11px var(--font-data);color:var(--ink-3)}
+.ew-stage{position:relative;background:#0a0f0c}
+.ew-stage img{display:block;width:100%;max-height:320px;object-fit:contain}
+.ew-box{position:absolute;border:2px solid #ff6b35;border-radius:2px;pointer-events:none}
+.ew-box em{position:absolute;top:-17px;left:-2px;font:600 10px var(--font-data);font-style:normal;color:#fff;background:var(--fire);padding:1px 5px;border-radius:2px;white-space:nowrap}
+.ew-box.ew-smoke{border-color:#8a97a3}
+.ew-box.ew-smoke em{background:#5f6b77}
+.ew-note{margin:0;padding:8px 13px;font:400 11px var(--font-data);color:var(--ink-3);border-top:1px solid var(--line)}

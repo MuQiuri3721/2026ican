@@ -1336,18 +1336,23 @@ function fleetAveragePosition() {
 }
 
 function generateScenario() {
+  buildScenario(null)
+}
+
+// FE-76 演示一键脚本：fixed 非空时跳过随机（主场景=小火速胜；扰动场景=风变+失能固定剧本）
+function buildScenario(fixed) {
   resetAnalysis()
   const base = fleetAveragePosition()
-  const distance = 800 + Math.random() * 1700
-  const angle = ((-25 + Math.random() * 100) * Math.PI) / 180
+  const distance = fixed ? 1200 : 800 + Math.random() * 1700
+  const angle = fixed ? ((10 + Math.random() * 30) * Math.PI) / 180 : ((-25 + Math.random() * 100) * Math.PI) / 180
   const fireOrigin = { x: Math.round(base.x + Math.cos(angle) * distance), y: Math.round(base.y + Math.sin(angle) * distance) }
   // FE-43：面积分层抽样——编队持续压制 ≈13 FLP/轮，「生成→扑灭」演示主流程应当多数
   // 落在可胜区间；BE-15：40% 小 / 45% 中 / 15% 大——中火占比上调让多机协同的场面更常见
   // （与后端 /api/scenarios/random 同口径），大火保留 15% 供失控/增援演练
   const sizeRoll = Math.random()
-  const areaM2 = Math.round(sizeRoll < 0.4 ? 300 + Math.random() * 600 : sizeRoll < 0.85 ? 900 + Math.random() * 1600 : 2500 + Math.random() * 3500)
-  const growthRate = Math.round((0.2 + Math.random() * 0.4) * 100) / 100
-  const people = ['confirmed', 'absent', 'unknown'][Math.floor(Math.random() * 3)]
+  const areaM2 = fixed ? fixed.areaM2 : Math.round(sizeRoll < 0.4 ? 300 + Math.random() * 600 : sizeRoll < 0.85 ? 900 + Math.random() * 1600 : 2500 + Math.random() * 3500)
+  const growthRate = fixed ? fixed.growthRate : Math.round((0.2 + Math.random() * 0.4) * 100) / 100
+  const people = fixed ? fixed.people : ['confirmed', 'absent', 'unknown'][Math.floor(Math.random() * 3)]
   const metersPerLng = 111320 * Math.cos((ZIXIAHU_BASE_GPS.latitude * Math.PI) / 180)
   const fireGps = {
     latitude: +(ZIXIAHU_BASE_GPS.latitude + (fireOrigin.y - base.y) / 111320).toFixed(6),
@@ -1356,11 +1361,11 @@ function generateScenario() {
   peopleStatus.value = people
   // 演练互斥（FE-34/35）：风变重规划可能生成无灭火机方案，与失能演练语义冲突，二选一
   const drillRoll = Math.random()
-  const failureRound = drillRoll < 0.35 ? 2 + Math.floor(Math.random() * 3) : null
+  const failureRound = fixed ? fixed.failureRound : (drillRoll < 0.35 ? 2 + Math.floor(Math.random() * 3) : null)
   // FE-44：风变目标必须真跨档（档位 0-4/4-6/6-8/8+）——旧逻辑 base+2.5 在低风天
   // 仍同档（1.35→3.9 同在 band 0），风变重规划静默失效；按基准档位取下一档中值
   const baseWind = Number(result.value.environment.wind_speed) || 0
-  const windShift = failureRound ? null : (Math.random() < 0.4 ? { round: 2 + Math.floor(Math.random() * 3), speed: baseWind < 4 ? 5.5 : baseWind < 6 ? 7.5 : baseWind < 8 ? 8.6 : 5.2 } : null)
+  const windShift = fixed ? fixed.windShift : (failureRound ? null : (Math.random() < 0.4 ? { round: 2 + Math.floor(Math.random() * 3), speed: baseWind < 4 ? 5.5 : baseWind < 6 ? 7.5 : baseWind < 8 ? 8.6 : 5.2 } : null))
   scenario.value = { fireOrigin, fireGps, areaM2, growthRate, people, failureRound, windShift }
   const peopleLabel = people === 'confirmed' ? '在场' : people === 'absent' ? '不在场' : '情况不明'
   addLog(`随机火情已生成 · 面积 ${areaM2}m² · 人员${peopleLabel} · 演训模拟就绪`, { stage: 'scenario', source: 'local' })
@@ -1372,6 +1377,23 @@ function generateScenario() {
       if (response.ok) addLog('演训火点环境数据已就绪', { stage: 'scenario', source: 'local' })
     })
     .catch(() => {})
+}
+
+function loadDemoMain() {
+  buildScenario({ areaM2: 450, growthRate: 0.18, people: 'absent', failureRound: null, windShift: null })
+  addLog('演示脚本 · 主场景：小火速胜闭环', { stage: 'scenario', source: 'local' })
+  startScenarioSimulation()
+}
+
+function loadDemoPerturb() {
+  const baseWind = Number(result.value.environment.wind_speed) || 0
+  buildScenario({
+    areaM2: 1800, growthRate: 0.45, people: 'unknown',
+    failureRound: null,
+    windShift: { round: 2, speed: baseWind < 4 ? 5.5 : baseWind < 6 ? 7.5 : baseWind < 8 ? 8.6 : 5.2 },
+  })
+  addLog('演示脚本 · 扰动场景：风变跨档触发重规划', { stage: 'scenario', source: 'local' })
+  startScenarioSimulation()
 }
 
 const scenarioPreview = computed(() => {
@@ -1506,12 +1528,12 @@ onMounted(() => {
       <div v-if="activeTab === 'command'" class="dashboard">
         <section class="hero-panel"><div class="panel-heading"><h2>{{ scene.incident }}</h2><span class="severity"><span></span>{{ result.fire_assessment.label }}</span></div><p class="hero-note">火点 <b>{{ scene.coordinates }}</b> · 现场风 <b>{{ result.environment.wind_direction || '—' }} {{ result.environment.wind_speed ?? '—' }} m/s</b> · 最近水源 <b>{{ result.environment.nearest_water?.name || '—' }} {{ result.environment.nearest_water?.distance_m ?? result.environment.nearest_water_distance_m ?? '' }}</b></p><div v-if="result?.fire_assessment" class="fire-sense"><div :class="['fs-level', 'lv-' + fireLevelNum]"><b>{{ result.fire_assessment.label }}</b><span>{{ fireLevelWord }}</span></div><div class="fs-cell" title="FLP = 标准化火情处置负荷，综合面积/燃料/坡度/风速按冻结公式折算；过火面积另有 m² 直读"><small>火势负荷 FLP</small><b>{{ formatNumber(fireFlpNow) }}</b><em v-if="fireTrend != null" :class="fireTrend < 0 ? 'down' : 'up'">{{ fireTrend < 0 ? '▼' : '▲' }} {{ Math.abs(Math.round(fireTrend * 100) / 100) }} 较上轮</em><em v-else>首轮基准</em></div><div class="fs-cell"><small>过火面积</small><b>{{ formatNumber(result.fire_assessment.fire_area_m2) }}</b><em>m²</em></div><div class="fs-cell"><small>蔓延速率</small><b>{{ Math.round((result.fire_assessment.growth_rate || 0) * 100) }}%</b><em>/h</em></div><div v-if="fireTrendText" :class="['fs-verdict', fireTrendText.down ? 'down' : 'up']">{{ fireTrendText.text }}<small>{{ fireTrendText.detail }}</small></div></div><div class="hero-footer" :class="controlVerdictView.tone"><div><small>当前处置结论</small><strong>{{ controlVerdictView.hero }}</strong></div><div class="hero-stat"><small>预计处置时间</small><strong>{{ result.dispatch_plan.estimated_minutes ?? '—' }} <em>MIN</em></strong></div><div class="hero-stat"><small>下次评估</small><strong>05 <em>MIN</em></strong></div></div></section>
 
-        <UploadPanel :analyzing="analyzing" :progress="progress" :uploaded="uploaded" :preview-url="previewUrl" :selected-file="selectedFile" :selected-frames="selectedFrames" :project-status="projectStatus" :environment-coordinates="environmentCoordinates" :scenario="scenario" :scenario-busy="scenarioBusy" v-model:use-vlm="useVlm" :detector-status="detectorStatus" @files="acceptFile" @capture="onCapture" @reset="resetAnalysis" @generate-scenario="generateScenario" @start-scenario="startScenarioSimulation" />
+        <UploadPanel :analyzing="analyzing" :progress="progress" :uploaded="uploaded" :preview-url="previewUrl" :selected-file="selectedFile" :selected-frames="selectedFrames" :project-status="projectStatus" :environment-coordinates="environmentCoordinates" :scenario="scenario" :scenario-busy="scenarioBusy" v-model:use-vlm="useVlm" :detector-status="detectorStatus" @files="acceptFile" @capture="onCapture" @reset="resetAnalysis" @generate-scenario="generateScenario" @start-scenario="startScenarioSimulation" @demo-main="loadDemoMain" @demo-perturb="loadDemoPerturb" />
 
         <section class="environment-panel panel"><div class="panel-heading"><h2>现场环境</h2><button class="outline-btn environment-refresh" :disabled="environmentLoading" @click="loadEnvironment"><RefreshCw :size="14" /> {{ environmentLoading ? '刷新中…' : '刷新环境' }}</button></div><div class="environment-controls"><label>模式 <select v-model="environmentMode" @change="loadEnvironment"><option value="real">真实数据</option><option value="auto">自动</option><option value="offline">离线演示（不联网）</option><option value="demo">演示数据</option></select></label><div class="coordinate-editor"><label>纬度 <input v-model="coordinateDraft.latitude" inputmode="decimal" aria-label="纬度"></label><label>经度 <input v-model="coordinateDraft.longitude" inputmode="decimal" aria-label="经度"></label><button class="outline-btn" type="button" @click="applyCoordinates">应用</button></div><span>{{ environmentCoordinates.latitude.toFixed(6) }}, {{ environmentCoordinates.longitude.toFixed(6) }}</span></div><div v-if="coordinateError" class="coordinate-error" role="alert">{{ coordinateError }}</div><div class="environment-note src-note">决策作用 · 坡度→K_slope · 燃料→K_fuel · 风速→K_wind/风档（参与 FLP 计算）；温湿度为背景信息不参与计算</div><div class="environment-meta"><span>采集 · {{ environment?.collected_at?.slice(0, 19).replace('T', ' ') || '—' }}{{ environmentAgeText ? '（' + environmentAgeText + '）' : '' }}</span><span>状态 · {{ environmentStatus }}</span><span>来源 · {{ environmentSource }}</span><span v-if="environmentStale">stale / 缓存</span><span v-if="environmentFallback">fallback · {{ environmentFallback }}</span></div><div class="environment-grid"><div v-for="item in environmentFeatures" :key="item.label" class="environment-item"><span>{{ item.label }}</span><strong :class="['tone-' + item.tone, { 'is-empty': item.empty }]">{{ item.value }}</strong></div></div></section>
         <section :class="['metrics-grid', 'hero-decision', 'hd-' + decisionUnits.verdict.tone]"><div class="hd-verdict"><small>处置结论</small><b>{{ decisionUnits.verdict.hero }}</b><span>{{ decisionUnits.verdict.callout }}</span></div><div class="hd-cell"><small>地点</small><b class="hd-loc">{{ decisionUnits.location }}</b><span>紫金山演示林区</span></div><div class="hd-cell"><small>火势趋势</small><b :class="decisionUnits.trend.down === true ? 't-down' : decisionUnits.trend.down === false ? 't-up' : ''">{{ decisionUnits.trend.text }}</b><span>{{ decisionUnits.trend.sub }}</span></div><div class="hd-cell"><small>出动规模</small><b>{{ decisionUnits.units }} <small>架</small></b><span>人员口径 · {{ decisionUnits.peopleLabel }}</span></div><div class="hd-cell"><small>控制时间区间</small><b>{{ decisionUnits.window }}</b><span>数据 · {{ decisionUnits.trust }}</span></div></section>
         <section class="fleet-panel panel"><div class="panel-heading"><h2>无人机集群状态</h2><button class="text-btn" @click="selectNav('fleet')">查看详情 <ChevronRight :size="14" /></button></div><div class="fleet-list"><template v-if="!drones.length"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></template><div v-for="drone in drones" :key="drone.id" class="drone-row"><div :class="['drone-icon', drone.color]"><Zap :size="17" /></div><div class="drone-name"><strong>{{ drone.id }} <span>{{ drone.label }}</span></strong><small>{{ drone.subgroup }} · {{ drone.status }}</small></div><div class="battery"><div :class="['battery-bar', drone.soc < 30 ? 'soc-low' : drone.soc < 60 ? 'soc-mid' : '']"><i :style="{ width: drone.soc + '%' }"></i></div><span>SOC {{ drone.soc }}%</span></div><div class="drone-telemetry"><span>模块 {{ moduleLabel(drone.module) }}</span><span>药剂 {{ drone.payload }}</span><span>信号 {{ drone.signal }}%</span><span>健康 {{ drone.health }}%</span></div><span :class="['drone-status', drone.status === '执行中' ? 'active-status' : '', { 'st-fault': drone.status === '故障', 'st-warn': drone.status === '已完成' }]"><i></i>{{ drone.status }}</span></div></div></section>
-        <DecisionPanel :analysis-result="analysisResult" :disable-options="disableOptions" :max-drones-options="maxDronesOptions" :result="result" :analysis-envelope="analysisEnvelope" :analysis-id="analysisId" :active-rounds="activeRounds" :monitor-result="monitorResult" :monitor-area="monitorArea" :data-mode="dataMode" :control-verdict-view="controlVerdictView" :plan-version-label="planVersionLabel" :current-plan-id="currentPlanId" :control-window="controlWindow" :resource-gap="resourceGap" :evacuation-summary="evacuationSummary" :people-risk="peopleRisk" :vlm-note="vlmNote" :vlm-note-source="vlmNoteSource" :vlm-note-body="vlmNoteBody" :vlm-note-facts="vlmNoteFacts" :vlm-note-issues="vlmNoteIssues" :frame-trend-text="frameTrendText" :input-provenance-text="inputProvenanceText" :mission-active="mission?.active" :mission-now="missionNow" :approval-busy="approvalBusy" :monitoring="monitoring" v-model:people-status="peopleStatus" v-model:max-drones="maxDrones" v-model:target-minutes="targetMinutes" v-model:disabled-uavs="disabledUavs" v-model:reason-input="reasonInput" v-model:sim-speed="simSpeed" v-model:report-open="reportViewer.open" @approval="submitApproval" @monitor="runMonitor()" @set-speed="setSimSpeed" @error="errorMessage = $event" />
+        <DecisionPanel :preview-url="previewUrl" :analysis-result="analysisResult" :disable-options="disableOptions" :max-drones-options="maxDronesOptions" :result="result" :analysis-envelope="analysisEnvelope" :analysis-id="analysisId" :active-rounds="activeRounds" :monitor-result="monitorResult" :monitor-area="monitorArea" :data-mode="dataMode" :control-verdict-view="controlVerdictView" :plan-version-label="planVersionLabel" :current-plan-id="currentPlanId" :control-window="controlWindow" :resource-gap="resourceGap" :evacuation-summary="evacuationSummary" :people-risk="peopleRisk" :vlm-note="vlmNote" :vlm-note-source="vlmNoteSource" :vlm-note-body="vlmNoteBody" :vlm-note-facts="vlmNoteFacts" :vlm-note-issues="vlmNoteIssues" :frame-trend-text="frameTrendText" :input-provenance-text="inputProvenanceText" :mission-active="mission?.active" :mission-now="missionNow" :approval-busy="approvalBusy" :monitoring="monitoring" v-model:people-status="peopleStatus" v-model:max-drones="maxDrones" v-model:target-minutes="targetMinutes" v-model:disabled-uavs="disabledUavs" v-model:reason-input="reasonInput" v-model:sim-speed="simSpeed" v-model:report-open="reportViewer.open" @approval="submitApproval" @monitor="runMonitor()" @set-speed="setSimSpeed" @error="errorMessage = $event" />
         <section class="chat-panel panel"><ChatPanel :task-id="analysisId" :enabled="chatEnabled" /></section>
         <section class="log-panel panel"><div class="panel-heading"><h2>任务日志</h2><span class="log-count">{{ logs.length }} EVENTS</span></div><div v-if="activeRounds.length" class="resource-strip"><span>水消耗 <b>{{ resourceSummary.water }}</b> L</span><span>CO₂ <b>{{ resourceSummary.co2 }}</b> kg</span><span>换电 <b>{{ resourceSummary.swaps }}</b> 次</span><span>补给 <b>{{ resourceSummary.refills }}</b> 次</span><small>累计自轮次监测 · 随任务实时更新</small></div><div class="logs"><div v-if="!logs.length" class="empty-hint"><b>暂无事件</b>启动研判或执行操作后，任务事件会实时显示在这里。</div><div v-for="(log, index) in logs.slice(0, 6)" :key="log.message + log.timestamp + index"><span class="log-time">{{ logTime(log, index) }}</span><i :class="{ bright: index === 0 }"></i><span>{{ logText(log) }} <small v-if="typeof log === 'object'">· {{ log.stage }} / {{ log.source }}</small></span></div></div></section>
       </div>
