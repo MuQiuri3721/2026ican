@@ -13,7 +13,7 @@ LABEL = sys.argv[1] if len(sys.argv) > 1 else "loop"
 failures = []
 start = time.time()
 
-for n in range(1, 22):
+for n in range(1, 23):
     proc = subprocess.run([sys.executable, str(ROOT / "e2e" / f"round{n}.py")],
                           capture_output=True, text=True, cwd=ROOT, timeout=600)
     out = proc.stdout + proc.stderr
