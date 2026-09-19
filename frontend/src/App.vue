@@ -1475,6 +1475,27 @@ function onKeydown(event) {
 }
 
 onMounted(() => { window.addEventListener('commander-auth-required', onCommanderAuthRequired) })
+// FE-78 录屏预热（审计§六步骤 6）：空闲时预载三维 chunk + 预取默认地形网格，
+// 首次切三维无加载停顿；不改变任何显示逻辑
+onMounted(() => {
+  const prewarm = () => {
+    import('./components/Terrain3D.vue').catch(() => {})
+    const { latitude, longitude } = environmentCoordinates.value
+    const key = `${latitude.toFixed(5)},${longitude.toFixed(5)}`
+    fetch(`/api/terrain/grid?latitude=${latitude}&longitude=${longitude}&radius_deg=0.06&size=161`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((grid) => {
+        // 与 loadTerrainGrid 同键控：预热即生效，切三维零等待
+        if (grid && grid.status === 'ok' && !terrainGrid.value) {
+          terrainGrid.value = grid
+          terrainGridKey.value = key
+        }
+      })
+      .catch(() => {})
+  }
+  if ('requestIdleCallback' in window) requestIdleCallback(prewarm, { timeout: 8000 })
+  else setTimeout(prewarm, 3000)
+})
 onBeforeUnmount(() => { window.removeEventListener('commander-auth-required', onCommanderAuthRequired) })
 onMounted(() => {
   window.addEventListener('keydown', onKeydown)

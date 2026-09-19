@@ -19,11 +19,15 @@ const series = computed(() => {
   for (const round of props.rounds) {
     const v = Number(round.after && (round.after.fire_load_flp ?? round.after.flp))
     if (!Number.isFinite(v)) continue
+    const ledger = round.after?.flp_ledger || null
     values.push({
       v,
       round: round.round || round.monitor_round || values.length + 1,
       before: round.before ? (round.before.fire_load_flp ?? round.before.flp) : null,
       event: Boolean((round.replan_triggers || round.replan_trigger || []).length),
+      growth: Number(ledger?.growth_flp) || 0,
+      suppression: Number(ledger?.suppression_flp) || 0,
+      net: ledger?.net_change_flp,
     })
   }
   if (!values.length) return null
@@ -46,6 +50,7 @@ const series = computed(() => {
   return {
     pts,
     line,
+    ledgerBars: buildLedgerBars(pts),
     max,
     area: `${line} L${fmt(last.x)},${H - PAD_B} L${fmt(first.x)},${H - PAD_B} Z`,
     first,
@@ -53,6 +58,24 @@ const series = computed(() => {
     statText: `第 ${last.round} 轮 · B ${last.before == null ? '—' : last.before} → ${last.v}`,
   }
 })
+// FE-77 轮次账本发散条：增长向上（红）/压制向下（绿），零基线居中——这轮为什么降/升一眼可读
+function buildLedgerBars(pts) {
+  const bars = pts.filter((p) => p.growth || p.suppression)
+  if (!bars.length) return null
+  const peak = Math.max(...bars.flatMap((p) => [p.growth, p.suppression]), 1)
+  const half = 22
+  return {
+    bars: bars.map((p) => ({
+      round: p.round,
+      x: p.x,
+      growthH: (p.growth / peak) * half,
+      suppressionH: (p.suppression / peak) * half,
+      net: p.net,
+      title: `R${p.round} · 增长 ${p.growth.toFixed(1)} / 压制 ${p.suppression.toFixed(1)} → 净 ${p.net != null ? p.net : '—'}`,
+    })),
+    peak,
+  }
+}
 </script>
 
 <template>
@@ -101,6 +124,18 @@ const series = computed(() => {
         <animate attributeName="stroke-opacity" values="0.5;0;0.5" dur="2s" repeatCount="indefinite" />
       </circle>
     </svg>
+    <div v-if="series && series.ledgerBars" class="evo-ledger-wrap">
+      <svg class="evo-ledger" :viewBox="`0 0 ${W} 48`" preserveAspectRatio="none" role="img" aria-label="逐轮增长与压制账本">
+        <line :x1="PAD_L" :x2="W - PAD_R" y1="24" y2="24" stroke="#20302a" stroke-width="1" />
+        <g v-for="b in series.ledgerBars.bars" :key="b.round" :title="b.title">
+          <rect :x="b.x - 5" :y="24 - b.growthH" width="10" :height="Math.max(b.growthH, 1)" fill="#d9541e" opacity="0.85" rx="1.5" />
+          <rect :x="b.x - 5" y="24" width="10" :height="Math.max(b.suppressionH, 1)" fill="#3fae72" opacity="0.85" rx="1.5" />
+          <circle :cx="b.x" :cy="b.net < 0 ? 24 + Math.min(b.suppressionH, 18) + 6 : 24 - Math.min(b.growthH, 18) - 6" r="2" fill="#e2b95d" />
+        </g>
+        <text :x="6" y="14" fill="#d9541e" font-size="9">▲ 增长</text>
+        <text :x="6" y="42" fill="#3fae72" font-size="9">▼ 压制</text>
+      </svg>
+    </div>
     <div v-else class="evo-empty">方案获批后，火情负荷将按 5 分钟轮次在此逐轮演化；触发重规划的轮次会以金色打点标注。</div>
   </div>
 </template>
