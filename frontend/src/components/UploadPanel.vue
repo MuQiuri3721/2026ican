@@ -38,9 +38,14 @@ async function openCamera() {
     cameraError.value = '无法访问摄像头 · ' + (error?.message || error)
   }
 }
-function captureFrame() {
+async function captureFrame() {
   const video = videoRef.value
-  if (!video || !video.videoWidth) return
+  if (!video) return
+  // 视频流就绪等待（round21 抓出：秒点抓帧时 videoWidth 仍为 0，静默无效果）
+  for (let waited = 0; waited < 30 && !video.videoWidth; waited += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
+  if (!video.videoWidth) { cameraError.value = '相机尚未就绪，请稍后重试。'; return }
   const canvas = document.createElement('canvas')
   canvas.width = video.videoWidth
   canvas.height = video.videoHeight
