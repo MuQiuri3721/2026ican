@@ -90,9 +90,16 @@ class AnalysisStore:
             item = self._items.get(analysis_id)
             return item.model_copy(deep=True) if item else None
 
-    def list(self) -> List[AnalysisEnvelope]:
+    def list(self, limit: int | None = None, shallow: bool = False) -> List[AnalysisEnvelope]:
+        """最新在前。limit 先截取再拷贝（BE-22：任务过千后全量深拷贝曾把列表请求拖到 10s+）；
+        shallow=True 返回内部对象引用，仅供只读投影/序列化，调用方不得修改。"""
         with self._lock:
-            return [item.model_copy(deep=True) for item in reversed(list(self._items.values()))]
+            items = list(self._items.values())[::-1]
+            if limit is not None:
+                items = items[:limit]
+            if shallow:
+                return items
+            return [item.model_copy(deep=True) for item in items]
 
     def update(self, analysis_id: str, **changes) -> AnalysisEnvelope:
         with self._lock:

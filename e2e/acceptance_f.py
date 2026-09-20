@@ -65,26 +65,26 @@ def main() -> int:
         # 恢复 confirmed 任务（研判态），使疏散摘要可见：历史任务 tab → 最新一行
         if pre_clean_aid:
             try:
-                session.page.get_by_text("历史任务").first.click()
+                session.page.get_by_text("历史复盘").first.click()
                 session.page.locator(".history-row").first.wait_for(timeout=10000)
                 rows = session.page.locator(".history-row")
                 print(f"[诊断] 历史行数={rows.count()} 第一行={rows.first.inner_text()[:60] if rows.count() else '无'}")
                 rows.first.click()
                 session.page.wait_for_timeout(2500)
-                session.page.get_by_role("button", name="指挥中枢").click()
+                session.page.get_by_role("button", name="火情研判").click()
                 session.page.wait_for_timeout(1000)
                 print(f"[诊断] plan-summary={session.page.locator('.plan-summary').count()} evacuation-summary={session.page.locator('.evacuation-summary').count()} 任务状态徽标={session.page.locator('.task-badge').first.inner_text() if session.page.locator('.task-badge').count() else '无'}")
             except Exception as error:
                 print("恢复任务失败:", str(error)[:80])
 
         # —— 1. 地形键控缓存：先在 3D 建立 A 基线 → 改坐标至 B → 再进 3D → 键控清缓存重载 B ——
-        session.page.get_by_role("button", name="指挥中枢").click()
+        session.page.get_by_role("button", name="火情研判").click()
         session.page.wait_for_timeout(600)
-        session.page.get_by_role("button", name="林区态势").click()
+        session.page.get_by_role("button", name="态势总览").click()
         session.page.wait_for_timeout(2500)
         session.page.locator("button", has_text="三维").first.click()
         session.page.wait_for_timeout(3500)
-        session.page.get_by_role("button", name="指挥中枢").click()
+        session.page.get_by_role("button", name="火情研判").click()
         session.page.wait_for_timeout(600)
         terrain_urls.clear()
         draft_lat = session.page.locator(".coordinate-editor input").nth(0)
@@ -93,11 +93,11 @@ def main() -> int:
         draft_lng.fill(str(LOC_B["longitude"]))
         session.page.get_by_role("button", name="应用").click()
         session.page.wait_for_timeout(1200)
-        session.page.get_by_role("button", name="林区态势").click()
+        session.page.get_by_role("button", name="态势总览").click()
         session.page.wait_for_timeout(2000)
         session.page.locator("button", has_text="三维").first.click()
         session.page.wait_for_timeout(3500)
-        session.page.get_by_role("button", name="指挥中枢").click()
+        session.page.get_by_role("button", name="火情研判").click()
         session.page.wait_for_timeout(400)
         last = terrain_urls[-1] if terrain_urls else ""
         last_is_b = f"latitude={LOC_B['latitude']}" in last
@@ -106,7 +106,7 @@ def main() -> int:
         findings["terrain_requests"] = len(terrain_urls)
 
         # 等高线来源标签仍指向真实 DEM（A/B 均在 N32E118 窗口内）
-        session.page.get_by_role("button", name="林区态势").click()
+        session.page.get_by_role("button", name="态势总览").click()
         session.page.wait_for_timeout(3000)
         source = session.page.locator(".map-source")
         try:
@@ -117,7 +117,7 @@ def main() -> int:
             ok &= report("F", "等高线来源标签", False, source.inner_text()[:40] if source.count() else "未找到")
 
         # —— 2. 疏散模拟路径标注 ——
-        session.page.get_by_role("button", name="指挥中枢").click()
+        session.page.get_by_role("button", name="火情研判").click()
         session.page.wait_for_timeout(800)
         summary = session.page.locator(".evacuation-summary")
         try:

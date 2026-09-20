@@ -1,40 +1,45 @@
 /* =====================================================================
-   EMBEROS 森林火灾救援工作台 — 基础设计系统
+   火巡智策 森林火灾智能应急指挥平台 — 基础设计系统（FE-80 大改版·深蓝大屏主题）
    Register: Product（设计服务于任务）。场景：指挥员在投影大屏前读数决策。
    字体：Manrope（UI/标题）+ DM Mono（数据值，≥12px）。
-   色彩：Restrained —— 冷灰底 + 白面板，指挥蓝单一强调，语义色只表达状态。
+   色彩：深海军蓝指挥屏 —— 面板半透蓝、青蓝单一强调、火焰琥珀作火情语义色；
+   语义色只表达状态。设计稿对齐：顶栏 + 图标导航 + 中央工作区。
    ===================================================================== */
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
 
 :root{
-  --bg:#f2f4f6;
-  --surface:#ffffff;
-  --surface-2:#f6f8f9;
-  --sidebar:#151d26;
-  --sidebar-2:#1e2b37;
-  --sidebar-line:#31414e;
-  --line:#dfe4e9;
-  --line-strong:#c8d1d8;
-  --ink:#1a2432;
-  --ink-2:#48586a;
-  --ink-3:#6d7d8b;
-  --accent:#2563eb;
-  --accent-deep:#1d4fd8;
-  --accent-soft:#eef4ff;
-  --accent-line:#c4d7fb;
-  --fire:#d9541e;
-  --fire-deep:#b84314;
-  --fire-soft:#fdf0ea;
-  --fire-line:#f3cdbc;
-  --ok:#0e8a5f;
-  --ok-soft:#e8f6f0;
-  --ok-line:#b9e2d0;
-  --warn:#b45309;
-  --warn-soft:#fdf6e9;
-  --plan:#6d4fa1;
-  --plan-soft:#f4f0fa;
-  --shadow-1:0 1px 2px #16202b0d,0 2px 10px #16202b08;
-  --shadow-2:0 6px 18px #16202b16,0 16px 40px #16202b12;
+  --bg:#0a1420;
+  --surface:#0f1d31;
+  --surface-2:#13243b;
+  --surface-3:#182c47;
+  --panel-hi:#122340;
+  --sidebar:#0d1a2c;
+  --sidebar-2:#11233c;
+  --sidebar-line:#1c3350;
+  --line:#1c3350;
+  --line-strong:#2b4a72;
+  --ink:#e8f0fa;
+  --ink-2:#b9c9dc;
+  --ink-3:#7f95ad;
+  --accent:#4da3ff;
+  --accent-deep:#1f7ae0;
+  --accent-soft:#12283f;
+  --accent-line:#235180;
+  --fire:#f0703c;
+  --fire-deep:#e05a28;
+  --fire-soft:#2a150d;
+  --fire-line:#5c2c18;
+  --ok:#38c78e;
+  --ok-soft:#0c2419;
+  --ok-line:#1d4a33;
+  --warn:#e5b45c;
+  --warn-soft:#271d0b;
+  --warn-line:#5c4a1f;
+  --plan:#a48ae0;
+  --plan-soft:#1c1631;
+  --plan-line:#3a2f5e;
+  --shadow-1:0 1px 2px #00000066,0 2px 12px #00000052;
+  --shadow-2:0 8px 22px #00000073,0 18px 44px #00000061;
   --radius:12px;
   --radius-s:8px;
   --font-ui:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
@@ -43,67 +48,62 @@
 }
 
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+body{margin:0;background:radial-gradient(1100px 560px at 82% -12%,#16345c2e,transparent 70%),radial-gradient(900px 520px at -8% 108%,#0e2c5029,transparent 70%),var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
 
-/* ---------- 应用骨架 ---------- */
-.app-shell{display:flex;min-height:100vh}
-.sidebar{width:240px;flex-shrink:0;background:var(--sidebar);color:#d7e0e8;padding:24px 16px 16px;display:flex;flex-direction:column;gap:4px}
-.brand{display:flex;gap:11px;align-items:center;padding:0 8px}
-.brand-mark{width:36px;height:36px;border-radius:10px;background:var(--fire);display:grid;place-items:center;color:#fff;box-shadow:0 4px 16px #d9541e55}
-.brand strong{font:800 17px/1.1 var(--font-ui);letter-spacing:1.6px;color:#fff;display:block}
-.brand strong span{color:#f5824f}
-.brand small{display:block;font:500 10px var(--font-data);letter-spacing:1.2px;color:#7d8c99;margin-top:3px}
-.scene-card{margin:30px 4px 22px;padding:14px;border:1px solid var(--sidebar-line);border-radius:var(--radius-s);background:var(--sidebar-2)}
-.eyebrow,.section-kicker{font:500 11px var(--font-data);letter-spacing:.8px;color:#7f8e9a}
+/* ---------- 应用骨架：顶栏横贯 + 左导航 + 工作区（设计稿布局） ---------- */
+.app-shell{display:grid;grid-template-columns:216px minmax(0,1fr);grid-template-rows:58px minmax(0,1fr);grid-template-areas:"topbar topbar" "sidebar main";height:100vh;overflow:hidden}
+.topbar{grid-area:topbar;display:flex;align-items:center;gap:14px;padding:0 18px 0 16px;min-width:0;background:linear-gradient(90deg,#0d1c31,#0b1727 45%,#0c1a2e);border-bottom:1px solid var(--sidebar-line)}
+.brand{display:flex;gap:10px;align-items:center;flex-shrink:0}
+.brand-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(140deg,#f5824f,#d9541e);display:grid;place-items:center;color:#fff;box-shadow:0 4px 16px #d9541e55}
+.brand strong{font:800 16px/1.1 var(--font-ui);letter-spacing:2px;color:#fff;display:block}
+.brand small{display:block;font:500 9px var(--font-data);letter-spacing:1.6px;color:#6f86a0;margin-top:3px}
+.topbar-divider{width:1px;height:28px;background:var(--sidebar-line);flex-shrink:0}
+.topbar-title{min-width:0}
+.topbar-title h1{font:800 16px/1.25 var(--font-ui);color:#fff;margin:0;letter-spacing:.02em;white-space:nowrap}
+.topbar-title .slogan{margin:2px 0 0;font:400 10.5px var(--font-data);color:var(--ink-3);letter-spacing:.8px;white-space:nowrap}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;min-width:0}
+.weather-chip{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink-2);font:500 12px var(--font-data);white-space:nowrap}
+.weather-chip svg{color:var(--accent);flex-shrink:0}
+.weather-chip i{font-style:normal;color:var(--ink-3)}
+.utc{text-align:right;font:400 11.5px/1.7 var(--font-data);color:var(--ink-3);white-space:nowrap}
+.utc strong{color:var(--ink-2)}
+.sidebar{grid-area:sidebar;width:auto;flex-shrink:0;background:linear-gradient(180deg,#0d1a2c 0%,#0b1626 62%,#091322 100%);border-right:1px solid var(--sidebar-line);color:#c9d6e6;padding:18px 14px 14px;display:flex;flex-direction:column;gap:4px;overflow-y:auto}
+.scene-card{margin:8px 4px 18px;padding:13px;border:1px solid var(--sidebar-line);border-radius:var(--radius-s);background:linear-gradient(180deg,#13273f,#0f2036);box-shadow:inset 0 1px 0 #ffffff0d}
+.eyebrow,.section-kicker{font:500 11px var(--font-data);letter-spacing:.8px;color:var(--ink-3)}
 .scene-name{font-size:15px;font-weight:700;margin:8px 0 10px;color:#fff}
-.scene-meta{font:400 11px var(--font-data);color:#8b99a5}
-.scene-time{float:right;color:#8b99a5}
-.live-dot{display:inline-block;width:7px;height:7px;background:#3ecf8e;border-radius:50%;box-shadow:0 0 0 3px #3ecf8e26;margin-right:7px}
+.scene-meta{font:400 11px var(--font-data);color:var(--ink-3)}
+.scene-time{float:right;color:var(--ink-3)}
+.live-dot{display:inline-block;width:7px;height:7px;background:#3ecf8e;border-radius:50%;box-shadow:0 0 0 3px #3ecf8e26,0 0 10px #3ecf8e55;margin-right:7px}
 nav{display:grid;gap:4px}
-nav button{border:0;background:transparent;color:#93a1ad;text-align:left;border-radius:var(--radius-s);padding:12px 13px;display:flex;gap:12px;align-items:center;font:600 13.5px var(--font-ui);cursor:pointer;transition:background var(--speed) ease,color var(--speed) ease}
+nav button{border:0;background:transparent;color:#8ba0b8;text-align:left;border-radius:9px;padding:12px 13px;display:flex;gap:12px;align-items:center;font:600 13.5px var(--font-ui);cursor:pointer;transition:background var(--speed) ease,color var(--speed) ease}
 nav button.active,nav button:hover{background:var(--sidebar-2);color:#fff}
-nav button.active{box-shadow:inset 2px 0 0 var(--accent)}
+nav button.active{background:#14283f;box-shadow:inset 2px 0 0 var(--accent)}
+nav button:hover:not(.active){background:#11243c;color:#dce5ec}
 nav button b{margin-left:auto;background:var(--fire);color:#fff;border-radius:10px;padding:2px 8px;font:500 11px var(--font-data)}
 .sidebar-foot{margin-top:auto}
 .system-status{display:flex;gap:10px;padding:15px 8px;border-top:1px solid var(--sidebar-line)}
-.system-status strong,.operator strong{display:block;font-size:12.5px;color:#e6edf2}
-.system-status small,.operator small{display:block;color:#7d8c99;font-size:11px;margin-top:2px}
+.system-status strong,.operator strong{display:block;font-size:12.5px;color:#dbe6f2}
+.system-status small,.operator small{display:block;color:var(--ink-3);font-size:11px;margin-top:2px}
 .operator{display:flex;align-items:center;gap:10px;padding:16px 8px 0}
-.operator svg{margin-left:auto;color:#6b7984}
-.avatar{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#d1a776;color:#31271e;font-weight:800;font-size:12px}
+.operator svg{margin-left:auto;color:#5f7690}
+.avatar{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#d1a776;color:#31271e;font-weight:800;font-size:12px;flex-shrink:0}
 
-/* ---------- 主区头部 ---------- */
-main{flex:1;padding:28px 36px 48px;max-width:1560px;margin:auto;width:100%}
-header{display:flex;justify-content:space-between;align-items:flex-start}
-.breadcrumb{font:500 11px var(--font-data);color:#8b98a3;letter-spacing:1px}
-.breadcrumb span{margin:0 8px;color:#c3ccd3}
-h1{font:800 25px/1.2 var(--font-ui);letter-spacing:-.01em;margin:10px 0 5px}
-header p{color:var(--ink-3);margin:0;font-size:13px}
-.header-actions{display:flex;align-items:center;gap:16px}
+/* ---------- 工作区（路由出口） ---------- */
+main{grid-area:main;overflow-y:auto;padding:22px 26px 48px;max-width:1720px;margin:0 auto;width:100%;min-width:0}
+.page-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:0 0 16px}
+.page-head h2{font:800 21px/1.25 var(--font-ui);margin:0;letter-spacing:-.01em}
+.page-head p{margin:4px 0 0;color:var(--ink-3);font-size:12.5px}
 .icon-btn{position:relative;border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-s);padding:10px;color:var(--ink-2);cursor:pointer;transition:border-color var(--speed) ease}
 .icon-btn:hover{border-color:var(--accent-line);color:var(--accent)}
 .icon-btn i{position:absolute;width:6px;height:6px;background:var(--fire);border-radius:50%;right:9px;top:8px}
-.utc{text-align:right;font:400 11.5px/1.7 var(--font-data);color:#8b98a3}
-.utc strong{color:var(--ink-2)}
-
-/* ---------- 工具栏 ---------- */
-.toolbar{margin:26px 0 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:0}
-.tab-pills{display:flex;gap:2px}
-.tab-pills button{border:0;background:transparent;color:var(--ink-3);padding:10px 16px 12px;font-size:13.5px;font-weight:600;cursor:pointer;border-radius:var(--radius-s) var(--radius-s) 0 0;position:relative;transition:color var(--speed) ease}
-.tab-pills button:hover{color:var(--ink)}
-.tab-pills .selected{color:var(--ink);background:var(--surface);box-shadow:inset 0 0 0 1px var(--line),inset 0 2px 0 var(--accent)}
-.toolbar-right{display:flex;gap:16px;align-items:center;padding-bottom:10px}
-.sync{font:400 12px var(--font-data);color:var(--ink-3);display:inline-flex;align-items:center}
-.primary{background:var(--accent);color:#fff;border:0;border-radius:var(--radius-s);padding:11px 18px;font:700 13.5px var(--font-ui);display:flex;align-items:center;gap:8px;white-space:nowrap;cursor:pointer;box-shadow:0 4px 14px #2563eb33;transition:background var(--speed) ease,transform var(--speed) ease}
-.primary:hover{background:var(--accent-deep)}
 
 /* ---------- 面板体系 ---------- */
 .dashboard{display:grid;grid-template-columns:1.65fr 1fr;gap:16px}
-.hero-panel,.upload-panel,.panel,.metric-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-1)}
+.hero-panel,.upload-panel,.panel,.metric-card{background:linear-gradient(180deg,var(--panel-hi),var(--surface));border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-1)}
 .hero-panel,.upload-panel,.panel{padding:20px 22px}
 .panel-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:32px}
 .panel-heading h2{font:700 17px/1.3 var(--font-ui);margin:0}
-.severity{font:500 12px var(--font-data);color:var(--fire-deep);background:var(--fire-soft);padding:7px 11px;border-radius:999px;display:inline-flex;align-items:center;white-space:nowrap}
+.severity{font:500 12px var(--font-data);color:#ff9c72;background:var(--fire-soft);padding:7px 11px;border-radius:999px;display:inline-flex;align-items:center;white-space:nowrap}
 .severity span{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--fire);margin-right:7px}
 
 /* Hero：处置结论状态带（排版层级，最大元素 = 结论） */
@@ -119,14 +119,14 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
 /* OPT-P3-01：维持压制中间态（压得住但时限内未完成/慢压）——琥珀警示，区别于可控与不可控 */
 .hero-footer.mid strong{color:var(--warn)}
 .hero-footer.mid{background:var(--warn-soft);border-radius:var(--radius-s);padding:10px 12px;margin-top:8px}
-.hero-footer.bad>div:first-child strong{color:var(--fire-deep)}
+.hero-footer.bad>div:first-child strong{color:#ff9c72}
 .hero-stat{border-left:1px solid var(--line);padding-left:24px!important}
 .hero-stat strong{font:800 22px/1.1 var(--font-ui);color:var(--ink)}
 .hero-stat em{font:400 11px var(--font-data);font-style:normal;color:var(--ink-3);margin-left:2px}
 
 /* ---------- 上传面板 ---------- */
 .upload-panel{min-height:0;display:flex;flex-direction:column}
-.muted-icon{color:#aeb8c0}
+.muted-icon{color:#5f7690}
 .dropzone{min-height:170px;margin-top:16px;border:1.5px dashed var(--line-strong);background:var(--surface-2);border-radius:var(--radius-s);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:border-color var(--speed) ease,background var(--speed) ease;padding:18px}
 .dropzone:hover,.dropzone.uploaded{border-color:var(--accent-line);background:var(--accent-soft)}
 .upload-orb{width:42px;height:42px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;margin-bottom:11px}
@@ -137,15 +137,15 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
 .process{margin-top:18px}
 .process-row{display:flex;justify-content:space-between;color:var(--ink-3);font:400 12px var(--font-data)}
 .process-row b{color:var(--accent)}
-.progress{height:5px;background:#e8ecef;margin:9px 0 11px;border-radius:4px}
+.progress{height:5px;background:#1a2c45;margin:9px 0 11px;border-radius:4px}
 .progress i{display:block;height:100%;background:var(--accent);border-radius:4px;transition:width .5s ease}
-.pipeline{display:flex;align-items:center;gap:5px;flex-wrap:nowrap;color:#9aa6af;font-size:11.5px}
+.pipeline{display:flex;align-items:center;gap:5px;flex-wrap:nowrap;color:#6f86a0;font-size:11.5px}
 .pipeline span{white-space:nowrap}
 .pipeline svg{width:11px;height:11px;flex-shrink:0}
 .pipeline .done{color:var(--accent);font-weight:600}
 
 /* ---------- KPI 统计带 ---------- */
-.metrics-grid{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-1);padding:6px 0}
+.metrics-grid{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);background:linear-gradient(180deg,var(--panel-hi),var(--surface));border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-1);padding:6px 0}
 .metric-card{border:0;border-radius:0;background:transparent;box-shadow:none;padding:14px 22px;border-left:1px solid var(--line)}
 .metric-card:first-child{border-left:0}
 .metric-top{display:flex;justify-content:space-between;color:var(--ink-3);font-size:12.5px;font-weight:600}
@@ -155,7 +155,7 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
 .tone-orange{color:var(--fire)}
 .tone-blue{color:var(--accent)}
 .tone-green{color:var(--ok)}
-.tone-slate{color:#5d7180}
+.tone-slate{color:#7a92aa}
 
 /* ---------- 集群 / 决策 / 日志面板 ---------- */
 .fleet-panel{grid-column:1}
@@ -164,7 +164,7 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
 .text-btn{border:0;background:transparent;color:var(--accent);font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:3px;white-space:nowrap;cursor:pointer;padding:4px 6px;border-radius:6px}
 .text-btn:hover{background:var(--accent-soft)}
 .fleet-list{margin-top:14px}
-.drone-row{display:flex;align-items:center;padding:12px 0;border-top:1px solid #eceff2}
+.drone-row{display:flex;align-items:center;padding:12px 0;border-top:1px solid #1b2f4a}
 .drone-icon{width:32px;height:32px;border-radius:var(--radius-s);display:grid;place-items:center;margin-right:12px;flex-shrink:0}
 .drone-icon.blue{background:var(--accent-soft);color:var(--accent)}
 .drone-icon.orange{background:var(--fire-soft);color:var(--fire)}
@@ -172,15 +172,15 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
 .drone-name{width:132px}
 .drone-name strong{font-size:13px}
 .drone-name strong span{font-weight:400;color:var(--ink-3);margin-left:5px}
-.drone-name small{display:block;font:400 11.5px var(--font-data);color:#8b98a3;margin-top:3px}
+.drone-name small{display:block;font:400 11.5px var(--font-data);color:var(--ink-3);margin-top:3px}
 .battery{display:flex;align-items:center;gap:10px;width:140px}
-.battery-bar{height:6px;background:#e8ecef;border-radius:4px;flex:1}
+.battery-bar{height:6px;background:#1a2c45;border-radius:4px;flex:1}
 .battery-bar i{display:block;height:100%;background:#27ae83;border-radius:4px}
 .battery span{font:400 12px var(--font-data);color:var(--ink-2)}
 .drone-status{margin-left:auto;color:var(--ink-3);font-size:12.5px;display:inline-flex;align-items:center}
-.drone-status i{display:inline-block;width:7px;height:7px;background:#c5cdd2;border-radius:50%;margin-right:6px}
+.drone-status i{display:inline-block;width:7px;height:7px;background:#3d5a80;border-radius:50%;margin-right:6px}
 .active-status{color:var(--ok);font-weight:600}
-.active-status i{background:var(--ok);box-shadow:0 0 0 3px #0e8a5f26}
+.active-status i{background:var(--ok);box-shadow:0 0 0 3px #38c78e26}
 .ai-badge{font:500 11.5px var(--font-data);color:var(--accent);background:var(--accent-soft);padding:6px 10px;border-radius:999px;display:flex;gap:6px;align-items:center;white-space:nowrap}
 .decision-callout{display:flex;gap:12px;background:var(--accent-soft);border-radius:var(--radius-s);padding:14px;margin-top:16px}
 .decision-icon{color:var(--accent);flex-shrink:0;margin-top:1px}
@@ -189,49 +189,60 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
 .task-chips{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
 .task-chips span{background:var(--surface-2);border:1px solid var(--line);padding:6px 10px;border-radius:999px;color:var(--ink-2);font-size:12.5px}
 .task-chips b{color:var(--accent);font:500 12px var(--font-data);margin-right:4px}
-.log-count{font:400 11.5px var(--font-data);color:#8b98a3}
+.log-count{font:400 11.5px var(--font-data);color:var(--ink-3)}
 .logs{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;column-gap:32px}
-.logs>div{border-top:1px solid #eceff2;padding:10px 0;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--ink-2)}
-.log-time{font:400 11.5px var(--font-data);color:#8b98a3;flex-shrink:0}
-.logs i{width:6px;height:6px;background:#c5cdd2;border-radius:50%;flex-shrink:0}
+.logs>div{border-top:1px solid #1b2f4a;padding:10px 0;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--ink-2)}
+.log-time{font:400 11.5px var(--font-data);color:var(--ink-3);flex-shrink:0}
+.logs i{width:6px;height:6px;background:#3d5a80;border-radius:50%;flex-shrink:0}
 .logs i.bright{background:var(--accent)}
 @keyframes pulse{0%{transform:scale(.75);opacity:1}70%{transform:scale(1.4);opacity:0}100%{opacity:0}}
-.task-badge{font:500 12px var(--font-data);color:var(--warn);background:var(--warn-soft);border:1px solid #f0dfc0;padding:7px 11px;border-radius:999px;white-space:nowrap}
+.task-badge{font:500 12px var(--font-data);color:var(--warn);background:var(--warn-soft);border:1px solid var(--warn-line);padding:7px 11px;border-radius:999px;white-space:nowrap}
 .monitor-btn{margin-top:15px;border:1px solid var(--accent-line);background:var(--accent-soft);color:var(--accent);border-radius:var(--radius-s);padding:9px 13px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:7px;white-space:nowrap;cursor:pointer;transition:background var(--speed) ease}
-.monitor-btn:hover{background:#e0ecff}
+.monitor-btn:hover{background:#16293f}
 .monitor-result{margin-top:10px;color:var(--ink-2);background:var(--surface-2);padding:10px 12px;border-radius:var(--radius-s);font-size:12.5px;line-height:1.65}
 .offline{background:#e8973f!important;box-shadow:0 0 0 3px #e8973f26!important}
 
 /* ---------- 详情视图公共 ---------- */
-.detail-view{min-height:520px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;box-shadow:var(--shadow-1)}
+.detail-view{min-height:520px;background:linear-gradient(180deg,var(--panel-hi),var(--surface));border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;box-shadow:var(--shadow-1)}
 .detail-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:1px solid var(--line);padding-bottom:16px}
 .detail-heading h2{font:700 20px/1.25 var(--font-ui);margin:0}
 .detail-heading p{margin:4px 0 0;color:var(--ink-3);font-size:13px}
 .status-tag{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border-radius:999px;background:var(--ok-soft);color:var(--ok);font:500 12px var(--font-data);white-space:nowrap}
-.status-tag.orange{background:var(--fire-soft);color:var(--fire-deep)}
+.status-tag.orange{background:var(--fire-soft);color:#ff9c72}
+
+/* ---------- 系统设置页（FE-80 新增） ---------- */
+.settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}
+.settings-card{border:1px solid var(--line);border-radius:var(--radius-s);background:var(--surface-2);padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.settings-card>b{font:700 14px var(--font-ui);color:var(--ink)}
+.settings-card>small{color:var(--ink-3);font-size:11.5px;line-height:1.6}
+.settings-card .outline-btn{margin-top:0;align-self:flex-start}
+.settings-rows{display:flex;flex-direction:column;gap:7px}
+.settings-rows span{display:flex;justify-content:space-between;gap:14px;font:400 12.5px var(--font-data);color:var(--ink-3)}
+.settings-rows i{font-style:normal;color:var(--ink-2);text-align:right;overflow-wrap:anywhere}
+.settings-rows .outline-btn{padding:4px 10px;font-size:11.5px}
 
 /* ---------- 舰队花名册（FE-15） ---------- */
 .fleet-roster{margin-top:18px;display:flex;flex-direction:column;gap:18px}
 .roster-group-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;color:var(--ink-2)}
 .roster-group-head b{font-size:13.5px;font-weight:700}
-.roster-group-head small{font:400 12px var(--font-data);color:#8b98a3}
+.roster-group-head small{font:400 12px var(--font-data);color:var(--ink-3)}
 .roster-group-head::after{content:"";flex:1;height:1px;background:var(--line)}
-.roster-table{border:1px solid var(--line);border-radius:var(--radius-s);overflow:hidden}
-.roster-row{display:grid;grid-template-columns:158px 92px 148px 1fr 66px 66px minmax(120px,1.2fr) max-content;align-items:center;gap:12px;padding:11px 16px;border-top:1px solid #eceff2;transition:background var(--speed) ease}
+.roster-table{border:1px solid var(--line);border-radius:var(--radius-s);overflow:hidden;box-shadow:var(--shadow-1)}
+.roster-row{display:grid;grid-template-columns:158px 92px 148px 1fr 66px 66px minmax(120px,1.2fr) max-content;align-items:center;gap:12px;padding:13px 16px;border-top:1px solid #1b2f4a;transition:background var(--speed) ease}
 .roster-row:first-child{border-top:0}
 .roster-row:hover{background:var(--surface-2)}
-.roster-state i{display:inline-block;width:7px;height:7px;background:#c5cdd2;border-radius:50%;margin-right:6px}
+.roster-state i{display:inline-block;width:7px;height:7px;background:#3d5a80;border-radius:50%;margin-right:6px}
 .roster-id{display:flex;align-items:center;gap:10px;min-width:0}
 .roster-id strong{font:800 14px var(--font-ui)}
 .roster-id .drone-icon{margin-right:0}
-.roster-id span{display:block;font:400 11.5px var(--font-data);color:#8b98a3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.roster-id span{display:block;font:400 11.5px var(--font-data);color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .roster-state{font-size:12.5px;color:var(--ink-2);display:inline-flex;align-items:center}
 .roster-soc{display:flex;align-items:center;gap:9px}
 .roster-soc .battery-bar{flex:1}
 .roster-soc b{font:500 12px var(--font-data);color:var(--ink-2);width:36px;text-align:right}
 .roster-payload{font:400 12px var(--font-data);color:var(--ink-3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .roster-num{font:400 12px var(--font-data);color:var(--ink-2)}
-.roster-num small{color:#6d7d8b;margin-right:3px}
+.roster-num small{color:var(--ink-3);margin-right:3px}
 .roster-task{font-size:12.5px;color:var(--ink-2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .roster-row .outline-btn{margin-top:0;justify-self:end}
 .fleet-detail-extra{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:6px 14px;margin:4px 0 6px;padding:10px 12px;background:var(--surface-2);border-radius:var(--radius-s);font:400 12px var(--font-data);color:var(--ink-2)}
@@ -247,8 +258,8 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
 /* ---------- 按钮 / 徽章 / 提示 ---------- */
 .outline-btn{display:inline-flex;align-items:center;gap:6px;margin-top:14px;border:1px solid var(--line-strong);background:var(--surface);border-radius:var(--radius-s);padding:8px 13px;color:var(--ink-2);font-size:12.5px;font-weight:600;line-height:1.2;white-space:nowrap;cursor:pointer;transition:border-color var(--speed) ease,color var(--speed) ease}
 .outline-btn:hover{border-color:var(--accent-line);color:var(--accent)}
-.notice{display:flex;align-items:center;gap:10px;margin:-7px 0 18px;padding:11px 14px;border:1px solid var(--fire-line);background:var(--fire-soft);color:var(--fire-deep);border-radius:var(--radius-s);font-size:13px}
-.notice-close{margin-left:auto;border:0;background:transparent;color:#b3765d;font-size:18px;line-height:1;cursor:pointer}
+.notice{display:flex;align-items:center;gap:10px;margin:-7px 0 18px;padding:11px 14px;border:1px solid var(--fire-line);background:var(--fire-soft);color:#ffb08e;border-radius:var(--radius-s);font-size:13px}
+.notice-close{margin-left:auto;border:0;background:transparent;color:#c98a6d;font-size:18px;line-height:1;cursor:pointer}
 .primary:disabled{opacity:.7;cursor:wait;box-shadow:none}
 .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .preview-thumb{width:52px;height:52px;overflow:hidden;border-radius:var(--radius-s);margin-bottom:10px;border:1px solid var(--accent-line)}
@@ -260,22 +271,26 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
 .large-map{height:560px;margin-top:18px;position:relative;overflow:hidden;border-radius:var(--radius-s)}
 .map-node{position:absolute;display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:var(--radius-s);background:var(--surface);box-shadow:var(--shadow-1);font:400 12px var(--font-data);cursor:pointer;transition:transform 120ms ease}
 .map-node.fire{color:var(--fire)}
-.map-node.water{color:#1f7fa0}
+.map-node.water{color:#4db8d9}
 .map-node.drone{background:var(--accent-soft);color:var(--accent);font-weight:500}
-.map-node.road{color:#b5652e;background:#fff8f0}
+.map-node.road{color:#e0b57a;background:#221b10}
 .map-compass{position:absolute;width:32px;height:32px;display:grid;place-items:center;border:1px solid var(--line-strong);border-radius:50%;color:var(--ink-2);font:400 12px var(--font-data)}
 .wind-legend{position:absolute;display:flex;align-items:center;gap:8px;color:var(--ink-2);font:400 12px var(--font-data)}
 .map-node:hover{z-index:20;transform:scale(1.05)}
 .full-logs{margin-top:12px}
-.full-logs>div{display:grid;grid-template-columns:86px 12px 1fr 72px;align-items:center;gap:10px;border-bottom:1px solid #eceff2;padding:14px 6px;color:var(--ink-2);font-size:13px}
-.full-logs i{width:7px;height:7px;background:#c5cdd2;border-radius:50%}
-.full-logs i.bright{background:var(--accent);box-shadow:0 0 0 4px #2563eb1c}
-.full-logs small{font:400 11.5px var(--font-data);color:#6d7d8b;text-align:right}
+.full-logs>div{display:grid;grid-template-columns:86px 12px 1fr 72px;align-items:center;gap:10px;border-bottom:1px solid #1b2f4a;padding:14px 6px;color:var(--ink-2);font-size:13px}
+.full-logs i{width:7px;height:7px;background:#3d5a80;border-radius:50%}
+.full-logs i.bright{background:var(--accent);box-shadow:0 0 0 4px #4da3ff1c}
+.full-logs small{font:400 11.5px var(--font-data);color:var(--ink-3);text-align:right}
 
 /* ---------- 响应式 ---------- */
+@media(max-width:1240px){
+  .topbar-title .slogan{display:none}
+  .utc{display:none}
+}
 @media(max-width:1000px){
-  .sidebar{width:196px}
-  main{padding:22px}
+  .app-shell{grid-template-columns:180px minmax(0,1fr)}
+  main{padding:20px}
   .dashboard{grid-template-columns:1fr}
   .hero-panel,.upload-panel,.fleet-panel,.decision-panel{grid-column:1}
   .metrics-grid{grid-template-columns:repeat(2,1fr)}
@@ -284,24 +299,21 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
   .metric-card:nth-child(-n+2){border-top:0}
   .roster-row{grid-template-columns:150px 110px 1fr 70px;grid-auto-rows:auto}
   .roster-payload,.roster-num,.roster-task{display:none}
+  .settings-grid{grid-template-columns:1fr}
 }
 @media(max-width:700px){
   body{font-size:13px}
-  .app-shell{display:block}
-  .sidebar{width:auto;padding:16px 14px 13px}
-  .brand{padding:0 3px}
-  .scene-card{margin:18px 3px 13px}
-  .sidebar-foot{display:none}
-  nav{grid-template-columns:repeat(4,1fr);gap:4px}
-  nav button{justify-content:center;padding:10px 4px;gap:5px;font-size:12px}
+  .app-shell{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);grid-template-areas:"topbar" "sidebar" "main"}
+  .topbar{flex-wrap:wrap;padding:8px 12px;gap:8px}
+  .topbar-divider,.topbar-title{display:none}
+  .topbar-right{gap:6px}
+  .task-badge{display:none}
+  .sidebar{border-right:0;border-bottom:1px solid var(--sidebar-line);padding:10px 12px}
+  .scene-card,.sidebar-foot{display:none}
+  nav{grid-template-columns:repeat(6,1fr);gap:2px}
+  nav button{flex-direction:column;justify-content:center;gap:4px;padding:8px 2px;font-size:11px;text-align:center}
   nav button b{display:none}
-  main{padding:18px 14px 34px}
-  header{gap:14px}
-  .header-actions{gap:8px}
-  .utc{display:none}
-  h1{font-size:23px}
-  .toolbar{align-items:stretch;gap:12px;flex-direction:column;margin:20px 0 15px}
-  .toolbar-right{justify-content:space-between;gap:10px}
+  main{padding:16px 12px 30px}
   .dashboard{gap:12px}
   .hero-panel,.upload-panel,.panel,.detail-view{padding:16px}
   .panel-heading h2{font-size:16px}
@@ -317,6 +329,7 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
   .fleet-detail-extra{grid-template-columns:1fr 1fr}
   .full-logs>div{grid-template-columns:64px 10px 1fr;gap:7px}
   .full-logs small{display:none}
+  .page-head{flex-wrap:wrap}
 }
 
 /* =====================================================================
@@ -336,7 +349,7 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
 .fleet-list .drone-row .drone-telemetry{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0;justify-content:flex-end}
 .drone-row .drone-telemetry span{padding:3px 9px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;font:400 11.5px var(--font-data);color:var(--ink-2);white-space:nowrap}
 .drone-row .drone-telemetry span:nth-child(odd){background:var(--surface)}
-.fleet-list .drone-row:last-child{border-bottom:1px solid #eceff2}
+.fleet-list .drone-row:last-child{border-bottom:1px solid #1b2f4a}
 
 /* ---- 3. 表单控件：统一焦点环 / 悬停描边 ---- */
 .people-risk select:hover,.environment-controls select:hover,.minute-input:hover,.reason-input:hover{border-color:var(--accent-line)}
@@ -345,8 +358,8 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
 .uav-disable{gap:5px}
 .uav-disable input[type=checkbox]{appearance:none;margin:0;padding:4px 10px;background:var(--surface);border:1px solid var(--line-strong);border-radius:999px;font:500 11.5px var(--font-data);color:var(--ink-3);cursor:pointer;user-select:none;line-height:1.2;transition:all var(--speed) ease}
 .uav-disable input[type=checkbox]::after{content:attr(value)}
-.uav-disable input[type=checkbox]:hover{border-color:var(--fire-line);color:var(--fire-deep)}
-.uav-disable input[type=checkbox]:checked{background:var(--fire-soft);border-color:var(--fire-line);color:var(--fire-deep);font-weight:600}
+.uav-disable input[type=checkbox]:hover{border-color:var(--fire-line);color:#ff9c72}
+.uav-disable input[type=checkbox]:checked{background:var(--fire-soft);border-color:var(--fire-line);color:#ff9c72;font-weight:600}
 .uav-disable input[type=checkbox]:checked::after{content:"✕ " attr(value)}
 .uav-disable input[type=checkbox]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .uav-disable input[type=checkbox]+span{display:none}
@@ -367,86 +380,34 @@ header p{color:var(--ink-3);margin:0;font-size:13px}
 /* ---- 6. 决策建议框：左侧强调线，层级更清晰 ---- */
 .decision-callout{border:1px solid var(--accent-line)}
 /* 次要来源注释对比度提升（小字可读） */
-.src-note,.plan-summary .src-note{color:#75828e}
+.src-note,.plan-summary .src-note{color:#7a92aa}
 /* fleet 页「遥测」按钮降噪：12 个重复按钮弱化为紧凑次级样式 */
 .roster-row .outline-btn{padding:6px 11px;font-size:12px;color:var(--ink-3)}
 .roster-row .outline-btn:hover{color:var(--accent)}
 /* 审批按钮组：主操作「批准主方案」升级为实心强调 */
 .approval-actions .outline-btn{box-shadow:var(--shadow-1)}
-.approval-actions .outline-btn.danger-btn{color:var(--fire-deep);border-color:var(--fire-line)}
+.approval-actions .outline-btn.danger-btn{color:#ff9c72;border-color:var(--fire-line)}
 .approval-actions .outline-btn.danger-btn:hover{background:var(--fire-soft)}
 .approval-actions .outline-btn:not(.danger-btn):first-of-type{background:var(--accent);border-color:var(--accent-deep);color:#fff;font-weight:700}
 .approval-actions .outline-btn:not(.danger-btn):first-of-type:hover{background:var(--accent-deep);color:#fff}
-/* 主按钮质感与页签激活下划线加强 */
-.primary{background:linear-gradient(180deg,#3172f2,var(--accent-deep))}
+/* 主按钮质感 */
+.primary{background:linear-gradient(180deg,#2f86ec,var(--accent-deep))}
+.primary:hover{background:var(--accent-deep)}
+.primary{box-shadow:0 4px 14px #1f7ae033;transition:background var(--speed) ease,transform var(--speed) ease}
 .primary:active{transform:translateY(1px)}
-.tab-pills .selected::after{content:"";position:absolute;left:16px;right:16px;bottom:-1px;height:2px;background:var(--accent)}
+
 /* 任务徽章（等待二次审批/待命）更轻 */
-.task-badge{background:var(--warn-soft);border-color:#f0dfc0;color:var(--warn)}
-
-/* =====================================================================
-   UI-POLISH W2（FE-51）：侧栏重样式 + 各详情页卡片化——可见改版第二波
-   ===================================================================== */
-
-/* ---- 侧栏：纵向微渐变 + 场景卡提亮 + 导航 active 底色 ---- */
-.sidebar{background:linear-gradient(180deg,#151d26 0%,#131a23 62%,#101720 100%)}
-.scene-card{background:linear-gradient(180deg,#1f2c38,#19242e);border-color:#3a4c5b;box-shadow:inset 0 1px 0 #ffffff0f}
-.scene-name{letter-spacing:.02em}
-nav button{border-radius:9px}
-nav button.active{background:#20303f;box-shadow:inset 2px 0 0 var(--accent)}
-nav button:hover:not(.active){background:#1a2530;color:#dce5ec}
-.live-dot{box-shadow:0 0 0 3px #3ecf8e26,0 0 10px #3ecf8e55}
-
-/* ---- 任务日志页：条目卡片化 + 阶段徽章 ---- */
-.full-logs>div{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-s);padding:12px 14px;margin-bottom:8px}
-.full-logs>div:hover{border-color:var(--accent-line)}
-.full-logs .log-meta{display:inline-block;margin-left:8px;padding:2px 8px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;font:400 11px var(--font-data);color:var(--ink-2);white-space:nowrap}
-.full-logs .log-repeat{display:inline-block;padding:2px 8px;background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:999px;color:var(--accent);font:500 11px var(--font-data)}
-
-/* ---- 历史任务页：行卡片化 + 状态徽章 + 悬停引导 ---- */
-.history-row{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-s);padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:border-color var(--speed) ease,box-shadow var(--speed) ease}
-.history-row:hover{border-color:var(--accent-line);box-shadow:var(--shadow-1)}
-.history-row:hover strong{color:var(--accent)}
-.history-row small:last-child{display:inline-block;margin-left:auto;padding:2px 9px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;font:500 11px var(--font-data);color:var(--ink-2)}
-/* FE-68 历史行对比勾选芯片（真实 input 保持可点，FE-49 教训） */
-.cmp-pick{display:inline-flex;align-items:center;flex-shrink:0;cursor:pointer}
-.cmp-pick span{display:none}
-.cmp-pick input{appearance:none;width:17px;height:17px;margin:0;border:1px solid var(--line-strong);border-radius:5px;background:var(--surface);cursor:pointer;display:grid;place-items:center}
-.cmp-pick input:hover{border-color:var(--accent)}
-.cmp-pick input:checked{background:var(--accent);border-color:var(--accent)}
-.cmp-pick input:checked::after{content:'✓';color:#fff;font:700 12px var(--font-ui)}
-
-/* ---- 集群页：行节奏与分组标题 ---- */
-.roster-row{padding:13px 16px}
-.roster-group-head{margin-bottom:10px}
-.roster-group-head b{letter-spacing:.01em}
-.roster-table{box-shadow:var(--shadow-1)}
-
-/* =====================================================================
-   UI-POLISH W3（FE-53）：主页左右面板等高对齐 + 列表内滚动
-   fleet-panel 限高后 12 架列表在面板内滚动；decision 面板经网格拉伸
-   与其底边对齐，内容超高时同样面板内滚动。
-   ===================================================================== */
-.dashboard .fleet-panel{display:flex;flex-direction:column;max-height:640px}
-.fleet-panel .fleet-list{flex:1;min-height:0;overflow-y:auto;padding-right:6px;margin-top:14px;scrollbar-width:thin;scrollbar-color:#c8d1d8 transparent}
-.fleet-panel .fleet-list::-webkit-scrollbar{width:6px}
-.fleet-panel .fleet-list::-webkit-scrollbar-thumb{background:#c8d1d8;border-radius:3px}
-.fleet-panel .panel-heading{flex-shrink:0}
-.dashboard .decision-panel{display:flex;flex-direction:column;max-height:640px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#c8d1d8 transparent}
-.dashboard .decision-panel::-webkit-scrollbar{width:6px}
-.dashboard .decision-panel::-webkit-scrollbar-thumb{background:#c8d1d8;border-radius:3px}
-.dashboard .decision-panel .panel-heading{position:sticky;top:-20px;z-index:2;background:var(--surface);margin:-20px -22px 0;padding:18px 22px 10px}
-@media(max-width:1000px){.dashboard .fleet-panel,.dashboard .decision-panel{max-height:none}}
+.task-badge{background:var(--warn-soft);border-color:var(--warn-line);color:var(--warn)}
 
 /* =====================================================================
    UI-POLISH W5（FE-62/63/64）：语义状态色 / 角色色 / KPI 闪烁 / 告警中心 / 资源汇总
    ===================================================================== */
-.drone-status.st-fault,.roster-state.st-fault{color:var(--fire-deep);font-weight:600}
-.drone-status.st-fault i,.roster-state.st-fault i{background:var(--fire);box-shadow:0 0 0 3px #d9541e26}
+.drone-status.st-fault,.roster-state.st-fault{color:#ff9c72;font-weight:600}
+.drone-status.st-fault i,.roster-state.st-fault i{background:var(--fire);box-shadow:0 0 0 3px #f0703c26}
 .drone-status.st-warn{color:var(--warn);font-weight:600}
 .task-chips .tc-R b{color:var(--accent)}
 .task-chips .tc-R{background:var(--accent-soft);border-color:var(--accent-line)}
-.task-chips .tc-E b{color:var(--fire-deep)}
+.task-chips .tc-E b{color:#ff9c72}
 .task-chips .tc-E{background:var(--fire-soft);border-color:var(--fire-line)}
 .task-chips .tc-S b{color:var(--ok)}
 .task-chips .tc-S{background:var(--ok-soft);border-color:var(--ok-line)}
@@ -456,13 +417,13 @@ nav button:hover:not(.active){background:#1a2530;color:#dce5ec}
 @keyframes kpi-pop{0%{transform:scale(1.05);color:var(--accent)}100%{transform:scale(1)}}
 .metric-value{animation:kpi-pop .45s ease-out}
 .agent-timeline .agent-msg{grid-template-columns:30px 76px 96px 1fr 110px!important}
-.agent-avatar{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font:700 12px var(--font-ui);color:#fff;background:#5f6b77;flex-shrink:0}
+.agent-avatar{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font:700 12px var(--font-ui);color:#fff;background:#3d5a80;flex-shrink:0}
 .agent-avatar.av-commander{background:var(--fire)}
 .agent-avatar.av-recon{background:var(--accent)}
 .agent-avatar.av-suppression{background:#d9541e}
 .agent-avatar.av-support{background:var(--ok)}
 .agent-avatar.av-simulator{background:var(--plan)}
-.alarm-stack{position:fixed;top:74px;right:20px;z-index:60;display:flex;flex-direction:column;gap:8px;width:300px}
+.alarm-stack{position:fixed;top:70px;right:20px;z-index:60;display:flex;flex-direction:column;gap:8px;width:300px}
 .alarm-card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:var(--radius-s);box-shadow:var(--shadow-2);padding:10px 12px;font-size:12.5px}
 .alarm-card.bad{border-left-color:var(--fire)}
 .alarm-card .alarm-head{display:flex;align-items:center;gap:8px;color:var(--ink-3);font:400 11px var(--font-data);margin-bottom:4px}
@@ -493,7 +454,7 @@ nav button:hover:not(.active){background:#1a2530;color:#dce5ec}
 .fs-cell em.up{color:var(--fire)}
 .fs-verdict{flex:1 1 180px;padding:8px 12px;border-radius:var(--radius-s);display:flex;flex-direction:column;justify-content:center;gap:2px;font:700 13px var(--font-ui)}
 .fs-verdict.down{background:var(--ok-soft);color:var(--ok)}
-.fs-verdict.up{background:var(--fire-soft);color:var(--fire)}
+.fs-verdict.up{background:var(--fire-soft);color:#ff9c72}
 .fs-verdict small{font:400 11px var(--font-data);color:var(--ink-3)}
 .monitor-result{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap;margin-top:10px;padding:9px 12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-s)}
 .mr-head{display:flex;align-items:center;font:600 12px var(--font-ui);color:var(--ink-2);padding-right:4px}
@@ -506,7 +467,7 @@ nav button:hover:not(.active){background:#1a2530;color:#dce5ec}
 /* FE-71 指挥员口令输入条 */
 .auth-gate{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:90;display:flex;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--warn);border-radius:var(--radius-s);box-shadow:var(--shadow-2);padding:10px 14px}
 .auth-gate span{font:600 12.5px var(--font-ui);color:var(--ink-2);white-space:nowrap}
-.auth-gate input{width:180px;padding:6px 10px;border:1px solid var(--line-strong);border-radius:var(--radius-s);font:500 12.5px var(--font-data)}
+.auth-gate input{width:180px;padding:6px 10px;border:1px solid var(--line-strong);border-radius:var(--radius-s);font:500 12.5px var(--font-data);background:var(--surface-2);color:var(--ink)}
 .auth-gate .primary{padding:6px 14px;font-size:12.5px}
 .svg-roads path{fill:none;stroke-linecap:round;stroke-linejoin:round}
 .svg-road.rl-major{stroke:#8a6d3b;stroke-width:3.4;opacity:.92}
@@ -518,10 +479,9 @@ nav button:hover:not(.active){background:#1a2530;color:#dce5ec}
    FE-60 大屏投影样式层（2026-09-18 补齐——此前 toggle 只挂 html.projection
    类但无任何规则，投影实为空操作；本项目 CSS 禁用 zoom，防 AMap 坐标偏移）
    ===================================================================== */
-html.projection header h1{font-size:26px}
-html.projection header p{font-size:13.5px}
+html.projection .topbar-title h1{font-size:18px}
 html.projection nav button{font-size:13.5px}
-html.projection .toolbar .tab-pills button{font-size:14px}
+html.projection .page-head h2{font-size:24px}
 html.projection .hero-panel h2{font-size:26px}
 html.projection .hero-note{font-size:13.5px}
 html.projection .hero-footer strong{font-size:24px}
@@ -600,10 +560,34 @@ html.projection .stream-rows{font-size:13px}
 .evo-ledger-wrap{border-top:1px dashed var(--line);margin-top:2px}
 .evo-ledger{display:block;width:100%;height:48px}
 
-/* FE-77 轮次账本发散条 */
-.evo-ledger-wrap{border-top:1px dashed var(--line);margin-top:2px}
-.evo-ledger{display:block;width:100%;height:48px}
-
 /* FE-75 修复：决策面板 flex column + max-height 下内容超高时子元素被 flex-shrink 压扁
    （证据窗曾压成 2px）——禁收缩，让面板滚动而非压扁 */
 .dashboard .decision-panel > *{flex-shrink:0}
+
+/* =====================================================================
+   UI-POLISH W2/W3（FE-51/53）深色版保留：日志/历史行卡片化 + 对比勾选 + 面板等高内滚
+   ===================================================================== */
+.full-logs>div{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-s);padding:12px 14px;margin-bottom:8px}
+.full-logs>div:hover{border-color:var(--accent-line)}
+.full-logs .log-meta{display:inline-block;margin-left:8px;padding:2px 8px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;font:400 11px var(--font-data);color:var(--ink-2);white-space:nowrap}
+.full-logs .log-repeat{display:inline-block;padding:2px 8px;background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:999px;color:var(--accent);font:500 11px var(--font-data)}
+.history-row{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-s);padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:border-color var(--speed) ease,box-shadow var(--speed) ease}
+.history-row:hover{border-color:var(--accent-line);box-shadow:var(--shadow-1)}
+.history-row:hover strong{color:var(--accent)}
+.history-row small:last-child{display:inline-block;margin-left:auto;padding:2px 9px;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;font:500 11px var(--font-data);color:var(--ink-2)}
+.cmp-pick{display:inline-flex;align-items:center;flex-shrink:0;cursor:pointer}
+.cmp-pick span{display:none}
+.cmp-pick input{appearance:none;width:17px;height:17px;margin:0;border:1px solid var(--line-strong);border-radius:5px;background:var(--surface);cursor:pointer;display:grid;place-items:center}
+.cmp-pick input:hover{border-color:var(--accent)}
+.cmp-pick input:checked{background:var(--accent);border-color:var(--accent)}
+.cmp-pick input:checked::after{content:'✓';color:#fff;font:700 12px var(--font-ui)}
+.dashboard .fleet-panel{display:flex;flex-direction:column;max-height:640px}
+.fleet-panel .fleet-list{flex:1;min-height:0;overflow-y:auto;padding-right:6px;margin-top:14px;scrollbar-width:thin;scrollbar-color:#2b4a72 transparent}
+.fleet-panel .fleet-list::-webkit-scrollbar{width:6px}
+.fleet-panel .fleet-list::-webkit-scrollbar-thumb{background:#2b4a72;border-radius:3px}
+.fleet-panel .panel-heading{flex-shrink:0}
+.dashboard .decision-panel{display:flex;flex-direction:column;max-height:640px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#2b4a72 transparent}
+.dashboard .decision-panel::-webkit-scrollbar{width:6px}
+.dashboard .decision-panel::-webkit-scrollbar-thumb{background:#2b4a72;border-radius:3px}
+.dashboard .decision-panel .panel-heading{position:sticky;top:-20px;z-index:2;background:#10213a;margin:-20px -22px 0;padding:18px 22px 10px}
+@media(max-width:1000px){.dashboard .fleet-panel,.dashboard .decision-panel{max-height:none}}

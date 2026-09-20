@@ -4,7 +4,7 @@
 // 鼠标读数再近似反算回 WGS-84，与后端契约坐标一致。Key 缺失或加载失败时 emit fallback，
 // 由父组件回退到等高线示意图，演示不因 Key 问题中断。
 import { onBeforeUnmount, onMounted, shallowRef, watch } from 'vue'
-import AMapLoader from '@amap/amap-jsapi-loader'
+import { loadAmap } from '../amap'
 import { MISSION_MS_PER_MIN, MISSION_PHASE_LABELS, ROAD_CLASS_STYLE } from '../constants'
 import { roadClass } from '../utils/labels'
 
@@ -673,15 +673,12 @@ watch(() => props.pickMode, (on) => {
 })
 
 onMounted(async () => {
-  const key = import.meta.env.VITE_AMAP_KEY
-  const securityCode = import.meta.env.VITE_AMAP_SECURITY_CODE
-  if (!key) {
+  if (!import.meta.env.VITE_AMAP_KEY) {
     emit('fallback', 'missing-key')
     return
   }
   try {
-    window._AMapSecurityConfig = securityCode ? { securityJsCode: securityCode } : {}
-    const AMap = await AMapLoader.load({ key, version: '2.0', plugins: ['AMap.Scale'] })
+    const AMap = await loadAmap(['AMap.Scale'])
     AMapNS.value = AMap
     const center = fireGps()
     const gcj = wgs2gcj(center.latitude, center.longitude)

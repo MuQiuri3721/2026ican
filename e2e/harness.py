@@ -59,7 +59,7 @@ class Session:
 
     def goto_app(self) -> None:
         self.page.goto(FRONTEND)
-        self.page.get_by_role("heading", name="森林火灾救援工作台").wait_for(timeout=30000)
+        self.page.get_by_role("heading", name="森林火灾智能应急指挥平台").wait_for(timeout=30000)
 
     def api(self, method: str, path: str, payload: dict | None = None) -> dict:
         request = urllib.request.Request(

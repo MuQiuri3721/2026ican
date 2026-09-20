@@ -33,7 +33,7 @@ def main() -> int:
         ok &= report(10, "真实水源数据(Overpass 镜像回退)", real_water_count > 0, f"count={real_water_count}")
 
         session.goto_app()
-        page.get_by_role("button", name="林区态势").click()
+        page.get_by_role("button", name="态势总览").click()
         # AMap 分支激活：卫星地图容器存在（SVG 回退分支 .large-map 不应出现）
         page.locator(".tactical-amap").wait_for(timeout=20000)
         ok &= report(10, "高德底图激活", page.locator(".large-map").count() == 0)
@@ -117,12 +117,12 @@ def main() -> int:
                      (head + " | " + body).replace("\n", " ")[:120])
 
         # 演示模式水源 GPS 精准标注（scene.json latitude/longitude 契约）
-        page.get_by_role("button", name="指挥中枢").click()
+        page.get_by_role("button", name="火情研判").click()
         page.locator(".environment-controls select").select_option("demo")
         page.wait_for_function(
             "document.querySelector('.environment-meta')?.textContent?.includes('demo-data')", timeout=15000
         )
-        page.get_by_role("button", name="林区态势").click()
+        page.get_by_role("button", name="态势总览").click()
         demo_water = page.locator(".tmap-water", has_text="北侧蓄水池")
         demo_water.wait_for(timeout=15000)
         demo_route = page.locator(".tmap-route-label.water")

@@ -72,7 +72,7 @@ def main() -> int:
         ok &= report(2, "审批按钮组", True)
 
         # 无人机集群页签：机群来自后端（R1/E1...）
-        session.page.get_by_role("button", name="无人机集群").click()
+        session.page.get_by_role("button", name="无人机管理").click()
         session.page.get_by_text("R1").first.wait_for(timeout=10000)
         ok &= report(2, "集群 R1 展示", True)
 

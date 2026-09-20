@@ -21,13 +21,13 @@ def main() -> int:
         ok &= report(12, "随机火情生成", "°E" in facts and "m²" in facts, facts[:110].replace("\n", " "))
 
         # 地图预览：演训火点标记 + 火圈
-        page.get_by_role("button", name="林区态势").click()
+        page.get_by_role("button", name="态势总览").click()
         preview = page.locator(".tmap-fire", has_text="演训火点")
         preview.wait_for(timeout=20000)
         ok &= report(12, "火点地图预览", "演训火点" in preview.inner_text(), preview.inner_text())
 
         # 开始模拟（无影像，scenario 驱动研判）
-        page.get_by_role("button", name="指挥中枢").click()
+        page.get_by_role("button", name="火情研判").click()
         page.get_by_role("button", name="开始模拟").click()
         page.locator(".plan-summary").wait_for(timeout=300000)
         badge = page.locator(".task-badge").inner_text()
@@ -40,13 +40,13 @@ def main() -> int:
         ok &= report(12, "批准→出动推演", True)
 
         # 地图：推演相位徽章出现（随机火点位置上作业/盘旋）
-        page.get_by_role("button", name="林区态势").click()
+        page.get_by_role("button", name="态势总览").click()
         page.locator(".tmap-drone").first.wait_for(timeout=20000)
         badges = page.evaluate("() => Array.from(document.querySelectorAll('.tmap-badge')).map(b => b.textContent).filter(Boolean)")
         ok &= report(12, "推演相位徽章", len(badges) > 0, str(badges[:5]))
 
         # 自动推演至第 2 轮后终止
-        page.get_by_role("button", name="指挥中枢").click()
+        page.get_by_role("button", name="火情研判").click()
         page.wait_for_function("document.querySelector('.sim-clock')?.textContent?.includes('第 2 轮')", timeout=30000)
         ok &= report(12, "自动推演至第 2 轮", True, page.locator(".sim-clock").inner_text())
         page.get_by_placeholder("驳回/终止原因（必填）").fill("演训完成，终止")

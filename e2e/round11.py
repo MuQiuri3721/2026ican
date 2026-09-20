@@ -27,7 +27,7 @@ def main() -> int:
         # 出动动画：推演时钟出现；机群标记相位徽章非空；盘旋侦察机坐标持续变化（dataset 实时经纬度）
         page.locator(".sim-clock").wait_for(timeout=8000)
         ok &= report(11, "推演时钟启动", True, page.locator(".sim-clock").inner_text())
-        page.get_by_role("button", name="林区态势").click()
+        page.get_by_role("button", name="态势总览").click()
         page.locator(".tmap-drone").first.wait_for(timeout=20000)
         capture = "() => JSON.stringify(Array.from(document.querySelectorAll('.tmap-drone')).map(m => (m.dataset.longitude || '') + ',' + (m.dataset.latitude || '')))"
         t1 = page.evaluate(capture)
@@ -39,7 +39,7 @@ def main() -> int:
 
         # 自动推演：等第 3 轮（每轮 6s）——压制增强后小火常在 2 轮内扑灭归档（FE-41/BE-12b），
         # 提前完成同样算通过，此时推演钟已随归档停止
-        page.get_by_role("button", name="指挥中枢").click()
+        page.get_by_role("button", name="火情研判").click()
         try:
             page.wait_for_function("document.querySelector('.sim-clock')?.textContent?.includes('第 3 轮')", timeout=40000)
             round_note = page.locator(".sim-clock").inner_text()
@@ -55,7 +55,7 @@ def main() -> int:
 
         # 补水闭环：首架次药剂喷尽后必然返航→基地补水/充电（药剂 20L ÷ 4L/min = 5min 作业期）；
         # 若火已提前扑灭归档，机群随推演冻结，无返航相位可观察——同样豁免
-        page.get_by_role("button", name="林区态势").click()
+        page.get_by_role("button", name="态势总览").click()
         page.locator(".tmap-drone").first.wait_for(timeout=20000)
         try:
             refill_appeared = page.wait_for_function(
@@ -71,7 +71,7 @@ def main() -> int:
         ok &= report(11, "相位快照", True, str(phases_now[:5]))
 
         # 终止任务 → 推演停止；若火已提前扑灭归档（已完成），终止 409 属预期，跳过
-        page.get_by_role("button", name="指挥中枢").click()
+        page.get_by_role("button", name="火情研判").click()
         already_done = page.evaluate("() => (document.querySelector('.task-badge') || {}).textContent?.includes('已完成') || false")
         if not already_done:
             page.get_by_placeholder("驳回/终止原因（必填）").fill("推演验证完成，终止")

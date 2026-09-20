@@ -35,26 +35,35 @@ import { useLogs } from './composables/useLogs'
 import { useEnvironment } from './composables/useEnvironment'
 import { useVoice } from './composables/useVoice'
 import { useMissionClock } from './composables/useMissionClock'
+import { useWeather, refreshWeather } from './composables/useWeather'
 import {
   Activity,
   Bell,
   Bot,
   ChevronRight,
+  Cloud,
+  CloudFog,
+  CloudLightning,
+  CloudRain,
+  CloudSnow,
+  CloudSun,
   Crosshair,
   Droplets,
   Flame,
+  History,
+  LayoutDashboard,
   ListFilter,
-  Map,
   MapPinned,
   MonitorUp,
   Radio,
   RefreshCw,
+  Settings,
+  Sun,
   Wind,
   Zap,
 } from 'lucide-vue-next'
 
 const activeTab = ref('command')
-const viewTab = ref('overview')
 const analyzing = ref(false)
 const monitoring = ref(false)
 const uploaded = ref(false)
@@ -460,11 +469,14 @@ const decisionUnits = computed(() => {
   }
 })
 
+// 大改版（FE-80）导航：与设计稿对齐的 8 项信息架构，任务日志收进顶栏铃铛
 const navItems = [
-  { id: 'command', label: '指挥中枢', icon: Crosshair },
-  { id: 'fleet', label: '无人机集群', icon: Radio },
-  { id: 'map', label: '林区态势', icon: Map },
-  { id: 'logs', label: '任务日志', icon: Activity },
+  { id: 'map', label: '态势总览', icon: LayoutDashboard },
+  { id: 'command', label: '火情研判', icon: Flame },
+  { id: 'fleet', label: '无人机管理', icon: Radio },
+  { id: 'agents', label: 'Agent 协作', icon: Bot },
+  { id: 'history', label: '历史复盘', icon: History },
+  { id: 'settings', label: '系统设置', icon: Settings },
 ]
 
 const mapProjection = computed(() => {
@@ -745,6 +757,8 @@ function applyPickedCoords(picked) {
   applyCoordinates()
 }
 
+watch(environmentCoordinates, (coords) => refreshWeather(coords))
+
 async function loadContours() {
   const requestToken = ++contourRequestToken.value
   contourLoading.value = true
@@ -793,25 +807,37 @@ function handleMapWheel(event) {
 const mapLayerStyle = computed(() => ({ transform: `translate3d(${mapPan.value.x}px, ${mapPan.value.y}px, 0) scale(${mapZoom.value})` }))
 
 const canRetryAnalysis = computed(() => Boolean(errorMessage.value && errorMessage.value.includes('研判')))
-const todayLabel = computed(() => {
-  const now = new Date()
-  return `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`
-})
 
 
 function selectNav(id) {
   activeTab.value = id
-  if (id === 'command') viewTab.value = 'overview'
-  else if (id === 'logs') viewTab.value = '' // 清除 agents/history 页签残留，否则侧边栏/铃铛进日志会命中 agents/history 分支
+  if (id === 'history') loadHistory()
 }
 
-function selectView(id) {
-  viewTab.value = id
-  if (id === 'monitor') activeTab.value = 'map'
-  else if (id === 'history') activeTab.value = 'logs'
-  else if (id === 'overview') activeTab.value = 'command'
-  else if (id === 'agents') activeTab.value = 'logs'
-  if (id === 'history') loadHistory()
+// —— 顶栏：高德实时天气 + 本地时钟（FE-80，对齐设计稿顶栏；天气为背景信息不参与计算） ——
+const { weather } = useWeather()
+const weatherIcon = computed(() => {
+  const text = weather.value?.text || ''
+  if (text.includes('雷')) return CloudLightning
+  if (text.includes('雨')) return CloudRain
+  if (text.includes('雪')) return CloudSnow
+  if (text.includes('雾') || text.includes('霾')) return CloudFog
+  if (text.includes('晴') && text.includes('云')) return CloudSun
+  if (text.includes('晴')) return Sun
+  return Cloud
+})
+const weatherTitle = computed(() => {
+  const w = weather.value
+  if (!w) return ''
+  return `高德实时天气 · ${w.district || '当前区域'} · 发布 ${w.reportTime || '—'}（背景信息，不参与火情计算）`
+})
+const wallDate = ref('')
+const wallTime = ref('')
+let wallTimer = null
+function tickWallClock() {
+  const now = new Date()
+  wallDate.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  wallTime.value = now.toLocaleTimeString('zh-CN', { hour12: false })
 }
 
 async function selectHistoryTask(task) {
@@ -837,7 +863,6 @@ async function selectHistoryTask(task) {
   if (Array.isArray(full.stages)) stages.value = full.stages
   if (Array.isArray(full.result?.fleet)) updateDrones(full.result)
   loadEvents(task.analysis_id)
-  viewTab.value = 'overview'
   activeTab.value = 'command'
 }
 
@@ -1502,10 +1527,13 @@ onMounted(() => {
   refreshLlmInfo()
   llmPollTimer = window.setInterval(refreshLlmInfo, 30000)
   document.documentElement.classList.toggle('projection', projection.value)
+  tickWallClock()
+  wallTimer = window.setInterval(tickWallClock, 1000)
 })
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown)
   if (llmPollTimer) { window.clearInterval(llmPollTimer); llmPollTimer = null }
+  if (wallTimer) { window.clearInterval(wallTimer); wallTimer = null }
   closeEventStream()
   stopMission(false)
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
@@ -1517,17 +1545,30 @@ onMounted(() => {
   loadFleetAndInventory()
   loadEnvironment()
   loadContours()
+  refreshWeather(environmentCoordinates.value)
 })
 </script>
 
 <template>
   <div class="app-shell">
-    <aside class="sidebar">
-      <div class="brand"><div class="brand-mark"><Flame :size="19" /></div><div><strong>EMBER<span>OS</span></strong><small>RESCUE INTELLIGENCE</small></div></div>
-      <div class="scene-card"><div class="eyebrow">CURRENT SCENE</div><div class="scene-name">{{ scene.name }} · 01</div><div class="scene-meta"><span class="live-dot"></span> LIVE SIMULATION <span class="scene-time">09:20:14</span></div></div>
+  <header class="topbar">
+    <div class="brand"><div class="brand-mark"><Flame :size="19" /></div><div><strong>火巡智策</strong><small>FOREST FIRE COMMAND</small></div></div>
+    <div class="topbar-divider"></div>
+    <div class="topbar-title"><h1>森林火灾智能应急指挥平台</h1><p class="slogan">智慧感知 · 协同决策 · 快速响应 · 守护生态</p></div>
+    <div class="topbar-right">
+      <span class="task-badge" :title="currentStage">任务状态 · {{ displayStatus }}</span>
+      <span v-if="weather" class="weather-chip" :title="weatherTitle"><component :is="weatherIcon" :size="15" /> {{ weather.text }} {{ weather.temperature }}°C<i>湿度 {{ weather.humidity }}%</i></span>
+      <span class="status-tag" :class="llmInfo?.available ? '' : 'orange'" :title="llmInfo?.available ? 'GLM 在线研判' : 'LLM 未配置 · 确定性降级'"><Activity :size="14" /> LLM {{ llmInfo?.available ? '在线' : '离线' }}</span>
+      <button :class="['icon-btn', { proj: projection }]" :aria-pressed="projection" title="大屏投影模式（放大字号与数据对比度）" @click="toggleProjection"><MonitorUp :size="18" /></button>
+      <button class="icon-btn" aria-label="任务日志" title="查看任务事件通知" @click="selectNav('logs')"><Bell :size="18" /><i></i></button>
+      <div class="utc">{{ wallDate }}<br><strong>{{ wallTime }}</strong></div>
+    </div>
+  </header>
+  <aside class="sidebar">
+      <div class="scene-card"><div class="eyebrow">CURRENT SCENE</div><div class="scene-name">{{ scene.name }} · 01</div><div class="scene-meta"><span class="live-dot"></span> LIVE SIMULATION <span class="scene-time">{{ wallTime }}</span></div></div>
       <nav aria-label="主导航"><button v-for="item in navItems" :key="item.id" :class="{ active: activeTab === item.id }" @click="selectNav(item.id)"><component :is="item.icon" :size="17" /><span>{{ item.label }}</span><b v-if="item.id === 'fleet'">{{ drones.length }}</b></button></nav>
       <div class="sidebar-foot"><div class="system-status"><span :class="['live-dot', { offline: !serviceOnline }]" /><div><strong>{{ serviceOnline ? '系统运行正常' : '本地演示模式' }}</strong><small>{{ serviceOnline ? '后端服务在线' : '后端服务未连接' }}</small></div></div><div class="operator"><div class="avatar">江</div><div><strong>江月</strong><small>指挥员 · OP-07</small></div><ChevronRight :size="16" /></div></div>
-    </aside>
+  </aside>
 
     <main :class="{ 'main-map': activeTab === 'map' }">
     <div v-if="authRequired" class="auth-gate" role="alert">
@@ -1542,11 +1583,11 @@ onMounted(() => {
         <p>{{ alarm.text }}</p>
       </div>
     </div>
-      <header><div><div class="breadcrumb">COMMAND CENTER <span>/</span> {{ (viewTab === 'agents' && activeTab === 'logs' ? 'agents' : activeTab).toUpperCase() }}</div><h1>森林火灾救援工作台</h1><p>多源感知 · 智能研判 · 集群调度 · 闭环处置</p></div><div class="header-actions"><button :class="['icon-btn', { proj: projection }]" :aria-pressed="projection" title="大屏投影模式（放大字号与数据对比度）" @click="toggleProjection"><MonitorUp :size="18" /></button><button class="icon-btn" title="查看任务事件通知" @click="selectNav('logs')"><Bell :size="18" /><i></i></button><span class="status-tag" :class="llmInfo?.available ? '' : 'orange'" :title="llmInfo?.available ? 'GLM 在线研判' : 'LLM 未配置 · 确定性降级'"><Activity :size="14" /> LLM {{ llmInfo?.available ? '在线' : '离线' }}</span><div class="utc">本地时间<br><strong>{{ todayLabel }}</strong></div></div></header>
-      <section class="toolbar"><div class="tab-pills" role="tablist" aria-label="任务视图"><button role="tab" :aria-selected="viewTab === 'overview'" :class="{ selected: viewTab === 'overview' }" @click="selectView('overview')">任务概览</button><button role="tab" :aria-selected="viewTab === 'monitor'" :class="{ selected: viewTab === 'monitor' }" @click="selectView('monitor')">实时监测</button><button role="tab" :aria-selected="viewTab === 'history'" :class="{ selected: viewTab === 'history' }" @click="selectView('history')">历史任务</button><button role="tab" :aria-selected="viewTab === 'agents'" :class="{ selected: viewTab === 'agents' }" @click="selectView('agents')">Agent 协作</button></div><div class="toolbar-right"><span class="task-badge">任务状态 · {{ displayStatus }}</span><span class="sync"><span class="live-dot"></span> {{ currentStage }}</span><button class="primary" :disabled="analyzing" @click="startAnalysis"><Bot :size="17" /> {{ analyzing ? '分析中…' : '启动智能研判' }}</button></div></section>
       <div v-if="errorMessage" class="notice" role="status"><Activity :size="16" /><span>{{ errorMessage }}</span><button v-if="canRetryAnalysis" class="outline-btn notice-retry" :disabled="analyzing" @click="startAnalysis">重试研判</button><button class="notice-close" title="关闭提示" @click="errorMessage = ''">×</button></div>
 
-      <div v-if="activeTab === 'command'" class="dashboard">
+      <template v-if="activeTab === 'command'">
+      <div class="page-head"><div><h2>火情研判</h2><p>接入现场影像或演训火情 · 规则引擎研判出方案，批准后进入闭环处置</p></div><button class="primary" :disabled="analyzing" @click="startAnalysis"><Bot :size="17" /> {{ analyzing ? '分析中…' : '启动智能研判' }}</button></div>
+      <div class="dashboard">
         <section class="hero-panel"><div class="panel-heading"><h2>{{ scene.incident }}</h2><span class="severity"><span></span>{{ result.fire_assessment.label }}</span></div><p class="hero-note">火点 <b>{{ scene.coordinates }}</b> · 现场风 <b>{{ result.environment.wind_direction || '—' }} {{ result.environment.wind_speed ?? '—' }} m/s</b> · 最近水源 <b>{{ result.environment.nearest_water?.name || '—' }} {{ result.environment.nearest_water?.distance_m ?? result.environment.nearest_water_distance_m ?? '' }}</b></p><div v-if="result?.fire_assessment" class="fire-sense"><div :class="['fs-level', 'lv-' + fireLevelNum]"><b>{{ result.fire_assessment.label }}</b><span>{{ fireLevelWord }}</span></div><div class="fs-cell" title="FLP = 标准化火情处置负荷，综合面积/燃料/坡度/风速按冻结公式折算；过火面积另有 m² 直读"><small>火势负荷 FLP</small><b>{{ formatNumber(fireFlpNow) }}</b><em v-if="fireTrend != null" :class="fireTrend < 0 ? 'down' : 'up'">{{ fireTrend < 0 ? '▼' : '▲' }} {{ Math.abs(Math.round(fireTrend * 100) / 100) }} 较上轮</em><em v-else>首轮基准</em></div><div class="fs-cell"><small>过火面积</small><b>{{ formatNumber(result.fire_assessment.fire_area_m2) }}</b><em>m²</em></div><div class="fs-cell"><small>蔓延速率</small><b>{{ Math.round((result.fire_assessment.growth_rate || 0) * 100) }}%</b><em>/h</em></div><div v-if="fireTrendText" :class="['fs-verdict', fireTrendText.down ? 'down' : 'up']">{{ fireTrendText.text }}<small>{{ fireTrendText.detail }}</small></div></div><div class="hero-footer" :class="controlVerdictView.tone"><div><small>当前处置结论</small><strong>{{ controlVerdictView.hero }}</strong></div><div class="hero-stat"><small>预计处置时间</small><strong>{{ result.dispatch_plan.estimated_minutes ?? '—' }} <em>MIN</em></strong></div><div class="hero-stat"><small>下次评估</small><strong>05 <em>MIN</em></strong></div></div></section>
 
         <UploadPanel :analyzing="analyzing" :progress="progress" :uploaded="uploaded" :preview-url="previewUrl" :selected-file="selectedFile" :selected-frames="selectedFrames" :project-status="projectStatus" :environment-coordinates="environmentCoordinates" :scenario="scenario" :scenario-busy="scenarioBusy" v-model:use-vlm="useVlm" :detector-status="detectorStatus" @files="acceptFile" @capture="onCapture" @reset="resetAnalysis" @generate-scenario="generateScenario" @start-scenario="startScenarioSimulation" @demo-main="loadDemoMain" @demo-perturb="loadDemoPerturb" />
@@ -1558,10 +1599,11 @@ onMounted(() => {
         <section class="chat-panel panel"><ChatPanel :task-id="analysisId" :enabled="chatEnabled" /></section>
         <section class="log-panel panel"><div class="panel-heading"><h2>任务日志</h2><span class="log-count">{{ logs.length }} EVENTS</span></div><div v-if="activeRounds.length" class="resource-strip"><span>水消耗 <b>{{ resourceSummary.water }}</b> L</span><span>CO₂ <b>{{ resourceSummary.co2 }}</b> kg</span><span>换电 <b>{{ resourceSummary.swaps }}</b> 次</span><span>补给 <b>{{ resourceSummary.refills }}</b> 次</span><small>累计自轮次监测 · 随任务实时更新</small></div><div class="logs"><div v-if="!logs.length" class="empty-hint"><b>暂无事件</b>启动研判或执行操作后，任务事件会实时显示在这里。</div><div v-for="(log, index) in logs.slice(0, 6)" :key="log.message + log.timestamp + index"><span class="log-time">{{ logTime(log, index) }}</span><i :class="{ bright: index === 0 }"></i><span>{{ logText(log) }} <small v-if="typeof log === 'object'">· {{ log.stage }} / {{ log.source }}</small></span></div></div></section>
       </div>
+      </template>
 
       <section v-else-if="activeTab === 'fleet'" class="detail-view"><div class="detail-heading"><div><h2>无人机集群</h2><p>当前集群共有 {{ drones.length }} 架无人机，状态数据来自 /api/fleet。</p></div><span class="status-tag"><span class="live-dot"></span> 全部在线</span></div><div class="fleet-roster"><div v-for="group in fleetGroups" :key="group.key" class="roster-group"><div class="roster-group-head"><b>{{ group.label }}</b><small>{{ group.drones.length }} 架 · {{ group.role }}</small></div><div class="roster-table"><div v-for="drone in group.drones" :key="drone.id" class="roster-row"><div class="roster-id"><div :class="['drone-icon', drone.color]"><Zap :size="16" /></div><div><strong>{{ drone.id }}</strong><span>{{ drone.label }}</span></div></div><span :class="['roster-state', drone.status === '执行中' ? 'active-status' : '', { 'st-fault': drone.status === '故障' }]"><i></i>{{ drone.status }}</span><div class="roster-soc"><div :class="['battery-bar', drone.soc < 30 ? 'soc-low' : drone.soc < 60 ? 'soc-mid' : '']"><i :style="{ width: drone.soc + '%' }"></i></div><b>{{ drone.soc }}%</b></div><span class="roster-payload">模块 {{ moduleLabel(drone.module) }} · 药剂 {{ drone.payload }}</span><span class="roster-num"><small>信号</small>{{ drone.signal }}%</span><span class="roster-num"><small>健康</small>{{ drone.health }}%</span><span class="roster-task" :title="drone.task">{{ drone.task }}</span><button class="outline-btn" @click="toggleFleetDetail(drone.id)"><ListFilter :size="14" /> {{ expandedFleet.has(drone.id) ? '收起遥测' : '遥测' }}</button><div v-if="expandedFleet.has(drone.id)" class="fleet-detail-extra"><span>速度 {{ drone.speed_mps ?? '—' }} m/s</span><span>耗电 {{ drone.energy_rate_percent_per_hour ?? '—' }} %/h</span><span>高度 {{ (drone.position && drone.position.z != null) ? drone.position.z + ' m' : '—' }}</span><span>编号 {{ drone.uav_id || drone.id }}</span><span>任务 {{ drone.task }}</span></div></div></div></div></div></section>
 
-      <section v-else-if="activeTab === 'map'" class="detail-view map-view map-view-full screen"><div class="map-toolbar"><div class="map-toolbar-heading"><h2>林区态势</h2><PhaseStepper :stage="screenStage.stage" :done="screenStage.done" :dead="screenStage.dead" :replans="replanCount" /></div><div class="map-toolbar-tools"><span class="view-toggle"><button :class="['legend-item', { on: mapMode === '2d' }]" :aria-pressed="mapMode === '2d'" @click.stop="toggleMapMode('2d')">🗺 平面</button><button :class="['legend-item', { on: mapMode === '3d' }]" :aria-pressed="mapMode === '3d'" @click.stop="toggleMapMode('3d')">🏔 三维</button></span><div class="map-legend" role="group" aria-label="图层开关"><button v-for="(label, key) in LAYER_LABELS" :key="key" :class="['legend-item', { off: !layerVisibility[key] }]" :aria-pressed="layerVisibility[key]" @click.stop="toggleLayer(key)"><i :class="'legend-' + key"></i>{{ label }}</button></div><button :class="['legend-item', { on: pickMode }]" :aria-pressed="pickMode" title="开启后在地图点击指定火情位置（模拟发现火情），上传影像即以该坐标为火点" @click.stop="pickMode = !pickMode"><i class="legend-fire"></i>指定火点</button><button :class="['legend-item', { off: !voiceOn }]" :aria-pressed="voiceOn" :title="voiceOn ? '疏散语音广播已开启（点击静音）' : '疏散语音广播已静音（点击开启）'" @click.stop="toggleVoice"><i class="legend-evac"></i>语音广播</button><span class="status-tag orange"><MapPinned :size="14" /> {{ environmentCoordinates.longitude.toFixed(6) }}°E · {{ environmentCoordinates.latitude.toFixed(6) }}°N</span></div></div>
+      <section v-else-if="activeTab === 'map'" class="detail-view map-view map-view-full screen"><div class="map-toolbar"><div class="map-toolbar-heading"><h2>态势总览</h2><PhaseStepper :stage="screenStage.stage" :done="screenStage.done" :dead="screenStage.dead" :replans="replanCount" /></div><div class="map-toolbar-tools"><span class="view-toggle"><button :class="['legend-item', { on: mapMode === '2d' }]" :aria-pressed="mapMode === '2d'" @click.stop="toggleMapMode('2d')">🗺 平面</button><button :class="['legend-item', { on: mapMode === '3d' }]" :aria-pressed="mapMode === '3d'" @click.stop="toggleMapMode('3d')">🏔 三维</button></span><div class="map-legend" role="group" aria-label="图层开关"><button v-for="(label, key) in LAYER_LABELS" :key="key" :class="['legend-item', { off: !layerVisibility[key] }]" :aria-pressed="layerVisibility[key]" @click.stop="toggleLayer(key)"><i :class="'legend-' + key"></i>{{ label }}</button></div><button :class="['legend-item', { on: pickMode }]" :aria-pressed="pickMode" title="开启后在地图点击指定火情位置（模拟发现火情），上传影像即以该坐标为火点" @click.stop="pickMode = !pickMode"><i class="legend-fire"></i>指定火点</button><button :class="['legend-item', { off: !voiceOn }]" :aria-pressed="voiceOn" :title="voiceOn ? '疏散语音广播已开启（点击静音）' : '疏散语音广播已静音（点击开启）'" @click.stop="toggleVoice"><i class="legend-evac"></i>语音广播</button><span class="status-tag orange"><MapPinned :size="14" /> {{ environmentCoordinates.longitude.toFixed(6) }}°E · {{ environmentCoordinates.latitude.toFixed(6) }}°N</span></div></div>
       <div class="screen-kpis"><div v-for="kpi in screenKpis" :key="kpi.label" :class="['skpi', 'tone-' + kpi.tone]"><b>{{ kpi.value }}<small>{{ kpi.unit }}</small></b><span>{{ kpi.label }}<em>{{ kpi.sub }}</em></span></div></div>
       <div class="map-taskbar" role="toolbar" aria-label="任务控制">
         <template v-if="!analysisResult && !scenario">
@@ -1621,9 +1663,37 @@ onMounted(() => {
       </aside></div>
       <div class="map-statusbar"><span class="map-source" :class="{ fallback: !contourData }">{{ contourLoading ? '等高线加载中' : `等高线来源 · ${contourData?.source || '合成回退'}` }}</span><span>等高距 {{ contourData?.interval_m ?? terrainVisual.contourStep }} m</span><span>火点基准 {{ fireGpsLabel || '—' }}</span></div></section>
 
-      <section v-else-if="viewTab === 'agents'" class="detail-view"><div class="detail-heading"><div><h2>Agent 协作</h2><p>指挥官 · 侦察研判 · 灭火调度 · 支援保障 · 仿真评估 · 交互审批 的实时协作消息流（黑板协议，可回放）。</p></div><span class="status-tag" :class="llmInfo?.available ? '' : 'orange'">{{ llmInfo?.available ? 'GLM 在线研判' : 'LLM 离线 · 确定性降级' }}</span></div><div class="full-logs agent-timeline"><div v-if="!agentMessages.length" class="agents-empty"><p class="agents-empty-lead"><b>暂无协作消息</b>启动研判或演训模拟后，六个角色通过黑板协议实时协作，消息流将按时间显示在这里。</p><div class="agents-roles"><div class="agents-role"><b>指挥官</b><span>建案派任务 · 审批仲裁</span></div><div class="agents-role"><b>侦察单元</b><span>态势发现 · 影像判读</span></div><div class="agents-role"><b>灭火单元</b><span>主力压制 · 补位接替</span></div><div class="agents-role"><b>支援单元</b><span>物资补给 · 通信中继</span></div><div class="agents-role"><b>仿真评估</b><span>逐轮研判 · 趋势闸门</span></div><div class="agents-role"><b>交互审批</b><span>方案确认 · 驳回调整</span></div></div></div><div v-for="message in agentMessages" :key="message.seq" class="agent-msg"><span class="agent-avatar" :class="'av-' + message.frm">{{ String(message.frm || '?').slice(0, 1).toUpperCase() }}</span><span class="log-time">{{ message.ts?.slice(11) || message.ts }}</span><b class="agent-chip" :class="'mt-' + message.msg_type">{{ agentMsgLabel(message.msg_type) }}</b><div class="agent-msg-body"><strong>{{ message.frm }} → {{ message.to }}</strong><p>{{ message.content }}</p></div><small class="agent-source" :class="'src-' + message.source">{{ agentSourceLabel(message.source) }}</small></div></div></section>
+      <section v-else-if="activeTab === 'agents'" class="detail-view"><div class="detail-heading"><div><h2>Agent 协作</h2><p>指挥官 · 侦察研判 · 灭火调度 · 支援保障 · 仿真评估 · 交互审批 的实时协作消息流（黑板协议，可回放）。</p></div><span class="status-tag" :class="llmInfo?.available ? '' : 'orange'">{{ llmInfo?.available ? 'GLM 在线研判' : 'LLM 离线 · 确定性降级' }}</span></div><div class="full-logs agent-timeline"><div v-if="!agentMessages.length" class="agents-empty"><p class="agents-empty-lead"><b>暂无协作消息</b>启动研判或演训模拟后，六个角色通过黑板协议实时协作，消息流将按时间显示在这里。</p><div class="agents-roles"><div class="agents-role"><b>指挥官</b><span>建案派任务 · 审批仲裁</span></div><div class="agents-role"><b>侦察单元</b><span>态势发现 · 影像判读</span></div><div class="agents-role"><b>灭火单元</b><span>主力压制 · 补位接替</span></div><div class="agents-role"><b>支援单元</b><span>物资补给 · 通信中继</span></div><div class="agents-role"><b>仿真评估</b><span>逐轮研判 · 趋势闸门</span></div><div class="agents-role"><b>交互审批</b><span>方案确认 · 驳回调整</span></div></div></div><div v-for="message in agentMessages" :key="message.seq" class="agent-msg"><span class="agent-avatar" :class="'av-' + message.frm">{{ String(message.frm || '?').slice(0, 1).toUpperCase() }}</span><span class="log-time">{{ message.ts?.slice(11) || message.ts }}</span><b class="agent-chip" :class="'mt-' + message.msg_type">{{ agentMsgLabel(message.msg_type) }}</b><div class="agent-msg-body"><strong>{{ message.frm }} → {{ message.to }}</strong><p>{{ message.content }}</p></div><small class="agent-source" :class="'src-' + message.source">{{ agentSourceLabel(message.source) }}</small></div></div></section>
 
-      <HistoryPanel v-else-if="viewTab === 'history'" :tasks="historyTasks" :loading="historyLoading" @restore="selectHistoryTask" @refresh="loadHistory" @error="errorMessage = $event" />
+      <HistoryPanel v-else-if="activeTab === 'history'" :tasks="historyTasks" :loading="historyLoading" @restore="selectHistoryTask" @refresh="loadHistory" @error="errorMessage = $event" />
+
+      <section v-else-if="activeTab === 'settings'" class="detail-view">
+        <div class="detail-heading"><div><h2>系统设置</h2><p>服务状态 · 显示与交互 · 数据来源口径。环境模式与坐标在「火情研判」页设置，全局生效。</p></div><span class="status-tag" :class="serviceOnline ? '' : 'orange'"><span :class="['live-dot', { offline: !serviceOnline }]"></span>{{ serviceOnline ? '后端服务在线' : '本地演示模式' }}</span></div>
+        <div class="settings-grid">
+          <div class="settings-card"><b>服务与模型状态</b><div class="settings-rows">
+            <span>后端框架<i>{{ projectStatus.framework }}</i></span>
+            <span>演示管线<i>{{ projectStatus.demo_pipeline }}</i></span>
+            <span>YOLO 检测<i>{{ projectStatus.yolo }}</i></span>
+            <span>VLM 视觉语言<i>{{ projectStatus.vlm }}</i></span>
+            <span>地理数据<i>{{ projectStatus.geo_data }}</i></span>
+            <span>GLM 大模型<i>{{ llmInfo?.available ? (llmInfo.model || '在线') : '离线 · 确定性降级' }}</i></span>
+          </div><small>状态来自 /api/project-status 与 /api/llm-status，LLM 徽标每 30 秒自动刷新。</small></div>
+          <div class="settings-card"><b>显示与交互</b><div class="settings-rows">
+            <span>大屏投影模式<i><button class="outline-btn" :aria-pressed="projection" @click="toggleProjection">{{ projection ? '已开启' : '已关闭' }}（P）</button></i></span>
+            <span>疏散语音广播<i><button class="outline-btn" :aria-pressed="voiceOn" @click="toggleVoice">{{ voiceOn ? '已开启' : '已静音' }}（V）</button></i></span>
+            <span>快捷键<i>P 投影 · V 语音 · Esc 关闭弹层</i></span>
+          </div><small>投影模式放大字号与数据对比度，适合大屏演示与录屏。</small></div>
+          <div class="settings-card"><b>环境数据源</b><div class="settings-rows">
+            <span>当前坐标<i>{{ environmentCoordinates.longitude.toFixed(6) }}°E · {{ environmentCoordinates.latitude.toFixed(6) }}°N</i></span>
+            <span>模式<i>{{ { real: '真实数据', auto: '自动', offline: '离线演示', demo: '演示数据' }[environmentMode] || environmentMode }}</i></span>
+            <span>来源<i>{{ environmentSource }}</i></span>
+          </div><small>坡度→K_slope、燃料→K_fuel、风速→K_wind/风档参与 FLP 计算；温湿度与天气为背景信息。修改模式或坐标请到「火情研判」页的现场环境面板。</small><button class="outline-btn" @click="selectNav('command')">前往火情研判</button></div>
+          <div class="settings-card"><b>天气与底图</b><div class="settings-rows">
+            <span>实时天气<i>{{ weather ? `${weather.text} ${weather.temperature}°C · 湿度 ${weather.humidity}%` : '未显示（高德服务不可用或坐标在境外）' }}</i></span>
+            <span>地图底图<i>高德卫星 + 路网（Key 缺失时回退等高线示意图）</i></span>
+          </div><small>天气来自高德实时天气接口，随环境坐标自动更新（30 分钟缓存），仅作背景信息不参与火情计算。</small></div>
+        </div>
+      </section>
 
       <section v-else class="detail-view"><div class="detail-heading"><div><h2>任务日志</h2><p>记录当前演示任务的输入、分析阶段和调度决策。</p></div><span class="status-tag"><Activity :size="14" /> {{ logs.length }} 条记录</span></div><div class="full-logs"><div v-for="(log, index) in foldedLogs" :key="log.message + log.timestamp + index"><span class="log-time">{{ logTime(log, index) }}</span><i :class="{ bright: index === 0 }"></i><span>{{ logText(log) }}</span><small v-if="typeof log === 'object'" class="log-meta">{{ log.stage }} · {{ log.source }}</small><b v-if="log.repeat > 1" class="log-repeat">×{{ log.repeat }}</b><small>{{ index === 0 ? 'LATEST' : 'EVENT' }}</small></div></div></section>
     </main>

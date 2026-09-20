@@ -41,7 +41,7 @@ def main():
         if aid:
             try:
                 session.page.get_by_role("button", name="任务日志").count()
-                hist = session.page.get_by_text("历史任务")
+                hist = session.page.get_by_text("历史复盘")
                 if hist.count():
                     hist.first.click()
                     session.page.wait_for_timeout(600)
@@ -52,7 +52,7 @@ def main():
             except Exception as e:
                 print("恢复任务失败:", str(e)[:80])
 
-        session.page.get_by_role("button", name="指挥中枢").click()
+        session.page.get_by_role("button", name="火情研判").click()
         session.page.wait_for_timeout(1200)
         session.page.screenshot(path=str(OUT / "2-command-analyzed.png"), full_page=True)
 
@@ -68,11 +68,11 @@ def main():
             except Exception as error:
                 print("推演态截图失败:", str(error)[:80])
 
-        session.page.get_by_role("button", name="无人机集群").click()
+        session.page.get_by_role("button", name="无人机管理").click()
         session.page.wait_for_timeout(1200)
         session.page.screenshot(path=str(OUT / "3-fleet.png"), full_page=True)
 
-        session.page.get_by_role("button", name="林区态势").click()
+        session.page.get_by_role("button", name="态势总览").click()
         session.page.wait_for_timeout(4500)
         session.page.screenshot(path=str(OUT / "4-map.png"), full_page=True)
 
@@ -81,7 +81,7 @@ def main():
         session.page.screenshot(path=str(OUT / "5-logs.png"), full_page=True)
 
         # 协作页签（tab pills）
-        agents_tab = session.page.get_by_role("tab", name="Agent 协作")
+        agents_tab = session.page.get_by_role("button", name="Agent 协作")
         if agents_tab.count():
             agents_tab.click()
             session.page.wait_for_timeout(900)

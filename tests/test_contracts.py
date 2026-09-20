@@ -342,6 +342,9 @@ def test_analyzes_list_limit_and_slim():
     assert newest["analysis_id"] == created.json()["analysis_id"], "limit 截取的必须是最新任务"
     assert "result" not in newest and "stages" not in newest, "slim 摘要不得携带重负载字段"
     assert {"analysis_id", "status", "created_at", "input"} <= set(newest)
+    assert set(newest) <= {"analysis_id", "status", "created_at", "updated_at", "monitor_round", "resource_locks", "input"}, "slim 投影不得引入额外字段（BE-22）"
+    one = client.get("/api/analyzes?limit=1").json()["items"]
+    assert len(one) == 1 and one[0]["analysis_id"] == created.json()["analysis_id"], "limit=1 精确切取最新一条（BE-22）"
 
     full = client.get("/api/analyzes").json()["items"]
     assert "result" in full[0], "缺省请求保持完整信封（向后兼容）"

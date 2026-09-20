@@ -53,7 +53,7 @@ def main() -> int:
 
         # ---- ② 风变演练 → 动作 等待二次审批 ----
         page.get_by_role("button", name="清空并重新接入").click()
-        page.get_by_role("button", name="指挥中枢").click()
+        page.get_by_role("button", name="火情研判").click()
         import re
         page.get_by_role("button", name="生成随机火情").click()
         page.locator(".scenario-facts").wait_for(timeout=8000)

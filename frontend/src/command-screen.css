@@ -6,14 +6,14 @@
    ===================================================================== */
 
 .map-view.screen{
-  --scr-bg0:#0b120f;
-  --scr-bg1:#0e1713;
-  --scr-panel:#121b17;
-  --scr-panel-2:#17221d;
-  --scr-line:#243430;
-  --scr-line2:#31493f;
-  --scr-ink:#e6ede9;
-  --scr-muted:#8fa39a;
+  --scr-bg0:#0a1220;
+  --scr-bg1:#0d1a2c;
+  --scr-panel:#101f33;
+  --scr-panel-2:#152741;
+  --scr-line:#1d3452;
+  --scr-line2:#2b4768;
+  --scr-ink:#e6eef7;
+  --scr-muted:#8ba3bd;
   --scr-ember:#f0a848;
   --scr-ok:#5fbd92;
   --scr-warn:#e2b95d;
@@ -24,7 +24,7 @@
   flex-direction:column;
   gap:12px;
   background:linear-gradient(180deg,var(--scr-bg1),var(--scr-bg0));
-  border:1px solid #1c2a24;
+  border:1px solid #16283e;
   box-shadow:none;
   color:var(--scr-ink);
 }
@@ -34,16 +34,16 @@
 .map-view.screen .map-toolbar-heading p{color:var(--scr-muted)}
 .map-view.screen .map-toolbar .legend-item{color:var(--scr-muted)}
 .map-view.screen .map-toolbar .legend-item:hover{background:var(--scr-panel-2)}
-.map-view.screen .map-toolbar .legend-item.off{color:#5c6f66}
-.map-view.screen .status-tag{background:#122019;border:1px solid #2a4636}
+.map-view.screen .map-toolbar .legend-item.off{color:#5c7a96}
+.map-view.screen .status-tag{background:#101f33;border:1px solid #1d4a33}
 .ph-step{display:flex;align-items:center;min-width:0;overflow:hidden}
 .ph-stage{display:flex;align-items:center;flex-shrink:0}
-.ph-no{font:500 9.5px var(--font-data);color:#5a6f65;letter-spacing:.5px;margin-right:4px}
-.ph-node{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--scr-line2);background:#101a15;color:#6c8177;transition:all .3s}
+.ph-no{font:500 9.5px var(--font-data);color:#5a7391;letter-spacing:.5px;margin-right:4px}
+.ph-node{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--scr-line2);background:#101a26;color:#6c86a4;transition:all .3s}
 .ph-node svg{display:block}
 .ph-label{font-size:11px;color:var(--scr-muted);margin:0 2px;white-space:nowrap}
 .ph-link{width:14px;height:2px;background:var(--scr-line2);margin:0 5px;border-radius:1px}
-.ph-done .ph-node{border-color:#3f7a5e;color:#8fd9b6;background:#0e2018}
+.ph-done .ph-node{border-color:#3f7a5e;color:#8fd9b6;background:#0e1c2e}
 .ph-done .ph-label,.ph-done .ph-no{color:#7ea393}
 .ph-done .ph-link{background:linear-gradient(90deg,#3f7a5e,#3f7a5e55)}
 .ph-active .ph-node{border-color:var(--scr-ember);color:#ffd9a0;background:radial-gradient(circle at 34% 30%,#f6c26b,#8a5a1e 72%);box-shadow:0 0 14px #f0a84888;animation:phPulse 1.8s infinite}
@@ -62,7 +62,7 @@
 .skpi.tone-danger::before{background:var(--scr-danger)}
 .skpi.tone-blue::before{background:var(--scr-blue)}
 .skpi.tone-green::before{background:var(--scr-ok)}
-.skpi.tone-slate::before{background:#5c7a6d}
+.skpi.tone-slate::before{background:#5f7a96}
 .skpi b{font:600 20px/1.15 var(--font-data);color:var(--scr-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .skpi b small{font:400 11px var(--font-data);color:var(--scr-muted);margin-left:3px}
 .skpi.tone-ember b{color:var(--scr-ember)}
@@ -70,7 +70,7 @@
 .skpi.tone-blue b{color:var(--scr-blue)}
 .skpi.tone-green b{color:var(--scr-ok)}
 .skpi span{display:flex;justify-content:space-between;gap:8px;color:var(--scr-muted);font-size:11.5px;line-height:1.2;white-space:nowrap}
-.skpi span em{font-style:normal;overflow:hidden;text-overflow:ellipsis;color:#75907f}
+.skpi span em{font-style:normal;overflow:hidden;text-overflow:ellipsis;color:#7191ad}
 
 /* ---------- 任务控制条：林区态势页直接开仿真 ---------- */
 .map-taskbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 14px;background:var(--scr-panel);border:1px solid var(--scr-line);border-radius:10px}
@@ -84,7 +84,7 @@
 /* ---------- 主区：左 地图+演化 / 右 信息栏 ---------- */
 .map-screen-body{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px 14px;height:calc(100vh - 438px);min-height:540px}
 .map-main-col{display:flex;flex-direction:column;gap:12px;min-height:0;min-width:0}
-.map-view.screen .tactical-map-wrap{flex:1;height:auto;min-height:400px;border:1px solid #1c2a24}
+.map-view.screen .tactical-map-wrap{flex:1;height:auto;min-height:400px;border:1px solid #16283e}
 
 /* 演化时间轴（EvolutionChart） */
 .evo-panel{display:flex;flex-direction:column;gap:6px;padding:12px 14px;background:var(--scr-panel);border:1px solid var(--scr-line);border-radius:10px;min-width:0;max-width:100%;overflow:hidden}
@@ -93,7 +93,7 @@
 .evo-stat{font:400 12px var(--font-data);color:var(--scr-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .evo-stat b{color:var(--scr-ember);font-weight:500}
 .evo-svg{width:100%;height:150px;display:block}
-.evo-empty{padding:26px 10px;text-align:center;color:#75907f;font-size:12.5px;line-height:1.7}
+.evo-empty{padding:26px 10px;text-align:center;color:#7191ad;font-size:12.5px;line-height:1.7}
 
 /* 右侧信息栏（深色化 + 高度撑满） */
 .map-view.screen .map-side-rail{max-height:none;min-height:0;overflow-y:auto}
@@ -106,22 +106,22 @@
 .map-view.screen .water-panel{max-height:236px;overflow-y:auto}
 .map-view.screen .water-panel-head b,.map-view.screen .deploy-head b,.map-view.screen .stream-head b{color:var(--scr-ink)}
 .map-view.screen .water-row{background:var(--scr-panel-2);border-color:var(--scr-line);color:var(--scr-muted)}
-.map-view.screen .water-row:hover{border-color:#3d5c4e}
+.map-view.screen .water-row:hover{border-color:#3d5c7e}
 .map-view.screen .water-row.preferred{border-color:#8a6d2f;background:#1d2418}
 .map-view.screen .water-row b{color:var(--scr-ink)}
-.map-view.screen .water-row small{color:#5c7a6d;overflow-wrap:anywhere}
+.map-view.screen .water-row small{color:#5f7a96;overflow-wrap:anywhere}
 .map-view.screen .deploy-row{background:var(--scr-panel-2);border-color:var(--scr-line);color:var(--scr-muted)}
-.map-view.screen .deploy-row:hover{border-color:#3d5c4e}
+.map-view.screen .deploy-row:hover{border-color:#3d5c7e}
 .map-view.screen .deploy-row.selected{border-color:var(--scr-ember);background:#1f2016}
 .map-view.screen .deploy-row.linked{border-color:var(--scr-blue);background:#141f2b}
 .map-view.screen .deploy-row b{color:var(--scr-ink)}
 .map-view.screen .deploy-row span{color:var(--scr-muted)}
 .map-view.screen .deploy-row em{color:#a8bfae}
-.map-view.screen .deploy-row .deploy-soc{background:#0d1512}
+.map-view.screen .deploy-row .deploy-soc{background:#0d1520}
 .map-view.screen .deploy-soc i{background:var(--scr-ok)}
 .map-view.screen .deploy-soc i.soc-mid{background:var(--scr-warn)}
 .map-view.screen .deploy-soc i.soc-low{background:var(--scr-danger)}
-.map-view.screen .deploy-row small{color:#5c7a6d}
+.map-view.screen .deploy-row small{color:#5f7a96}
 .deploy-group-label{display:flex;align-items:center;gap:8px;margin:4px 0 -1px;font:700 11px var(--font-ui);letter-spacing:.6px;color:var(--scr-muted)}
 .deploy-group-label::after{content:"";flex:1;height:1px;background:var(--scr-line)}
 .map-view.screen .terrain-data b,.map-view.screen .slope-badge b{color:var(--scr-ink)}
@@ -132,17 +132,17 @@
 .stream-rows{flex:1 1 auto}
 .stream-tabs{display:flex;gap:4px;margin-left:auto}
 .stream-tab{border:1px solid var(--scr-line2);background:transparent;color:var(--scr-muted);font:500 10.5px/1.2 var(--font-data);padding:3px 9px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:all var(--speed) ease}
-.stream-tab:hover{border-color:#4a6b5c}
+.stream-tab:hover{border-color:#4a6b8c}
 .stream-tab.on{color:#ffd9a0;border-color:#a28437;background:#241d10}
 .stream-row.stream-agent-row{align-items:flex-start}
 .stream-agent-body{min-width:0;flex:1}
 .stream-agent-head{display:flex;align-items:center;gap:6px;min-width:0}
 .stream-agent-head .agent-chip{flex-shrink:0;font-size:10.5px;padding:2px 7px}
-.stream-agent-head small{margin-left:auto;flex-shrink:0;font-size:10.5px;color:#75907f;white-space:nowrap}
+.stream-agent-head small{margin-left:auto;flex-shrink:0;font-size:10.5px;color:#7191ad;white-space:nowrap}
 .stream-agent-head small.src-glm{color:#7fb3ff}
 .stream-agent-head small.src-rules{color:#5fbd92}
 .stream-content{margin:3px 0 0;color:var(--scr-muted);font-size:12px;line-height:1.55;overflow-wrap:anywhere}
-.stream-content i{display:block;font-style:normal;color:#5c7a6d;font-size:10.5px;margin-bottom:1px}
+.stream-content i{display:block;font-style:normal;color:#5f7a96;font-size:10.5px;margin-bottom:1px}
 /* 深色屏上的协作芯片（浅色 .agent-chip 基础样式的暗底适配） */
 .map-view.screen .agent-chip{background:#1a2636;border-color:#2c4258;color:#9cc2ff}
 .map-view.screen .agent-chip.mt-FINDING{background:#241610;border-color:#59301f;color:#ff9c72}
@@ -156,15 +156,15 @@
 .map-view.screen .stream-agent-head small.src-rules{color:#5fbd92}
 .stream-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .stream-head b{font:700 13.5px var(--font-ui);color:var(--scr-ink)}
-.stream-head small{color:#5c7a6d;font-size:11.5px;white-space:nowrap}
+.stream-head small{color:#5f7a96;font-size:11.5px;white-space:nowrap}
 .stream-rows{display:flex;flex-direction:column;gap:0;overflow-y:auto;min-height:0}
-.stream-row{display:flex;align-items:flex-start;gap:8px;padding:7px 2px;border-top:1px solid #1a2620;line-height:1.5}
+.stream-row{display:flex;align-items:flex-start;gap:8px;padding:7px 2px;border-top:1px solid #1a2636;line-height:1.5}
 .stream-row:first-child{border-top:0}
 .stream-row.latest .stream-text{color:var(--scr-ink)}
-.stream-time{flex-shrink:0;font:400 11px var(--font-data);color:#5c7a6d;padding-top:1px}
+.stream-time{flex-shrink:0;font:400 11px var(--font-data);color:#5f7a96;padding-top:1px}
 .stream-chip{flex-shrink:0;font:500 10.5px/1 var(--font-data);padding:3px 7px;border-radius:999px;border:1px solid;white-space:nowrap;margin-top:1px}
 .stream-text{min-width:0;overflow-wrap:anywhere;color:var(--scr-muted);font-size:12px}
-.stream-empty{padding:14px 4px;color:#5c7a6d;font-size:12px;line-height:1.7}
+.stream-empty{padding:14px 4px;color:#5f7a96;font-size:12px;line-height:1.7}
 /* 大屏内滚区域统一细窄滚动条（部署/水源/协作流/侧栏） */
 .map-view.screen .stream-rows,.map-view.screen .map-side-rail,
 .map-view.screen .deploy-panel,.map-view.screen .deploy-rows,
@@ -190,42 +190,42 @@
 .map-view.screen .map-side-rail::-webkit-scrollbar-thumb:hover,
 .map-view.screen .deploy-panel::-webkit-scrollbar-thumb:hover,
 .map-view.screen .deploy-rows::-webkit-scrollbar-thumb:hover,
-.map-view.screen .water-panel::-webkit-scrollbar-thumb:hover{background:#4a6b5c}
+.map-view.screen .water-panel::-webkit-scrollbar-thumb:hover{background:#4a6b8c}
 
 /* 标记详情卡 / 光标读数 / 底部状态栏（深色化） */
-.map-view.screen .marker-detail{background:#121b17f5;border-color:var(--scr-line);color:var(--scr-muted);backdrop-filter:blur(6px)}
+.map-view.screen .marker-detail{background:#101f33f5;border-color:var(--scr-line);color:var(--scr-muted);backdrop-filter:blur(6px)}
 .map-view.screen .marker-detail-head b{color:var(--scr-ink)}
-.map-view.screen .marker-detail-close{color:#5c7a6d}
+.map-view.screen .marker-detail-close{color:#5f7a96}
 .map-view.screen .marker-detail-close:hover{color:var(--scr-danger)}
-.map-view.screen .marker-detail-row{border-bottom-color:#1f2d26}
-.map-view.screen .marker-detail-row span{color:#5c7a6d}
+.map-view.screen .marker-detail-row{border-bottom-color:#1f2d3d}
+.map-view.screen .marker-detail-row span{color:#5f7a96}
 .map-view.screen .marker-detail-row b{color:var(--scr-ink)}
-.map-view.screen .map-statusbar{color:#5c7a6d}
+.map-view.screen .map-statusbar{color:#5f7a96}
 .map-view.screen .map-source{color:var(--scr-muted)}
 .map-view.screen .map-source::before{background:var(--scr-ember)}
 .map-view.screen .map-source.fallback{color:var(--scr-warn)}
 
 /* ---------- SVG 回退分支（.large-map）深色适配 ---------- */
-.map-view.screen .large-map{background:#0e1512;box-shadow:inset 0 0 0 1px #1d2b25,inset 0 -70px 100px #00000055}
+.map-view.screen .large-map{background:#0d1520;box-shadow:inset 0 0 0 1px #1c3050,inset 0 -70px 100px #00000055}
 .map-view.screen .contour-line{stroke:#54705f;opacity:.6}
 .map-view.screen .major-contour{stroke:#87a795;opacity:.85}
-.map-view.screen .contour-label{fill:#a9c0b2;stroke:#0e1512}
-.map-view.screen .summit-ring{stroke:#8fa39a}
-.map-view.screen .summit-label,.map-view.screen .summit-elevation{fill:#c9d8ce;stroke:#0e1512}
-.map-view.screen .terrain-caption,.map-view.screen .contour-note,.map-view.screen .slope-badge,.map-view.screen .map-controls,.map-view.screen .map-scale,.map-view.screen .wind-legend{background:#121b17f2;border-color:var(--scr-line);color:var(--scr-muted);backdrop-filter:blur(5px)}
+.map-view.screen .contour-label{fill:#a9c0b2;stroke:#0d1520}
+.map-view.screen .summit-ring{stroke:#8ba3bd}
+.map-view.screen .summit-label,.map-view.screen .summit-elevation{fill:#c9d8ce;stroke:#0d1520}
+.map-view.screen .terrain-caption,.map-view.screen .contour-note,.map-view.screen .slope-badge,.map-view.screen .map-controls,.map-view.screen .map-scale,.map-view.screen .wind-legend{background:#101f33f2;border-color:var(--scr-line);color:var(--scr-muted);backdrop-filter:blur(5px)}
 .map-view.screen .terrain-caption strong{color:var(--scr-ink)}
 .map-view.screen .terrain-caption span{color:#a8845a}
 .map-view.screen .contour-note b,.map-view.screen .map-scale,.map-view.screen .map-controls output{color:var(--scr-muted)}
-.map-view.screen .contour-note small,.map-view.screen .slope-badge span{color:#5c7a6d}
+.map-view.screen .contour-note small,.map-view.screen .slope-badge span{color:#5f7a96}
 .map-view.screen .map-controls button{background:var(--scr-panel-2);border-color:var(--scr-line2);color:var(--scr-muted)}
-.map-view.screen .map-controls button:hover{background:#20302a}
+.map-view.screen .map-controls button:hover{background:#1c2c44}
 .map-view.screen .map-scale i{border-color:var(--scr-muted)}
-.map-view.screen .map-node{background:#17221dee;border-color:var(--scr-line2);color:var(--scr-muted);box-shadow:0 2px 8px #00000066}
+.map-view.screen .map-node{background:#152741ee;border-color:var(--scr-line2);color:var(--scr-muted);box-shadow:0 2px 8px #00000066}
 .map-view.screen .map-node.fire{color:#ff9c72}
 .map-view.screen .map-node.water{color:#7fd0e8}
 .map-view.screen .map-node.drone{color:#9cc2ff;background:#16202eee}
 .map-view.screen .map-node.road{color:#e0b57a;background:#221b10ee}
-.map-view.screen .map-compass{color:var(--scr-muted);border-color:var(--scr-line2);background:#121b17f2}
+.map-view.screen .map-compass{color:var(--scr-muted);border-color:var(--scr-line2);background:#101f33f2}
 
 .map-view.screen .nq-track{stroke:#ffffff2e}
 .map-view.screen .nq-arms{stroke:#c9d8ce}

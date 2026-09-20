@@ -24,7 +24,7 @@ def main() -> int:
 
         session.goto_app()
         session.page.get_by_text("系统运行正常").wait_for(timeout=15000)
-        session.page.get_by_role("tab", name="历史任务").click()
+        session.page.get_by_role("button", name="历史复盘").click()
         session.page.locator(".history-row").first.wait_for(timeout=15000)
 
         # 勾选 2 个任务（真实 input 可点，FE-49 教训）→「对比所选」出现

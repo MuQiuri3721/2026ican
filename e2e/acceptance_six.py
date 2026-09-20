@@ -68,7 +68,7 @@ def scenario_1_absent_logistics():
     try:
         page = s.page
         s.goto_app()
-        page.get_by_role("button", name="指挥中枢").click()
+        page.get_by_role("button", name="火情研判").click()
         ok &= record(1, "随机到无人场景", reroll_until_people(page, "不在场"))
         page.get_by_role("button", name="开始模拟").click()
         page.locator(".plan-summary").wait_for(timeout=150000)
@@ -91,7 +91,7 @@ def scenario_2_confirmed_guidance():
     try:
         page = s.page
         s.goto_app()
-        page.get_by_role("button", name="指挥中枢").click()
+        page.get_by_role("button", name="火情研判").click()
         ok &= record(2, "随机到有人场景", reroll_until_people(page, "在场"))
         page.get_by_role("button", name="开始模拟").click()
         page.locator(".plan-summary").wait_for(timeout=150000)
@@ -99,7 +99,7 @@ def scenario_2_confirmed_guidance():
         ok &= record(2, "疏散路线生成", "疏散：" in summary, summary[:100].replace("\n", " "))
         page.get_by_role("button", name="批准主方案").click()
         page.wait_for_function("document.querySelector('.sim-clock')?.textContent?.includes('第 1 轮')", timeout=45000)
-        page.get_by_role("button", name="林区态势").click()
+        page.get_by_role("button", name="态势总览").click()
         exit_marker = page.locator(".tmap-exit")
         exit_marker.wait_for(timeout=15000)
         ok &= record(2, "地图疏散出口标注", "疏散出口" in exit_marker.inner_text())
@@ -145,7 +145,7 @@ def scenario_4_soc_return_and_swap():
         page.locator(".plan-summary").wait_for(timeout=150000)
         page.get_by_role("button", name="批准主方案").click()
         page.wait_for_function("document.querySelector('.sim-clock')?.textContent?.includes('第 1 轮')", timeout=45000)
-        page.get_by_role("button", name="林区态势").click()
+        page.get_by_role("button", name="态势总览").click()
         page.wait_for_function(
             "['返航中', '基地充电', '基地补水'].some(t => document.body.innerText.includes(t))", timeout=90000
         )

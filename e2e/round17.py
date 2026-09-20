@@ -18,7 +18,7 @@ def main() -> int:
         session.goto_app()
         session.page.get_by_text("系统运行正常").wait_for(timeout=15000)
 
-        session.page.get_by_role("button", name="林区态势").click()
+        session.page.get_by_role("button", name="态势总览").click()
         session.page.wait_for_selector(".tactical-amap", timeout=20000)
         # 冷启动 dev server 时 AMap 卫星图层与视图就绪较慢：
         # 过早点击 containerToLngLat 返回空被选点逻辑静默跳过，先等视图稳定
@@ -54,7 +54,7 @@ def main() -> int:
         ok &= report(17, "选点模式自动退出", pick_btn.get_attribute("aria-pressed") == "false")
 
         # 上传面板的火点定位提示应与选点坐标同步（回到指挥中枢页签）
-        session.page.get_by_role("button", name="指挥中枢").click()
+        session.page.get_by_role("button", name="火情研判").click()
         note = session.page.locator(".fire-coord-note")
         note.wait_for(timeout=8000)
         note_text = note.inner_text()

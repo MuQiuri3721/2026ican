@@ -15,7 +15,7 @@ def main() -> int:
         session.goto_app()
 
         # LLM 离线态徽标（未配置 key：确定性降级）
-        llm_badge = page.locator(".header-actions .status-tag", has_text="LLM")
+        llm_badge = page.locator(".topbar-right .status-tag", has_text="LLM")
         llm_badge.wait_for(timeout=8000)
         # LLM 在线/离线均为合法状态（key 可选）：徽标存在且标注其一即可
         badge_text = llm_badge.inner_text()
@@ -29,7 +29,7 @@ def main() -> int:
         ok &= report(13, "演训研判完成", True)
 
         # Agent 协作时间线：建案/发现/方案/审批四类消息齐备
-        page.get_by_role("tab", name="Agent 协作").click()
+        page.get_by_role("button", name="Agent 协作").click()
         page.locator(".agent-msg").first.wait_for(timeout=10000)
         timeline = page.locator(".agent-timeline").inner_text()
         required = ["建案派任务", "态势发现", "方案提案", "审批请求"]
@@ -42,11 +42,11 @@ def main() -> int:
         ok &= report(13, "来源标注完整", all(src.strip() for src in sources) if sources else False, str(sources[:4]))
 
         # 批准 → 仲裁消息 + 执行中 → 自动推演至第 2 轮 → JUDGMENT 消息（保守降级）
-        page.get_by_role("button", name="指挥中枢").click()
+        page.get_by_role("button", name="火情研判").click()
         page.get_by_role("button", name="批准主方案").click()
         page.wait_for_function("document.querySelector('.task-badge')?.textContent?.includes('执行中')", timeout=30000)
         page.wait_for_function("document.querySelector('.sim-clock')?.textContent?.includes('第 2 轮')", timeout=30000)
-        page.get_by_role("tab", name="Agent 协作").click()
+        page.get_by_role("button", name="Agent 协作").click()
         page.wait_for_function(
             "document.querySelector('.agent-timeline')?.textContent?.includes('自主研判')", timeout=20000
         )
@@ -55,7 +55,7 @@ def main() -> int:
         ok &= report(13, "审批仲裁消息", "审批仲裁" in timeline2)
 
         # 终止 → 推演停止
-        page.get_by_role("button", name="指挥中枢").click()
+        page.get_by_role("button", name="火情研判").click()
         page.get_by_placeholder("驳回/终止原因（必填）").fill("协作验证完成，终止")
         page.get_by_role("button", name="终止任务").click()
         page.wait_for_function("document.querySelector('.task-badge')?.textContent?.includes('已终止')", timeout=30000)

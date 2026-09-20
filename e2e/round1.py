@@ -20,7 +20,7 @@ def main() -> int:
         ok &= report(1, "服务在线", True)
 
         # 等高线与标记都在"林区态势"视图，先切页签
-        session.page.get_by_role("button", name="林区态势").click()
+        session.page.get_by_role("button", name="态势总览").click()
         session.page.wait_for_selector(".tactical-amap, .large-map", timeout=20000)
         amap_mode = session.page.locator(".tactical-amap").count() > 0
         ok &= report(1, "地图分支", True, "amap" if amap_mode else "svg-fallback")
