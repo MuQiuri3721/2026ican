@@ -51,6 +51,7 @@ def main() -> int:
         session.page.wait_for_function(
             "document.querySelector('.task-badge')?.textContent?.includes('执行中')", timeout=30000
         )
+        session.page.get_by_role("button", name="任务日志").click()
         session.page.wait_for_function(
             "document.querySelector('.full-logs')?.textContent?.includes('方案审批：approve')", timeout=15000
         )
@@ -58,6 +59,7 @@ def main() -> int:
         ok &= report(5, "审批事件实时上屏", "方案审批：approve" in after and after != before, "")
 
         # 报告在线查看：打开 → 展开原始 JSON → 含 task_id 与 plan_versions → 收起
+        session.page.get_by_role("button", name="任务调度").click()
         session.page.get_by_role("button", name="在线查看报告").click()
         session.page.locator(".report-viewer").wait_for(timeout=30000)
         session.page.locator(".report-raw summary").click()

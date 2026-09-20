@@ -34,7 +34,7 @@ def main() -> int:
         ok &= report(6, "历史任务恢复", True)
 
         # 日志页应展示恢复任务的事件（来自 events 接口）
-        session.session.page.get_by_role("button", name="任务日志").click()
+        session.page.get_by_role("button", name="任务日志").click()
         session.page.locator(".full-logs > div").first.wait_for(timeout=15000)
         ok &= report(6, "恢复任务事件", True)
 

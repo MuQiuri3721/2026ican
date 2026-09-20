@@ -68,7 +68,8 @@ def main() -> int:
             facts = page.locator(".scenario-facts").inner_text()
             match = re.search(r"面积 (\d+) m²", facts)
             # 小火在风变轮之前就扑灭（round11 结论）：必须够大才能活到跨档轮
-            if "风变演练" in facts and match and int(match.group(1)) >= 1500:
+            # FE-82 后压制更强（扩编 12 机），1500 也常在风变轮前扑灭——提到 2500
+            if "风变演练" in facts and match and int(match.group(1)) >= 2500:
                 shifted = True
                 break
             try:
@@ -79,7 +80,7 @@ def main() -> int:
         # 摇号是概率事件（风变×大火组合）：摇不到时跳过风变段（API 层已由 full_function_test 覆盖），
         # 摇到则硬断言轮次动作提示
         if shifted:
-            ok &= report(16, "摇到风变演练场景(面积≥1500)", True,
+            ok &= report(16, "摇到风变演练场景(面积≥2500)", True,
                          page.locator(".scenario-facts").inner_text()[:100].replace("\n", " "))
         else:
             report(16, "摇到风变演练场景(跳过风变段,API 层已覆盖)", False,

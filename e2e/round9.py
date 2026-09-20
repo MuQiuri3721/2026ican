@@ -39,9 +39,10 @@ def main() -> int:
         summary = session.page.locator(".plan-summary").inner_text()
         ok &= report(9, "时限缺口 time_limit", "time_limit" in summary, summary[:160].replace("\n", " "))
 
-        # 判为不可控：hero 结论为增援
+        # 判为不可控：hero 结论为增援（hero 面板在火情研判页）
         # OPT-P0-04/P3-01：时限缺口场景三态归入「维持压制 · 时限内未完成」，
         # 不再误报「暂不可控」（方案本身可控，只是超时限）——旧断言锁的是矛盾结论
+        session.page.get_by_role("button", name="火情研判").click()
         session.page.wait_for_function(
             "document.querySelector('.hero-footer strong')?.textContent?.includes('维持压制')",
             timeout=20000,

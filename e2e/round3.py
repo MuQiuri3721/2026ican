@@ -46,7 +46,7 @@ def main() -> int:
 
         # 任务日志应有审批与监测事件（顶栏铃铛进任务日志页，FE-82 后日志面板不在研判页）
         session.page.get_by_role("button", name="任务日志").click()
-        page.locator(".full-logs > div").first.wait_for(timeout=15000)
+        session.page.locator(".full-logs > div").first.wait_for(timeout=15000)
         logs = session.page.locator(".full-logs").inner_text()
         ok &= report(3, "审批事件入日志", "方案审批" in logs or "approval" in logs, logs[:80].replace("\n", " "))
 
