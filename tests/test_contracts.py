@@ -630,3 +630,24 @@ def test_target_minutes_validation_422_and_zero_legal():
     assert good.status_code == 200, good.text
     client.post(f"/api/tasks/{good.json()['analysis_id']}/approval",
                 json={"action": "terminate", "reason": "探针清理"})
+
+
+def test_frame_sequence_real_yolo_payload_none_fields():
+    """E-1a 回归：真实检测载荷（仅检测框、面积字段为显式 None）走多帧序列
+    不得 float(None) 崩溃——面积应由 calculate_fire_metrics 从框推算。"""
+    from unittest import mock
+
+    from backend.app.tools.core import analyze_frame_sequence, analyze_visual_trend
+
+    real_payload = {"detections": [{"class_name": "fire", "confidence": 0.8, "box": [100, 100, 300, 300]}],
+                    "image_width": 640, "image_height": 480, "mode": "real",
+                    "source": "local-yolo-service", "model": "yolo11n-dfire-v1",
+                    "fire_area_m2": None, "smoke_area_m2": None, "growth_rate": None, "confidence": None}
+    with mock.patch("backend.app.tools.core.detect_fire", return_value=dict(real_payload)):
+        out = analyze_frame_sequence(frame_paths=["a.jpg", "b.jpg"])
+    assert out["frame_count"] == 2
+    areas = out["trend"]["areas_m2"]
+    assert len(areas) == 2 and all(a > 0 for a in areas), f"面积应由框推算: {areas}"
+    assert out["frames"][0]["area_source"] == "detector-boxes"
+    # 趋势统计对显式 None 行不再崩溃
+    assert analyze_visual_trend([{"fire_area_m2": None}, {"fire_area_m2": 5.0}])["status"] == "insufficient_data"

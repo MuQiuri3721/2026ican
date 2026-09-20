@@ -79,7 +79,9 @@ def _haversine_m(a: Dict[str, Any], b: Dict[str, Any]) -> float:
 def analyze_visual_trend(observations: list = None, **_: Any) -> Dict[str, Any]:
     """Summarize multi-frame fire area and center movement using deterministic statistics."""
     rows = observations or []
-    areas = [float(row.get("fire_area_m2", 0)) for row in rows if isinstance(row, dict)]
+    # 真实检测载荷含显式 None（键在值 None），.get 默认值不生效——None 安全转换
+    areas = [float(row["fire_area_m2"]) for row in rows
+             if isinstance(row, dict) and isinstance(row.get("fire_area_m2"), (int, float))]
     centers = [row.get("fire_center") for row in rows if isinstance(row, dict) and isinstance(row.get("fire_center"), dict)]
     if len(areas) < 2:
         return {"status": "insufficient_data", "sample_count": len(areas), "trend": "unknown", "growth_rate": None}
@@ -95,21 +97,36 @@ def analyze_visual_trend(observations: list = None, **_: Any) -> Dict[str, Any]:
 
 
 def analyze_frame_sequence(frame_paths: List[str] = None, **_: Any) -> Dict[str, Any]:
-    """多帧序列：按时间顺序逐帧检测并输出面积趋势（api-contract §5.2 visual_sequence）。"""
+    """多帧序列：按时间顺序逐帧检测并输出面积趋势（api-contract §5.2 visual_sequence）。
+
+    真实检测适配器只回检测框（面积/中心由 calculate_fire_metrics 从框推算，与
+    主研判路径同口径）；fixture 路径回填好的面积字段则原样保留。
+    """
     observations = []
     for path in frame_paths or []:
         name = Path(path).name
         detection = detect_fire(image_name=name, image_path=path)
         if detection.get("status") == "error":
             continue
-        observations.append({
+        entry = {
             "image_name": name,
             "fire_area_m2": detection.get("fire_area_m2"),
             "smoke_area_m2": detection.get("smoke_area_m2"),
             "growth_rate": detection.get("growth_rate"),
             "confidence": detection.get("confidence"),
             "fire_center": detection.get("fire_center"),
-        })
+        }
+        if entry["fire_area_m2"] is None and isinstance(detection.get("detections"), list):
+            metrics = calculate_fire_metrics(
+                detections=detection["detections"],
+                image_width=int(detection.get("image_width") or 1920),
+                image_height=int(detection.get("image_height") or 1080))
+            entry["fire_area_m2"] = metrics.get("fire_area_m2")
+            entry["smoke_area_m2"] = metrics.get("smoke_area_m2")
+            if not isinstance(entry["fire_center"], dict):
+                entry["fire_center"] = metrics.get("fire_center")
+            entry["area_source"] = "detector-boxes"
+        observations.append(entry)
     return {"frame_count": len(observations), "frames": observations, "trend": analyze_visual_trend(observations)}
 
 
