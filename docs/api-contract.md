@@ -483,6 +483,8 @@ Query：`once`（可选，`1` = 仅推送当前事件快照后结束，供一次
 
 平台侧实现：`backend/app/tools/core.py::detect_fire`。YOLO 开发者只需交付一个独立 HTTP 服务，**不修改平台代码**。
 
+**现状（E-1a，2026-09-20）**：官方 D-Fire 数据集（CC BY 4.0）子集训练的自训模型 **yolo11n-dfire-v1** 已作为第一实现交付上线——独立服务 `yolo_server/server.py`（`source=local-yolo-service`），官方 test 集（4,306 张）mAP50 0.665 / Precision 0.689 / Recall 0.611，单帧推理 1.4ms；训练/评测脚本 `scripts/yolo/`。PWM-Net 原始权重到位后同一端点换服务即可，平台零改动。
+
 - 启用方式：环境变量 `FIRE_YOLO_ENDPOINT`（如 `http://127.0.0.1:9000/detect`）；未设置时平台使用 fixture（`data/vision_observations.json`），`mode=demo`。
 - 请求：`POST <endpoint>`，body 为**原始图片字节**，`Content-Type: application/octet-stream`；仅当任务带 `image_path` 时才会调用。
 - 超时：5 秒。
@@ -510,7 +512,11 @@ Query：`once`（可选，`1` = 仅推送当前事件快照后结束，供一次
 | 端点未配置 | 不调用，走 fixture | 走 fixture |
 | 调用失败/响应非法 | `{"status": "error", "mode": "real", "source": "pwm-yolo-adapter", "error": {"code": "detector_unavailable", "message": ...}, "detections": []}` → Skill 链返回 `ok:false` → 任务 502 | 回退 fixture，附 `adapter_fallback: {"code": "yolo_endpoint_unavailable", "message": ...}` |
 
-接入成功后结果带 `mode="real"`、`source="pwm-yolo-adapter"`。前端与报告以 `mode/source` 展示来源，未配置端点时不得宣称真实识别。
+接入成功后结果带 `mode="real"`；`source`/`model` 由服务声明优先（自训服务为 `local-yolo-service` / `yolo11n-dfire-v1`，缺省回落 `pwm-yolo-adapter` / `pwm-yolo`）。前端与报告以 `mode/source` 展示来源，未配置端点时不得宣称真实识别。
+
+多帧序列（§5.2 visual_sequence）真模型载荷说明：检测适配器只回检测框时，逐帧面积/中心由 `calculate_fire_metrics` 从框推算（`area_source=detector-boxes`），趋势统计对显式 None 字段安全（BE-20）。
+
+零检测回落（BE-21）：真模型返回 `detections=[]`（画面无目标或漏检）时，平台**不**将面积推算为 0 伪装无火情，而是如实回落场景 fixture 并标注 `detector_zero_detections=true` + `adapter_fallback.code=detector_zero_detections`，`detections=[]` 保留于载荷供证据链追溯。
 
 ## 10. VLM 解释适配协议（FIRE_VLM_ENDPOINT / FIRE_VLM_API_KEY）
 

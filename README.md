@@ -60,6 +60,8 @@ frontend/src/     # Vue 工作台
 configs/          # 仿真参数
 data/             # 场景、2+6+4 机群、库存和视觉 fixture
 docs/             # 需求、架构、算法、数据、演示和进度
+yolo_server/      # 自训 YOLO 检测服务（local-yolo-service）
+scripts/yolo/     # D-Fire 训练/评测/过夜 runner 脚本
 data/reports/     # 任务报告输出（运行时生成，git 忽略）
 tests/            # 契约和接口测试
 ```
@@ -107,10 +109,11 @@ POST /api/tasks/{task_id}/approval       approve/reject/adjust/terminate
 POST /api/tasks/{task_id}/replan
 POST /api/tasks/{task_id}/rounds
 GET  /api/tasks/{task_id}/report
+GET  /api/tasks/{task_id}/report/export  独立 HTML 图文报告（可打印 PDF）
 GET  /api/tasks/{task_id}/events/stream  SSE 事件实时推送
 ```
 
-旧的 `POST /api/monitor/{analysis_id}` 继续保留；其 `extinguishing_liters` 仅在入口转换为 W20 输入，避免旧面积规则污染新领域模型。上传支持 JPEG、PNG、MP4，当前文件不会送入真实 YOLO。
+旧的 `POST /api/monitor/{analysis_id}` 继续保留；其 `extinguishing_liters` 仅在入口转换为 W20 输入，避免旧面积规则污染新领域模型。上传支持 JPEG、PNG、MP4；配置 `FIRE_YOLO_ENDPOINT` 后图片进入**自训 YOLO 真实检测**（`yolo11n-dfire-v1`，见 `yolo_server/README.md`），未配置时使用 fixture 并如实标注。
 
 ## 验证
 
@@ -122,7 +125,7 @@ cd frontend && npm run build
 
 ## 已知限制与后续
 
-任务、事件和资源锁已通过 SQLite 写穿持久化（`data/analysis_store.db`，删除该文件即重置演示状态）；规则参数和 FLP 为团队仿真设定，不代表专业消防标准；路线为演示模型，不是生产级障碍避让；执行不连接飞控；视觉默认 fixture。后续按优先级接入真实 YOLO/PWM-YOLO、视频抽帧、VLM、在线 GIS/气象、WebSocket 双向控制、真实能耗与飞控。
+任务、事件和资源锁已通过 SQLite 写穿持久化（`data/analysis_store.db`，删除该文件即重置演示状态）；规则参数和 FLP 为团队仿真设定，不代表专业消防标准；路线为演示模型，不是生产级障碍避让；执行不连接飞控。视觉现状：VLM=glm-4.6v-flash 真实云端模型、YOLO=自训 yolo11n-dfire-v1 实时服务（检测零框时如实回落 fixture 并标注，不伪装无火情）。后续候选：PWM-Net 原始权重切换（同端点零改动）、WebSocket 双向控制、真实能耗与飞控、多用户认证。
 
 ## 相关文档
 

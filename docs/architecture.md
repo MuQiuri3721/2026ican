@@ -78,7 +78,7 @@ executing → replanning → awaiting_confirmation → executing → completed
 ## 六、可替换适配器（现状）
 
 ```text
-detect_fire       → YOLO/PWM-YOLO Adapter   【接收面就绪，真实权重待交付（E-1）】
+detect_fire       → 自训 yolo11n-dfire-v1（local-yolo-service）+ PWM-YOLO Adapter【自训模型已上线（D-Fire，test mAP50 0.665）；零框/失败如实回落 fixture 并标注】
 analyze_with_vlm  → VLM Adapter             【glm-4.6v-flash 直连已上线 + 契约守卫】
 extract_frames    → 路由层 OpenCV 抽帧       【MP4 上传自动抽帧（BE-11）】
 get_environment   → Open-Meteo + OSM        【已接入，离线回退标注来源】
