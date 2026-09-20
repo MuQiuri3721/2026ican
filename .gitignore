@@ -33,3 +33,6 @@ data/yolo_sample_check/
 yolo11n.pt
 yolo26n.pt
 data/yolo_sample_check/
+
+# 第三方官方仓库克隆（复现参考用，不入库；来源见 scripts/yolo/pwm/pwm_modules.py 头注释）
+/external/

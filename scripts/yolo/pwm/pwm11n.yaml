@@ -1,0 +1,45 @@
+# PWM-Net（n 尺度）：YOLOv11n 骨架 + PartialNet backbone + WTConv neck + M2S 检测头
+# 复现自：Xiang et al., "PWM-Net for Frequency-Domain Enhanced Forest Fire Detection
+# in UAV Imagery" (2026)。通道数为 yolo11n 实际通道（width=0.25, max_channels=1024），
+# 因为自定义模块走 parse_model 通用分支（不做 width 缩放），必须显式写实际值。
+# 注意：变体字符串必须带 pat_ 前缀——parse_model 会把字符串 args 用 locals()[a] 替换，
+# "ch" 等短名会撞上 parse_model 的局部变量。repeat=2 的 PATBlock 打包为 Sequential 占 1 个层号。
+# 结构：PAT_ch 浅层 / PAT_sp 中层 / PAT_sf 最深层（论文 §3.1）；WTConv 置于 neck
+# 跨层聚合之后（§2.1）；M2S 紧贴 P3/P4/P5 三个检测头（Fig.1 节点 24-26）。
+nc: 2 # D-Fire 类别：0=smoke 1=fire（画框目检校验过）
+
+backbone:
+  # [from, repeats, module, args]
+  - [-1, 1, Conv, [16, 3, 2]] # 0 P1/2
+  - [-1, 1, Conv, [32, 3, 2]] # 1 P2/4
+  - [-1, 2, PATBlock, [32, "pat_ch"]] # 2 浅层通道注意力 ×2
+  - [-1, 1, Conv, [64, 3, 2]] # 3 P3/8
+  - [-1, 2, PATBlock, [64, "pat_ch"]] # 4 ×2
+  - [-1, 1, Conv, [128, 3, 2]] # 5 P4/16
+  - [-1, 2, PATBlock, [128, "pat_sp"]] # 6 中层空间注意力 ×2
+  - [-1, 1, Conv, [256, 3, 2]] # 7 P5/32
+  - [-1, 2, PATBlock, [256, "pat_sf"]] # 8 最深层部分自注意力 ×2
+  - [-1, 1, SPPF, [256, 5]] # 9
+  - [-1, 2, C2PSA, [256]] # 10
+
+head:
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 11
+  - [[-1, 6], 1, Concat, [1]] # 12 cat backbone P4
+  - [-1, 2, C3k2, [128, False]] # 13
+  - [-1, 1, WTConvYolo, [128]] # 14 WTConv 跨层聚合增强（P4）
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 15
+  - [[-1, 4], 1, Concat, [1]] # 16 cat backbone P3
+  - [-1, 2, C3k2, [64, False]] # 17
+  - [-1, 1, WTConvYolo, [64]] # 18 WTConv（P3）
+  - [-1, 1, M2S, [64]] # 19 M2S → 检测头 P3
+  - [18, 1, Conv, [64, 3, 2]] # 20 下采样自 WT 后的 P3 特征
+  - [[-1, 14], 1, Concat, [1]] # 21 cat head P4
+  - [-1, 2, C3k2, [128, False]] # 22
+  - [-1, 1, WTConvYolo, [128]] # 23 WTConv（head P4）
+  - [-1, 1, M2S, [128]] # 24 M2S → 检测头 P4
+  - [23, 1, Conv, [128, 3, 2]] # 25 下采样自 WT 后的 head P4 特征
+  - [[-1, 10], 1, Concat, [1]] # 26 cat head P5
+  - [-1, 2, C3k2, [256, True]] # 27
+  - [-1, 1, WTConvYolo, [256]] # 28 WTConv（head P5）
+  - [-1, 1, M2S, [256]] # 29 M2S → 检测头 P5
+  - [[19, 24, 29], 1, Detect, [nc]] # 30 Detect(P3, P4, P5)
