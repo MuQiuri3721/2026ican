@@ -27,17 +27,18 @@ def main() -> int:
         page.get_by_text("影像已接入").wait_for(timeout=10000)
         page.get_by_role("button", name="火情研判").click()
         page.get_by_role("button", name="启动智能研判").click()
-        page.get_by_role("button", name="任务调度").click()
-        page.locator(".plan-summary").wait_for(timeout=300000)
-
+        # FE-82 七页 IA：detector-live 与 hero 决策条在火情研判页，先读再切页
+        page.locator(".detector-live").first.wait_for(timeout=300000)
         live = page.evaluate("document.querySelector('.detector-live')?.textContent || ''")
         ok &= report(23, "检测状态行(real)", "real" in live and "yolo11n-dfire-v1" in live and "local-yolo-service" in live, live.strip())
 
-        boxes = page.evaluate("Array.from(document.querySelectorAll('.ew-box em')).map(e=>e.textContent)")
-        ok &= report(23, "证据窗真实检测框", len(boxes) > 0, str(boxes[:5]))
-
         area = page.evaluate("document.querySelector('.hero-decision')?.textContent || ''")
         ok &= report(23, "面积随检测框变化", "火势" in area or "FLP" in area, area[:80].replace("\n", " "))
+
+        page.get_by_role("button", name="任务调度").click()
+        page.locator(".plan-summary").wait_for(timeout=120000)
+        boxes = page.evaluate("Array.from(document.querySelectorAll('.ew-box em')).map(e=>e.textContent)")
+        ok &= report(23, "证据窗真实检测框", len(boxes) > 0, str(boxes[:5]))
 
         session.assert_clean_console("round23")
         ok &= report(23, "控制台无错误", True)
