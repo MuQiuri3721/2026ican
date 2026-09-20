@@ -36,3 +36,5 @@ data/yolo_sample_check/
 
 # 第三方官方仓库克隆（复现参考用，不入库；来源见 scripts/yolo/pwm/pwm_modules.py 头注释）
 /external/
+yolo_server/best_v2.pt
+e2e/_app_compiled.js

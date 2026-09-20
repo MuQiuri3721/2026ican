@@ -22,9 +22,11 @@ def main() -> int:
         ok &= report(13, "LLM 状态徽标", "在线" in badge_text or "离线" in badge_text, badge_text)
 
         # 演训模拟（scenario 路径，无影像）
+        page.get_by_role("button", name="火情研判").click()
         page.get_by_role("button", name="生成随机火情").click()
         page.locator(".scenario-facts").wait_for(timeout=8000)
         page.get_by_role("button", name="开始模拟").click()
+        page.get_by_role("button", name="任务调度").click()
         page.locator(".plan-summary").wait_for(timeout=300000)
         ok &= report(13, "演训研判完成", True)
 
@@ -42,9 +44,11 @@ def main() -> int:
         ok &= report(13, "来源标注完整", all(src.strip() for src in sources) if sources else False, str(sources[:4]))
 
         # 批准 → 仲裁消息 + 执行中 → 自动推演至第 2 轮 → JUDGMENT 消息（保守降级）
-        page.get_by_role("button", name="火情研判").click()
+        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="任务调度").click()
         page.get_by_role("button", name="批准主方案").click()
         page.wait_for_function("document.querySelector('.task-badge')?.textContent?.includes('执行中')", timeout=30000)
+        page.get_by_role("button", name="任务调度").click()
         page.wait_for_function("document.querySelector('.sim-clock')?.textContent?.includes('第 2 轮')", timeout=30000)
         page.get_by_role("button", name="Agent 协作").click()
         page.wait_for_function(
@@ -55,7 +59,8 @@ def main() -> int:
         ok &= report(13, "审批仲裁消息", "审批仲裁" in timeline2)
 
         # 终止 → 推演停止
-        page.get_by_role("button", name="火情研判").click()
+        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="任务调度").click()
         page.get_by_placeholder("驳回/终止原因（必填）").fill("协作验证完成，终止")
         page.get_by_role("button", name="终止任务").click()
         page.wait_for_function("document.querySelector('.task-badge')?.textContent?.includes('已终止')", timeout=30000)

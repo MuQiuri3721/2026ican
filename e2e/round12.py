@@ -15,6 +15,7 @@ def main() -> int:
         session.goto_app()
 
         # 生成随机火情
+        page.get_by_role("button", name="火情研判").click()
         page.get_by_role("button", name="生成随机火情").click()
         page.locator(".scenario-facts").wait_for(timeout=8000)
         facts = page.locator(".scenario-facts").inner_text()
@@ -29,13 +30,16 @@ def main() -> int:
         # 开始模拟（无影像，scenario 驱动研判）
         page.get_by_role("button", name="火情研判").click()
         page.get_by_role("button", name="开始模拟").click()
+        page.get_by_role("button", name="任务调度").click()
         page.locator(".plan-summary").wait_for(timeout=300000)
         badge = page.locator(".task-badge").inner_text()
         ok &= report(12, "开始模拟→待确认", "待确认" in badge, badge)
 
         # 批准 → 出动推演
+        page.get_by_role("button", name="任务调度").click()
         page.get_by_role("button", name="批准主方案").click()
         page.wait_for_function("document.querySelector('.task-badge')?.textContent?.includes('执行中')", timeout=30000)
+        page.get_by_role("button", name="任务调度").click()
         page.locator(".sim-clock").wait_for(timeout=8000)
         ok &= report(12, "批准→出动推演", True)
 
@@ -46,9 +50,11 @@ def main() -> int:
         ok &= report(12, "推演相位徽章", len(badges) > 0, str(badges[:5]))
 
         # 自动推演至第 2 轮后终止
-        page.get_by_role("button", name="火情研判").click()
+        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="任务调度").click()
         page.wait_for_function("document.querySelector('.sim-clock')?.textContent?.includes('第 2 轮')", timeout=30000)
         ok &= report(12, "自动推演至第 2 轮", True, page.locator(".sim-clock").inner_text())
+        page.get_by_role("button", name="任务调度").click()
         page.get_by_placeholder("驳回/终止原因（必填）").fill("演训完成，终止")
         page.get_by_role("button", name="终止任务").click()
         page.wait_for_function("document.querySelector('.task-badge')?.textContent?.includes('已终止')", timeout=30000)

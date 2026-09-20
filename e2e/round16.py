@@ -23,11 +23,15 @@ def main() -> int:
         page.get_by_text("系统运行正常").wait_for(timeout=15000)
 
         # ---- ① 视频 UI 上传：抽帧 → 研判 ----
+        page.get_by_role("button", name="火情研判").click()
         page.set_input_files("input[type=file]", VIDEO)
+        page.get_by_role("button", name="火情研判").click()
         page.get_by_text("影像已接入").wait_for(timeout=15000)  # 单视频无「· 序列」后缀（那是多图提示）
         ok &= report(16, "视频接入", True)
 
+        page.get_by_role("button", name="火情研判").click()
         page.get_by_role("button", name="启动智能研判").click()
+        page.get_by_role("button", name="任务调度").click()
         page.locator(".plan-summary").wait_for(timeout=180000)
         ok &= report(16, "视频研判完成", True)
 
@@ -52,9 +56,11 @@ def main() -> int:
             session.api("POST", f"/api/tasks/{tid}/approval", {"action": "terminate", "reason": "round16 清理"})
 
         # ---- ② 风变演练 → 动作 等待二次审批 ----
+        page.get_by_role("button", name="火情研判").click()
         page.get_by_role("button", name="清空并重新接入").click()
         page.get_by_role("button", name="火情研判").click()
         import re
+        page.get_by_role("button", name="火情研判").click()
         page.get_by_role("button", name="生成随机火情").click()
         page.locator(".scenario-facts").wait_for(timeout=8000)
         shifted = False
@@ -81,13 +87,18 @@ def main() -> int:
 
         if shifted:
             page.get_by_role("button", name="开始模拟").click()
-            page.locator(".plan-summary").wait_for(timeout=300000)
+            page.get_by_role("button", name="任务调度").click()
+            # 随机火点冷缓存真实环境抓取可超 5 分钟（Overpass 时段性慢）——600s 加固
+            page.locator(".plan-summary").wait_for(timeout=600000)
+            page.get_by_role("button", name="任务调度").click()
             page.get_by_role("button", name="批准主方案").click()
             # 风变在第 2 轮注入 → 跨档触发重规划 → 回待确认 → 轮次列表动作提示
+            page.get_by_role("button", name="任务调度").click()
             page.wait_for_function(
                 "document.querySelector('.round-list')?.textContent?.includes('等待二次审批')",
                 timeout=180000,
             )
+            page.get_by_role("button", name="任务调度").click()
             rounds_text = page.locator(".round-list").inner_text()
             ok &= report(16, "轮次动作提示(等待二次审批)", "等待二次审批" in rounds_text,
                          rounds_text[:110].replace("\n", " "))

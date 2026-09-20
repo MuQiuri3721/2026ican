@@ -1654,6 +1654,7 @@ onMounted(() => {
         <div class="map-controls" role="group" aria-label="地图缩放控制"><button type="button" title="放大地图" aria-label="放大地图" @click="zoomMap(0.2)">+</button><button type="button" title="缩小地图" aria-label="缩小地图" @click="zoomMap(-0.2)">−</button><button type="button" title="重置地图视图" aria-label="重置地图视图" @click="resetMapView"><RefreshCw :size="14" /></button><output aria-live="polite">{{ Math.round(mapZoom * 100) }}%</output></div>
         <div class="map-scale" aria-label="比例尺"><i :style="{ width: mapScale.width }"></i><b>{{ mapScale.label }}</b></div>
       </div>
+      </div>
         <div v-if="analysisResult && analysisResult.fire_assessment" :class="['fire-status-card', 'lvb-' + fireLevelNum]" role="status" aria-label="火情等级浮层">
           <div class="fsc-head"><span class="fsc-flame"><Flame :size="14" /></span><b>{{ result.fire_assessment.label }}</b><i>{{ fireLevelWord }}</i></div>
           <div class="fsc-rows">
@@ -1663,7 +1664,6 @@ onMounted(() => {
             <span v-if="fireTrendText" :class="['fsc-trend', fireTrendText.down ? 'down' : 'up']">{{ fireTrendText.text }}<b>{{ fireTrendText.detail }}</b></span>
           </div>
         </div>
-      </div>
       <div v-if="activeMarker" class="marker-detail" :style="activeMarker.style" role="dialog" :aria-label="activeMarker.title">
 <div class="marker-detail-head"><b>{{ activeMarker.title }}</b><button class="marker-detail-close" aria-label="关闭详情" @click.stop="activeMarker = null">×</button></div>
 <div class="marker-detail-body"><div v-for="row in activeMarker.rows" :key="row.k" class="marker-detail-row"><span>{{ row.k }}</span><b>{{ row.v }}</b></div></div>

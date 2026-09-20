@@ -591,3 +591,54 @@ html.projection .stream-rows{font-size:13px}
 .dashboard .decision-panel::-webkit-scrollbar-thumb{background:#2b4a72;border-radius:3px}
 .dashboard .decision-panel .panel-heading{position:sticky;top:-20px;z-index:2;background:#10213a;margin:-20px -22px 0;padding:18px 22px 10px}
 @media(max-width:1000px){.dashboard .fleet-panel,.dashboard .decision-panel{max-height:none}}
+
+/* =====================================================================
+   FE-82 大改版第二波：七页 IA（任务调度独立成页）+ 总览大屏浮层卡
+   ===================================================================== */
+
+/* ---- 火情研判页：决策建议面板通栏（集群/日志/问答已分流到专属页） ---- */
+.dashboard .decision-panel{grid-column:1/-1}
+
+/* ---- 任务调度页布局：左 账本/资源/机群概览 · 右 调度建议 ---- */
+.dispatch-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:16px;align-items:start}
+.dispatch-side{display:flex;flex-direction:column;gap:16px;min-width:0}
+.dispatch-strip span small{margin-left:0}
+.dispatch-grid .decision-panel{display:flex;flex-direction:column}
+.fm-group-label small{color:var(--ink-3);font-weight:400;margin-left:4px}
+.fm-chips{display:flex;gap:5px;flex-wrap:wrap}
+.fm-chips span{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border:1px solid var(--line);border-radius:999px;background:var(--surface-2);font:400 11.5px var(--font-data);color:var(--ink-3)}
+.fm-chips span b{color:var(--ink-2);font-weight:500}
+.fm-chips span.selected{border-color:var(--accent-line);background:var(--accent-soft);color:var(--accent)}
+.fm-chips span.selected b{color:var(--accent)}
+@media(max-width:1100px){.dispatch-grid{grid-template-columns:1fr}}
+
+/* ---- 总览大屏：火情等级浮层卡（地图左上，平面/三维/回退共用） ---- */
+.fire-status-card{position:absolute;left:14px;top:14px;z-index:500;width:248px;padding:12px 14px;border-radius:var(--radius-s);background:#0d1b2eee;border:1px solid var(--line-strong);backdrop-filter:blur(6px);color:var(--ink-2);font:400 12px var(--font-data);box-shadow:var(--shadow-2);pointer-events:none}
+.fsc-head{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.fsc-flame{width:23px;height:23px;border-radius:6px;display:grid;place-items:center;color:#fff;flex-shrink:0}
+.fsc-head b{font:800 13.5px var(--font-ui);color:var(--ink)}
+.fsc-head i{font-style:normal;font:500 10.5px var(--font-data);color:var(--ink-3);margin-left:auto;white-space:nowrap}
+.fsc-rows{display:flex;flex-direction:column;gap:4px}
+.fsc-rows>span{display:flex;justify-content:space-between;gap:10px}
+.fsc-rows b{font-weight:500;color:var(--ink);text-align:right;overflow-wrap:anywhere}
+.fsc-trend{flex-direction:column!important;align-items:flex-start!important;gap:1px;margin-top:4px;padding-top:7px;border-top:1px dashed var(--line)}
+.fsc-trend b{text-align:left!important;font-weight:400!important}
+.fsc-trend.down,.fsc-trend.down b{color:var(--ok)}
+.fsc-trend.up,.fsc-trend.up b{color:#ff9c72}
+.lvb-1 .fsc-flame{background:linear-gradient(140deg,#2f8f5b,#3fae72)}
+.lvb-2 .fsc-flame{background:linear-gradient(140deg,#b98a1c,#d4a437)}
+.lvb-3 .fsc-flame{background:linear-gradient(140deg,#cf5b22,#e8763c)}
+.lvb-4 .fsc-flame{background:linear-gradient(140deg,#b3261e,#d9541e)}
+
+/* ---- 总览大屏右栏：机群概览卡（mockup「任务执行」卡） ---- */
+.fleet-mini{padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--scr-panel);color:var(--scr-muted);font:400 12.5px var(--font-data);flex-shrink:0}
+.fm-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+.fm-head b{font:700 13.5px var(--font-ui);color:var(--scr-ink)}
+.fm-head small{color:var(--scr-muted)}
+.fm-bar{height:6px;background:#0d1520;border-radius:3px;overflow:hidden;margin-bottom:9px}
+.fm-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#2f8f5b,#5fbd92);border-radius:3px;transition:width .6s ease}
+.fm-groups{display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center}
+.fm-groups span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.fm-groups i{width:8px;height:8px;border-radius:50%}
+.fm-groups b{color:var(--scr-ink);font-weight:500}
+.fm-groups .fm-live{margin-left:auto;color:var(--scr-ok)}

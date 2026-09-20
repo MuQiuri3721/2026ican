@@ -33,11 +33,13 @@ def main() -> int:
         facts = page.locator(".scenario-facts").inner_text()
         ok &= report(22, "主场景一键生成", "450" in facts and "0.18" in facts, facts[:90].replace("\n", " "))
         # 自动开始模拟（无需点开始按钮）
+        page.get_by_role("button", name="任务调度").click()
         page.locator(".plan-summary").wait_for(timeout=300000)
         badge = page.locator(".task-badge").inner_text()
         ok &= report(22, "一键自动研判", "待确认" in badge, badge)
 
         # FE-75：证据窗（真实检测模式才渲染；当前后端未带端点则跳过该断言）
+        page.get_by_role("button", name="任务调度").click()
         if page.locator(".evidence-window").count():
             boxes = page.evaluate("Array.from(document.querySelectorAll('.ew-box em')).map(e=>e.textContent)")
             ok &= report(22, "证据窗渲染", len(boxes) > 0, str(boxes[:4]))
@@ -46,6 +48,7 @@ def main() -> int:
             ok &= report(22, "证据窗(真实检测模式)", "real" not in live, f"detector-live={live[:60] or '无'}")
 
         # 清理：终止任务
+        page.get_by_role("button", name="任务调度").click()
         page.get_by_placeholder("驳回/终止原因（必填）").fill("round22 清理")
         page.get_by_role("button", name="终止任务").click()
         page.wait_for_function("document.querySelector('.task-badge')?.textContent?.includes('已终止')", timeout=30000)

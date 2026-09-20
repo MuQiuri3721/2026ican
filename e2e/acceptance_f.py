@@ -71,7 +71,7 @@ def main() -> int:
                 print(f"[诊断] 历史行数={rows.count()} 第一行={rows.first.inner_text()[:60] if rows.count() else '无'}")
                 rows.first.click()
                 session.page.wait_for_timeout(2500)
-                session.page.get_by_role("button", name="火情研判").click()
+                session.page.get_by_role("button", name="任务调度").click()
                 session.page.wait_for_timeout(1000)
                 print(f"[诊断] plan-summary={session.page.locator('.plan-summary').count()} evacuation-summary={session.page.locator('.evacuation-summary').count()} 任务状态徽标={session.page.locator('.task-badge').first.inner_text() if session.page.locator('.task-badge').count() else '无'}")
             except Exception as error:

@@ -21,9 +21,13 @@ def main() -> int:
     try:
         session.goto_app()
         page.get_by_text("系统运行正常").wait_for(timeout=20000)
+        page.get_by_role("button", name="火情研判").click()
         page.set_input_files("input[type=file]", "e2e/_real_images/fire1.jpg")
+        page.get_by_role("button", name="火情研判").click()
         page.get_by_text("影像已接入").wait_for(timeout=10000)
+        page.get_by_role("button", name="火情研判").click()
         page.get_by_role("button", name="启动智能研判").click()
+        page.get_by_role("button", name="任务调度").click()
         page.locator(".plan-summary").wait_for(timeout=300000)
 
         live = page.evaluate("document.querySelector('.detector-live')?.textContent || ''")

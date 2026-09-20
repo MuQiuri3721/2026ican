@@ -26,6 +26,7 @@ def main() -> int:
 
         # 点击第一条恢复：界面载入该任务的方案与状态
         session.page.locator(".history-row").first.click()
+        session.page.get_by_role("button", name="任务调度").click()
         session.page.wait_for_function(
             "document.querySelector('.plan-summary')?.textContent?.includes('FLP')",
             timeout=20000,
@@ -33,7 +34,7 @@ def main() -> int:
         ok &= report(6, "历史任务恢复", True)
 
         # 日志页应展示恢复任务的事件（来自 events 接口）
-        session.page.get_by_role("button", name="任务日志").click()
+        session.session.page.get_by_role("button", name="任务日志").click()
         session.page.locator(".full-logs > div").first.wait_for(timeout=15000)
         ok &= report(6, "恢复任务事件", True)
 

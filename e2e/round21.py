@@ -41,6 +41,7 @@ def main() -> int:
 
         # 抓帧并研判：自动接图 + 自动启动分析
         page.get_by_role("button", name="抓帧并研判").click()
+        page.get_by_role("button", name="火情研判").click()
         page.get_by_text("影像已接入").wait_for(timeout=10000)
         ok &= report(21, "抓帧自动接入", True)
         file_label = page.evaluate("document.querySelector('.dropzone span')?.textContent || ''")
@@ -49,6 +50,7 @@ def main() -> int:
         ok &= report(21, "取景窗自动关闭", page.locator(".camera-pane").count() == 0)
 
         # 自动进入研判（无需再点启动按钮）
+        page.get_by_role("button", name="任务调度").click()
         page.locator(".plan-summary").wait_for(timeout=300000)
         badge = page.locator(".task-badge").inner_text()
         ok &= report(21, "采集后自动研判", "待确认" in badge, badge)

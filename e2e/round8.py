@@ -13,24 +13,32 @@ def main() -> int:
     try:
         session.goto_app()
         session.page.get_by_text("系统运行正常").wait_for(timeout=15000)
+        session.page.get_by_role("button", name="火情研判").click()
         session.page.set_input_files("input[type=file]", "e2e/small-fire.jpg")
+        session.page.get_by_role("button", name="火情研判").click()
         session.page.get_by_text("影像已接入").wait_for(timeout=10000)
+        session.page.get_by_role("button", name="火情研判").click()
         session.page.get_by_role("button", name="启动智能研判").click()
+        session.page.get_by_role("button", name="任务调度").click()
         session.page.wait_for_function(
             "document.querySelector('.plan-summary')?.textContent?.includes('FLP：')", timeout=300000
         )
 
         # 禁用 E1、E2，出动上限 2 → 调整
+        session.page.get_by_role("button", name="任务调度").click()
         session.page.locator(".people-risk select").nth(1).select_option("2")
         session.page.locator(".uav-disable input[value='E1']").check()
         session.page.locator(".uav-disable input[value='E2']").check()
+        session.page.get_by_role("button", name="任务调度").click()
         session.page.get_by_role("button", name="按约束调整").click()
+        session.page.get_by_role("button", name="任务调度").click()
         session.page.wait_for_function(
             "document.querySelector('.plan-summary b')?.textContent?.includes('v2')", timeout=30000
         )
         ok &= report(8, "调整生成 v2", True)
 
         # 主方案任务分工 chips 不含 E1/E2
+        session.page.get_by_role("button", name="任务调度").click()
         session.page.wait_for_function(
             "Array.from(document.querySelectorAll('.task-chips b')).filter(b=>['E1','E2'].includes(b.textContent.trim())).length === 0",
             timeout=20000,
