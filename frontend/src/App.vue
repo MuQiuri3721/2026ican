@@ -792,7 +792,7 @@ function resetMapView() { mapZoom.value = 1; mapPan.value = { x: 0, y: 0 } }
 function startMapDrag(event) {
   if (event.button !== 0) return
   // 交互元素（标记/图例/面板/控件）不触发地图拖拽，避免 pointer capture 吞掉点击
-  if (event.target?.closest?.('.map-node, .map-legend, .map-controls, .water-panel, .deploy-panel, .map-source, .marker-detail, .stream-panel')) return
+  if (event.target?.closest?.('.map-node, .map-legend, .map-controls, .water-panel, .deploy-panel, .map-source, .marker-detail, .stream-panel, .map-taskbar')) return
   mapDragging.value = true
   event.currentTarget?.setPointerCapture?.(event.pointerId)
   mapDragStart.value = { x: event.clientX - mapPan.value.x, y: event.clientY - mapPan.value.y }
@@ -1670,12 +1670,17 @@ onMounted(() => {
 </div>
       <div v-if="amapReady && mapMode === '2d'" class="map-coords" aria-live="polite" aria-label="光标经纬度"><Crosshair :size="13" /> <template v-if="cursorCoords">{{ cursorCoords.longitude.toFixed(6) }}°E · {{ cursorCoords.latitude.toFixed(6) }}°N</template><template v-else>移动鼠标读取经纬度</template></div>
       </div>
-      <EvolutionChart :rounds="activeRounds" /></div>
+      </div>
       <aside class="map-side-rail" aria-label="态势信息栏">
         <div class="fleet-mini" aria-label="机群概览">
           <div class="fm-head"><b>任务执行</b><small>{{ (analysisResult?.dispatch_plan?.selected_uavs || []).length }}/{{ drones.length }} 架出动</small></div>
           <div class="fm-bar"><i :style="{ width: Math.round((analysisResult?.dispatch_plan?.selected_uavs || []).length / Math.max(drones.length, 1) * 100) + '%' }"></i></div>
           <div class="fm-groups"><span v-for="group in fleetGroups" :key="group.key"><i :style="{ background: SUBGROUP_COLORS[group.key] || '#8fa39a' }"></i>{{ group.label.replace('单元', '') }} <b>{{ group.drones.length }}</b></span><span class="fm-live"><i class="live-dot"></i>{{ (analysisResult?.dispatch_plan?.selected_uavs || []).length }} 架任务中</span></div>
+        </div>
+        <EvolutionChart :rounds="activeRounds" />
+        <div v-if="previewUrl" class="live-feed-card" aria-label="现场影像">
+          <div class="lf-head"><b>现场影像</b><small><span class="live-dot"></span>实时</small></div>
+          <img :src="previewUrl" alt="现场影像帧">
         </div>
         <div class="stream-panel" aria-label="协作与事件流"><div class="stream-head"><b>{{ streamMode === 'agent' ? '协作流' : '事件流' }}</b><span class="stream-tabs"><button :class="['stream-tab', { on: streamMode === 'agent' }]" :aria-pressed="streamMode === 'agent'" @click.stop="streamMode = 'agent'">协作</button><button :class="['stream-tab', { on: streamMode === 'events' }]" :aria-pressed="streamMode === 'events'" @click.stop="streamMode = 'events'">事件</button></span><small>{{ streamMode === 'agent' ? agentMessages.length + ' 条' : logs.length + ' 条' }}</small></div><div v-if="streamMode === 'agent'" class="stream-rows"><div v-if="!agentMessages.length" class="stream-empty">启动研判后，指挥官建案 / 侦察发现 / 方案提案 / 每轮自主研判等六角色协作消息将实时滚动显示。</div><div v-for="message in agentMessages.slice(-30).reverse()" :key="'am' + message.seq" class="stream-row stream-agent-row"><span class="stream-time">{{ (message.ts || '').slice(11, 19) }}</span><div class="stream-agent-body"><div class="stream-agent-head"><span class="agent-chip" :class="'mt-' + message.msg_type">{{ agentMsgLabel(message.msg_type) }}</span><small :class="'src-' + message.source">{{ agentSourceLabel(message.source) }}</small></div><p class="stream-content"><i>{{ message.frm }} → {{ message.to }}</i>{{ message.content }}</p></div></div></div><div v-else class="stream-rows"><div v-if="!logs.length" class="stream-empty">启动研判后，感知 / 研判 / 调度 / 监测事件将实时滚动显示。</div><div v-for="(log, index) in foldedLogs.slice(0, 30)" :key="log.message + log.timestamp + index" :class="['stream-row', { latest: index === 0 }]"><span class="stream-time">{{ logTime(log, index) }}</span><span class="stream-chip" :style="{ color: streamType(log).color, borderColor: streamType(log).color + '55' }">{{ streamType(log).label }}</span><span class="stream-text">{{ logText(log) }}</span><b v-if="log.repeat > 1" class="log-repeat">×{{ log.repeat }}</b></div></div></div>
         <div class="deploy-panel" aria-label="任务部署"><div class="deploy-head"><b>任务部署</b><small>{{ deploymentList.length }} 架 · {{ (analysisResult?.dispatch_plan?.selected_uavs || []).length }} 架出动</small></div><template v-for="group in deploymentGroups" :key="group.key"><div class="deploy-group-label" :style="{ color: SUBGROUP_COLORS[group.key] || '#8fa39a' }">{{ group.label }}</div><div class="deploy-rows"><div v-for="drone in group.rows" :key="drone.id" :class="['deploy-row', deployRowClass(drone)]" @mouseenter="hoveredDroneId = drone.id" @mouseleave="hoveredDroneId = ''" @click="focusDeployment(drone)" :title="'点击在地图上查看 ' + drone.id"><b>{{ drone.id }}</b><span>{{ drone.label }} · {{ drone.status }}</span><div class="deploy-soc"><i :class="drone.soc < 25 ? 'soc-low' : drone.soc < 50 ? 'soc-mid' : ''" :style="{ width: drone.soc + '%' }"></i></div><small>{{ drone.soc }}%</small><em v-if="missionPhaseText(drone.id) || (drone.task && drone.task !== '待命')">{{ missionPhaseText(drone.id) || drone.task }}</em></div></div></template></div>
