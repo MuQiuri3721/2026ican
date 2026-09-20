@@ -38,3 +38,4 @@ data/yolo_sample_check/
 /external/
 yolo_server/best_v2.pt
 e2e/_app_compiled.js
+data/analysis_store.db-journal
