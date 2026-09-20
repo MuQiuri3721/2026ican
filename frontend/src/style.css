@@ -603,3 +603,7 @@ html.projection .stream-rows{font-size:13px}
 /* FE-77 轮次账本发散条 */
 .evo-ledger-wrap{border-top:1px dashed var(--line);margin-top:2px}
 .evo-ledger{display:block;width:100%;height:48px}
+
+/* FE-75 修复：决策面板 flex column + max-height 下内容超高时子元素被 flex-shrink 压扁
+   （证据窗曾压成 2px）——禁收缩，让面板滚动而非压扁 */
+.dashboard .decision-panel > *{flex-shrink:0}
