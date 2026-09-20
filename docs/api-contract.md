@@ -253,7 +253,7 @@ Query：`latitude`（默认 32.0725，紫金山主峰）、`longitude`（默认 
     "source_image": "small-fire.jpg",
     "data_mode": "固定演示数据 · 规则引擎",
     "pipeline_stages": [{"id": "ingest", "label": "影像接入", "status": "completed", "source": "上传文件"}, "..."],
-    "fleet": ["...同 §4.1 归一化 8 架"],
+    "fleet": ["...同 §4.1 归一化 12 架（2 侦察 R + 6 灭火 E + 4 支援 S，S3/S4 multi_role 计入灭火上限）"],
     "inventory": {"...同 §4.2"},
     "explanation": "当前为III 级 · 高风险，火情负荷 245.7 FLP（18 个 100m² 网格）...",
     "agent": {"skill_chain": {"...9 步核心 Skill 链结构化结果（确认有人时追加 evacuation；route_planning/task_execution/closed_loop_monitoring 已移出核心链，仅存于兼容注册表）"}, "chain_order": ["..."], "data_mode": "demo-stub + rules"},
