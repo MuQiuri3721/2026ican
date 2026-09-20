@@ -482,6 +482,22 @@ def detect_fire(image_name: str = "default", image_path: Optional[str] = None, s
             with urllib.request.urlopen(request, timeout=5) as response:
                 result = _validate_external_payload(json.loads(response.read().decode()), ("detections",), "detect_fire")
             # 来源/模型透传（BE-19）：服务声明优先（如 local-yolo-service），缺省保持 pwm-yolo-adapter 口径
+            # BE-21（审计补充）：真模型 0 框（画面无火/烟，或模型未识别）时如实回落
+            # fixture 并标注——0 框若直通面积推算会得 0m²，把大火伪装成「无火情」，掩盖
+            # 模型漏检这一事实。detections=[] 保留在载荷中供证据链追溯。
+            if not result.get("detections"):
+                observation = demo_observation(image_name, image_path)
+                observation.update({
+                    "detections": [],
+                    "detector_zero_detections": True,
+                    "mode": "real",
+                    "source": result.get("source") or "pwm-yolo-adapter",
+                    "model": result.get("model") or "pwm-yolo",
+                    "image_name": image_name, "image_path": image_path,
+                    "adapter_fallback": {"code": "detector_zero_detections",
+                                         "message": "真模型未检出火/烟目标，面积回退场景 fixture（模型漏检风险如实标注）"},
+                })
+                return observation
             result.update({
                 "mode": "real",
                 "source": result.get("source") or "pwm-yolo-adapter",

@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -651,3 +652,25 @@ def test_frame_sequence_real_yolo_payload_none_fields():
     assert out["frames"][0]["area_source"] == "detector-boxes"
     # 趋势统计对显式 None 行不再崩溃
     assert analyze_visual_trend([{"fire_area_m2": None}, {"fire_area_m2": 5.0}])["status"] == "insufficient_data"
+
+
+def test_real_detector_zero_detections_falls_back_honestly():
+    """BE-21（真模型终验抓出）：真模型 0 框（漏检/画面无目标）时不得把面积推算成 0
+    伪装无火情——如实回落场景 fixture 并标注 detector_zero_detections。"""
+    from unittest import mock
+
+    from backend.app.tools.core import detect_fire
+
+    real_img = (Path(__file__).parent.parent / "e2e" / "small-fire.jpg").read_bytes()
+    zero_payload = {"detections": [], "image_width": 1280, "image_height": 720,
+                    "mode": "real", "source": "local-yolo-service", "model": "yolo11n-dfire-v1"}
+    with mock.patch.dict(os.environ, {"FIRE_YOLO_ENDPOINT": "http://127.0.0.1:9000/detect"}), \
+         mock.patch("backend.app.tools.core.Path.read_bytes", return_value=real_img), \
+         mock.patch("backend.app.tools.core.urllib.request.urlopen",
+                    return_value=mock.mock_open(read_data=json.dumps(zero_payload).encode()).return_value):
+        observation = detect_fire(image_name="large-fire.jpg", image_path="x.jpg")
+    assert observation.get("detector_zero_detections") is True
+    assert observation.get("mode") == "real"
+    assert observation.get("detections") == []
+    assert observation.get("fire_area_m2") not in (None, 0), "应回落 fixture 面积而非 0"
+    assert observation.get("adapter_fallback", {}).get("code") == "detector_zero_detections"
