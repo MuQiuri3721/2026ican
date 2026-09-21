@@ -686,6 +686,29 @@ class AnalysisService:
             # 推演期间任务被终止：本轮作废，不得覆盖终态
             raise ValueError("任务已终止，本轮反馈作废")
         latest = analysis_store.get(analysis_id); analysis_store.update(analysis_id, rounds=[*latest.rounds, round_data])
+        # ---- 编成兵力用尽的到顶抑制（BE-23 补强，10 轮矩阵实测 v13 风暴）：上限已到
+        # 编成顶 + 当前方案仍 cannot_control 时，压制不足类/20% 涨幅的自动重规划只会
+        # 产出同结论的新版本（版本噪音+审批轰炸），物理结论不变。抑制自动 replan，
+        # triggers 照常留痕；每 3 轮一条编成用尽提醒。人工调整路径不受限；
+        # 真实新观测（风变/人员变化）不属压制类，仍正常触发重排布防。
+        dp_top = (current.result or {}).get("dispatch_plan") or {}
+        cons_top = dict((current.result or {}).get("constraints") or {})
+        cur_cap_top = int(cons_top.get("max_drones", 4) or 4)
+        capable_top = sum(
+            1 for u in (analysis_store.fleet(analysis_id) or [])
+            if (str(u.get("uav_id", "")).startswith("E") or (str(u.get("uav_id", "")).startswith("S") and u.get("multi_role")))
+            and u.get("status") != "fault"
+        )
+        if capable_top <= cur_cap_top and dp_top.get("control_verdict") == "cannot_control":
+            auto_class = {"suppression_insufficient_persistent", "fire_load_increase_over_20_percent", "agent_insufficient", "soc_below_return_threshold", "resource_or_soc"}
+            if any(t in auto_class for t in triggers):
+                triggers = [t for t in triggers if t not in auto_class]
+                if request.round % 3 == 1:
+                    analysis_store.add_event(
+                        analysis_id, "monitor",
+                        f"编成兵力已用尽（出动上限 {cur_cap_top} = 编成 {capable_top}）仍压制不足，维持现方案持续作业；建议请求外部增援",
+                        "rules",
+                    )
         if triggers and action != "finish":
             analysis_store.add_event(analysis_id, "replan", "触发重规划关键事件：" + "、".join(triggers), "rules")
             # 兵力不足型压不住的自动增援（调度闭环修复）：此前自动重规划沿用原审批上限
