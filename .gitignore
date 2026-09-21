@@ -39,3 +39,8 @@ data/yolo_sample_check/
 yolo_server/best_v2.pt
 e2e/_app_compiled.js
 data/analysis_store.db-journal
+
+# pwm/（队友独立 PWM-Net 复现）训练产物与缓存不入库
+pwm/runs/
+pwm/**/__pycache__/
+pwm/_class_check.jpg
