@@ -93,7 +93,9 @@ print("\n===== 分析 =====")
 for f in results:
     flags = []
     if f["v1_verdict"] == "can_control" and f["final_status"] != "completed":
-        flags.append("裁决虚高?can_control未灭")
+        # can_control 未灭需对照预估控制时长：测试窗口 20 轮=100 模拟分钟，
+        # 预估 earliest > 100 属"窗口不足"而非裁决虚高（round4 113min 实例）
+        flags.append("can_control未灭(窗口100min,需对照预估)")
     if f["soc_min_flying"] < 25:
         flags.append(f"SOC破硬线{f['soc_min_flying']}")
     if f["versions"] >= 4:
