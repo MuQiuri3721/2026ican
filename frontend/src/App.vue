@@ -660,8 +660,8 @@ const screenKpis = computed(() => {
   const active = (analysisResult.value?.dispatch_plan?.selected_uavs || []).length
   const round = activeRounds.value.at(-1)
   return [
-    { label: '火焰面积', value: fire.fire_area_m2 != null ? formatNumber(fire.fire_area_m2) : '—', unit: 'm²', tone: 'ember', sub: fireChange.value },
-    { label: '火情负荷', value: fire.fire_load_flp != null ? String(fire.fire_load_flp) : '—', unit: 'FLP', tone: 'danger', sub: fire.growth_rate != null ? `增长率 ${Math.round(fire.growth_rate * 100)}%` : '—' },
+    { label: '火焰面积', value: monitorArea.value != null ? formatNumber(monitorArea.value) : '—', unit: 'm²', tone: 'ember', sub: fireChange.value },
+    { label: '火情负荷', value: fireFlpNow.value != null ? String(Math.round(fireFlpNow.value * 10) / 10) : '—', unit: 'FLP', tone: 'danger', sub: fire.growth_rate != null ? `增长率 ${Math.round(fire.growth_rate * 100)}%` : '—' },
     { label: '现场风况', value: env.wind_speed != null ? String(env.wind_speed) : '—', unit: `m/s · ${env.wind_direction || '—'}`, tone: 'blue', sub: env.altitude != null ? `海拔 ${env.altitude} m` : '实时环境' },
     { label: '机群出动', value: String(active), unit: `/ ${total} 架`, tone: 'green', sub: `待命 ${Math.max(0, total - active)} 架` },
     { label: '监测轮次', value: String(activeRounds.value.length), unit: '轮', tone: 'slate', sub: round ? `最新 B ${round.after ? (round.after.fire_load_flp ?? round.after.flp) : '—'}` : `预计 ${controlWindow.value}` },
