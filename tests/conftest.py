@@ -10,6 +10,12 @@ Store 是"启动加载 + 写穿"模型：uvicorn 常驻进程与 pytest 进程�
 """
 import pytest
 
+# 环境磁盘快照在测试进程关闭（必须先于 backend.app 模块导入）：
+# 契约测试（失败回退演示）依赖"无缓存"语义，磁盘快照会把上一用例的数据泄漏进来。
+# 生产 uvicorn 进程默认开启（重启后保留最近真实抓取，BE-23 补强）。
+import os as _os
+_os.environ["ENV_SNAPSHOT_DISK"] = "0"
+
 from backend.app.agentkit import llm as agentkit_llm
 from backend.app.domain.store import analysis_store
 

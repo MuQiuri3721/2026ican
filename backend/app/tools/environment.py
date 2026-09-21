@@ -140,6 +140,20 @@ class EnvironmentTool(BaseTool):
                     # partial（个别数据源失败）不写缓存：空结果不该占住 5 分钟 TTL，下次请求重试数据源
                     if raw.get("status") == "ok":
                         environment_cache.set(cache_key, data)
+                    elif raw.get("status") == "error":
+                        # 全模块失败（系统级断网/DNS 故障）的 stale 兜底：safe_call 把模块异常
+                        # 吞成 status 字段，下方 except 的 stale 兜底对此路径永不触发——
+                        # real 模式曾直接 502 整个研判任务（round2-5 批量挂实锤）。
+                        # 回退值是最近一次真实抓取的缓存（非演示数据冒充），stale+原始错误如实标注。
+                        stale_value, _is_stale = environment_cache.get_with_stale(cache_key)
+                        if stale_value is not None:
+                            stale = dict(stale_value)
+                            stale["status"] = "stale"
+                            stale["stale"] = True
+                            stale["fallback"] = {"code": "environment_unavailable", "message": "环境数据源全部不可用，回退最近真实缓存"}
+                            if metadata:
+                                stale["metadata"] = metadata
+                            return stale
                     return data
                 except Exception as error:
                     stale_value, is_stale = environment_cache.get_with_stale(cache_key)

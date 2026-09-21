@@ -11,7 +11,9 @@ import urllib.request
 
 from playwright.sync_api import sync_playwright, Page, BrowserContext
 
-FRONTEND = "http://localhost:5173"
+# E2E 前端目标可切换：默认 dev 5173；设 E2E_FRONTEND=http://localhost:4173 跑生产
+# preview（交付形态，且规避 vite dev 代理长跑后对带 body POST 的间歇性楔死）
+FRONTEND = os.environ.get("E2E_FRONTEND", "http://localhost:5173")
 BACKEND = "http://127.0.0.1:8000"
 
 _CHROMIUM = os.path.join(
@@ -60,6 +62,13 @@ class Session:
     def goto_app(self) -> None:
         self.page.goto(FRONTEND)
         self.page.get_by_role("heading", name="森林火灾智能应急指挥平台").wait_for(timeout=30000)
+        # 在线态守卫：前端启动探测 /api/health 一旦瞬时失败即降级"本地演示"且不再自愈
+        # （vite dev 代理长跑后楔死时必现，round2-5 曾批量挂）。落地若见离线态则重载一次，
+        # 重载后仍离线再放行（让脚本以真实失败呈现，不掩盖产品问题）。
+        if self.page.get_by_text("本地演示模式").count():
+            self.page.reload(wait_until="networkidle")
+            self.page.get_by_role("heading", name="森林火灾智能应急指挥平台").wait_for(timeout=30000)
+        self.page.get_by_text("系统运行正常").wait_for(timeout=20000)
         # 默认落地页是态势总览（大屏）；绝大多数轮次的上传/研判流程在火情研判页——统一导航
         if self.page.locator(".upload-panel").count() == 0:
             self.page.get_by_role("button", name="火情研判").first.click()
