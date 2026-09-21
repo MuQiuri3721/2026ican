@@ -60,6 +60,10 @@ class Session:
     def goto_app(self) -> None:
         self.page.goto(FRONTEND)
         self.page.get_by_role("heading", name="森林火灾智能应急指挥平台").wait_for(timeout=30000)
+        # 默认落地页是态势总览（大屏）；绝大多数轮次的上传/研判流程在火情研判页——统一导航
+        if self.page.locator(".upload-panel").count() == 0:
+            self.page.get_by_role("button", name="火情研判").first.click()
+            self.page.locator(".upload-panel").wait_for(timeout=8000)
 
     def api(self, method: str, path: str, payload: dict | None = None) -> dict:
         request = urllib.request.Request(

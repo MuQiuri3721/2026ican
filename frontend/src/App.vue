@@ -64,7 +64,7 @@ import {
   Zap,
 } from 'lucide-vue-next'
 
-const activeTab = ref('command')
+const activeTab = ref('map') // 用户拍板：默认落地态势总览（大屏）；研判流程经 E2E harness 统一导航适配
 const analyzing = ref(false)
 const monitoring = ref(false)
 const uploaded = ref(false)
