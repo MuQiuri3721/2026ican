@@ -53,6 +53,8 @@ def positive(value: float, name: str) -> float:
 
 def resolve_wind_band(wind_speed: float = 0, **_: Any) -> Dict[str, Any]:
     ws = positive(wind_speed, "wind_speed")
+    # 边界归属为 [0,4) [4,6) [6,8) [8,∞)（test_wind_bands_frozen_levels 冻结口径，气象标准
+    # 半开区间）；中文标签 "0–4" 字面上像含 4——文案歧义已在审计记录，勿再"修复"归属
     bands = v1_config().get("wind_bands") or [{"max_mps": 4.0, "k_wind": 1.0, "label": "0–4 m/s"}, {"max_mps": 6.0, "k_wind": 1.2, "label": "4–6 m/s"}, {"max_mps": 8.0, "k_wind": 1.5, "label": "6–8 m/s"}]
     for band in bands:
         if ws < band["max_mps"]:
@@ -435,7 +437,13 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
     if module == "co2_6kg":
         quantity = 6.0
     kappa, _compatible = _agent_kappa(module, fire_type)
-    fire_load = max(1.0, float(fire.get("fire_load_flp") or fire["fire_area_m2"] / 180.0))
+    # 零值语义（审计实锤）：fire_load_flp=0 是显式合法值（余烬/无负荷），此前 `or` 链
+    # 把 0 跳到 area/180 再被 max(1.0) 抬成 1.0 FLP；除数 180 亦违反「area_per_flp
+    # 禁硬编码」冻结口径——改显式 None 判断 + 场景比率回退。
+    raw_load = fire.get("fire_load_flp")
+    if raw_load is None:
+        raw_load = float(fire.get("fire_area_m2") or 0) / float(fire.get("area_per_flp") or 180.0)
+    fire_load = max(0.0, float(raw_load))
     # BE-13（评审问题4）：比例增长率是场景/观测层参数（研判 growth_rate），只随「新观测
     # 重规划」更新；方案同时落 growth_baseline_flp（生成时点负荷）。approve 盖章的
     # replan_trigger_baseline_flp 只作重规划触发线，不再参与增长计算——审批/重规划
