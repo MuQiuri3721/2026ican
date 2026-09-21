@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:"Microsoft YaHei","PingFang SC",sans-serif; }
+  body { width:1600px; height:700px; background:#ffffff; position:relative; overflow:hidden; }
+  .stage { position:absolute; inset:26px 30px 22px; display:flex; flex-direction:column; }
+  .row { height:530px; display:flex; }
+
+  .zone-head { font-size:21px; font-weight:700; letter-spacing:2px; margin-bottom:14px; display:flex; align-items:center; gap:8px;}
+  .zone-head i { width:10px; height:10px; border-radius:2px; display:inline-block; }
+
+  /* 起点列 */
+  .col-start { width:335px; display:flex; flex-direction:column; }
+  .col-start .zone-head { color:#5b6b7c; } .col-start .zone-head i { background:#8fa3b8; }
+  .start-card { background:linear-gradient(135deg,#eef2f6,#e2e9f0); border:1px solid #c3cfda; border-left:4px solid #8fa3b8;
+    border-radius:10px; padding:14px 18px; margin-bottom:13px; }
+  .start-card b { display:block; font-size:20px; color:#41556a; margin-bottom:3px; }
+  .start-card span { font-size:13.5px; color:#7a8b9c; line-height:1.4; }
+
+  .arrow { width:60px; display:flex; align-items:center; justify-content:center; }
+
+  /* 中部机制列 */
+  .col-mech { flex:1; display:flex; flex-direction:column; margin:0 6px; }
+  .col-mech .zone-head { color:#1b5fa8; } .col-mech .zone-head i { background:#1b5fa8; }
+  .mech-grid { flex:1; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:14px; }
+  .mech-card { background:#f5f9fd; border:1.5px solid #b9d2ea; border-radius:12px; padding:16px 18px; position:relative;
+    display:flex; flex-direction:column; justify-content:center; }
+  .mech-card h3 { font-size:21px; color:#14497f; margin-bottom:7px; }
+  .mech-card p { font-size:14px; color:#5c7186; line-height:1.5; }
+  .mech-card .tag { position:absolute; top:13px; right:13px; font-size:12px; padding:2px 9px; border-radius:999px;
+    background:#e3eef8; color:#14497f; }
+  .mech-card.orange { border-color:#ecc4a6; background:#fdf8f3; }
+  .mech-card.orange h3 { color:#b45a1b; } .mech-card.orange .tag { background:#fbeadb; color:#b45a1b; }
+  .mech-card.gold { border-color:#e3cf96; background:#fdfaf1; }
+  .mech-card.gold h3 { color:#9c7a14; } .mech-card.gold .tag { background:#f5ecd2; color:#9c7a14; }
+
+  /* 右侧闭环列 */
+  .col-loop { width:520px; display:flex; flex-direction:column; }
+  .col-loop .zone-head { color:#123f6b; } .col-loop .zone-head i { background:#123f6b; }
+  .loop-wrap { flex:1; position:relative; }
+  .loop-node { position:absolute; width:152px; padding:9px 6px 8px; border-radius:12px; text-align:center;
+    background:linear-gradient(150deg,#1b5fa8,#123f6b); color:#fff; box-shadow:0 3px 10px rgba(18,63,107,.25); }
+  .loop-node b { display:block; font-size:18px; letter-spacing:1px; }
+  .loop-node span { font-size:11.5px; opacity:.78; }
+  .gate { position:absolute; background:#c9971c; color:#fff; font-size:13px; padding:4px 11px; border-radius:999px;
+    box-shadow:0 2px 6px rgba(160,120,20,.35); font-weight:700; letter-spacing:1px; }
+
+  /* 价值线 */
+  .value-line { height:82px; margin-top:18px; background:linear-gradient(90deg,#f2f7fc,#eef4fa); border:1px solid #d5e3f0;
+    border-radius:12px; display:flex; align-items:center; justify-content:space-around; padding:0 20px; }
+  .value-item { text-align:center; }
+  .value-item b { display:block; font-size:17.5px; color:#14497f; margin-bottom:3px; }
+  .value-item span { font-size:12.5px; color:#7a8b9c; }
+  .value-sep { width:1px; height:42px; background:#d5e3f0; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="row">
+    <div class="col-start">
+      <div class="zone-head"><i></i>起点 · 单点识别</div>
+      <div class="start-card"><b>火焰烟雾识别</b><span>模型输出检测框与置信度</span></div>
+      <div class="start-card"><b>单次告警提示</b><span>发现火情即结束，无后续跟踪</span></div>
+      <div class="start-card"><b>静态资源展示</b><span>机群与物资仅作列表罗列</span></div>
+    </div>
+    <div class="arrow">
+      <svg width="42" height="60" viewBox="0 0 42 60"><path d="M4 30 H28 M20 16 L34 30 L20 44" stroke="#1b5fa8" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="col-mech">
+      <div class="zone-head"><i></i>扩展机制</div>
+      <div class="mech-grid">
+        <div class="mech-card"><span class="tag">环境</span><h3>多源环境融合</h3><p>地形·坡度·植被·风速·水源·道路实时进入研判与补给决策</p></div>
+        <div class="mech-card orange"><span class="tag">决策</span><h3>确定性规则</h3><p>负荷·电量·药剂·时间全部由冻结规则计算，模型只观察不拍板</p></div>
+        <div class="mech-card"><span class="tag">机群</span><h3>三子群协同</h3><p>侦察·灭火·支援动态编组，故障接替与返航换电自动重组</p></div>
+        <div class="mech-card gold"><span class="tag">门禁</span><h3>人工审批</h3><p>生成方案不等于执行，批准·调整·驳回全程留痕</p></div>
+      </div>
+    </div>
+    <div class="arrow">
+      <svg width="42" height="60" viewBox="0 0 42 60"><path d="M4 30 H28 M20 16 L34 30 L20 44" stroke="#1b5fa8" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="col-loop">
+      <div class="zone-head"><i></i>形成能力 · 处置闭环</div>
+      <div class="loop-wrap">
+        <svg width="490" height="478" viewBox="0 0 490 478" style="position:absolute;inset:0;">
+          <defs>
+            <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#9db4c9"/></marker>
+            <marker id="arp" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#7a5fc9"/></marker>
+          </defs>
+          <!-- 主链向下 -->
+          <g stroke="#9db4c9" stroke-width="3" fill="none">
+            <path d="M215 66 V92" marker-end="url(#ar)"/>
+            <path d="M215 152 V178" marker-end="url(#ar)"/>
+            <path d="M215 324 V350" marker-end="url(#ar)"/>
+          </g>
+          <!-- 反馈：执行→重规划（紫虚线） -->
+          <path d="M215 238 V264" stroke="#7a5fc9" stroke-width="3" fill="none" stroke-dasharray="7 6" marker-end="url(#arp)"/>
+          <!-- 新版本再审批：重规划→执行（右侧紫实线回流） -->
+          <path d="M299 296 H400 Q416 296 416 280 V233 Q416 217 400 217 H303" stroke="#7a5fc9" stroke-width="3" fill="none" marker-end="url(#arp)"/>
+          <text x="430" y="262" font-size="12.5" fill="#7a5fc9" writing-mode="tb" letter-spacing="2">新版本再审批</text>
+        </svg>
+        <div class="loop-node" style="left:139px; top:14px;"><b>自主研判</b><span>多源融合评估</span></div>
+        <div class="loop-node" style="left:139px; top:100px;"><b>方案生成</b><span>编组·时间窗·缺口</span></div>
+        <div class="gate" style="left:172px; top:155px;">审批门</div>
+        <div class="loop-node" style="left:139px; top:186px;"><b>持续执行</b><span>轮次推进监测</span></div>
+        <div class="loop-node" style="left:139px; top:272px; background:linear-gradient(150deg,#7a5fc9,#5a43a5); box-shadow:0 3px 10px rgba(90,67,165,.28);"><b>反馈重规划</b><span>异常触发新版本</span></div>
+        <div class="loop-node" style="left:139px; top:358px;"><b>报告归档</b><span>全程可追溯</span></div>
+        <div style="position:absolute; left:139px; top:430px; width:152px; text-align:center; font-size:12.5px; color:#7a8b9c;">处置完成 · 结案</div>
+      </div>
+    </div>
+  </div>
+  <div class="value-line">
+    <div class="value-item"><b>更完整的任务链</b><span>从发现火情到结案归档</span></div>
+    <div class="value-sep"></div>
+    <div class="value-item"><b>更可解释的数字</b><span>每项结论可复算可审计</span></div>
+    <div class="value-sep"></div>
+    <div class="value-item"><b>更安全的执行门禁</b><span>关键动作由人确认</span></div>
+    <div class="value-sep"></div>
+    <div class="value-item"><b>更持续的处置能力</b><span>跟随火情变化滚动重规划</span></div>
+  </div>
+</div>
+</body>
+</html>

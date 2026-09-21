@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:"Microsoft YaHei","PingFang SC",sans-serif; }
+  body { width:1680px; height:1720px; background:#fff; position:relative; overflow:hidden; }
+  .stage { position:absolute; inset:26px 30px; display:flex; flex-direction:column; gap:18px; }
+  .sec-head { font-size:21px; font-weight:700; color:#14497f; letter-spacing:2px; display:flex; align-items:center; gap:9px; margin-bottom:10px;}
+  .sec-head i { width:10px; height:10px; border-radius:2px; background:#1b5fa8; }
+
+  /* A 平台装配 */
+  .layers { display:flex; flex-direction:column; gap:8px; }
+  .layer { display:flex; align-items:center; gap:14px; border:1px solid #d5e0ea; border-radius:9px; padding:9px 16px; background:#f7fafd; }
+  .layer b { flex-shrink:0; width:150px; font-size:16.5px; color:#14497f; }
+  .layer span { font-size:14.5px; color:#5c7186; }
+  .layer.l1 { border-left:5px solid #1b5fa8; }
+  .layer.l2 { border-left:5px solid #2f8f5b; }
+  .layer.l3 { border-left:5px solid #d96a2b; }
+  .layer.l4 { border-left:5px solid #7a5fc9; }
+  .down { text-align:center; color:#9db4c9; font-size:14px; line-height:1; margin:-2px 0; }
+
+  /* B 功能分区 */
+  .zones { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .zcell { border:1px solid #dde6ee; border-radius:12px; overflow:hidden; background:#fff; }
+  .zhead { display:flex; align-items:baseline; gap:10px; padding:10px 14px 8px; }
+  .zhead .zn { font-size:16.5px; font-weight:700; color:#fff; background:#1b5fa8; border-radius:6px; padding:2px 10px; flex-shrink:0; }
+  .zhead .zt { font-size:15.5px; font-weight:700; color:#2c3e50; flex-shrink:0; }
+  .zhead .zv { font-size:12.5px; color:#8a99a8; }
+  .zcell img { display:block; width:100%; }
+
+  /* C 九步流程 */
+  .flow { display:flex; align-items:stretch; }
+  .fstep { flex:1; border:1px solid #cfdcea; border-radius:9px; padding:9px 4px 8px; text-align:center; background:#f5f9fd; position:relative; }
+  .fstep b { display:block; font-size:15px; color:#14497f; }
+  .fstep em { font-style:normal; font-size:11.5px; border-radius:999px; padding:1px 8px; display:inline-block; margin-top:5px; }
+  .fstep.user { background:#fdfaf1; border-color:#e3cf96; } .fstep.user em { background:#f5ecd2; color:#9c7a14; }
+  .fstep.sys em { background:#e3eef8; color:#14497f; }
+  .fstep.mix { background:#f7f5fc; border-color:#cdbfea; } .fstep.mix em { background:#eae3f6; color:#5a43a5; }
+  .farr { width:24px; display:flex; align-items:center; justify-content:center; color:#9db4c9; font-size:16px; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <!-- A 平台装配 -->
+  <div>
+    <div class="sec-head"><i></i>平台装配 —— 报警任务驱动的四层链路</div>
+    <div class="layers">
+      <div class="layer l1"><b>交互层</b><span>Vue 指挥工作台 · 七页界面：态势总览 / 火情研判 / 任务调度 / 无人机管理 / Agent 协作 / 历史复盘 / 系统设置</span></div>
+      <div class="down">▼</div>
+      <div class="layer l2"><b>服务层</b><span>FastAPI · 任务状态机 · 方案审批门 · 轮次推进 · SSE 实时事件 · SQLite 持久化 · 报告归档</span></div>
+      <div class="down">▼</div>
+      <div class="layer l3"><b>智能与规则层</b><span>六角色智能体协作 · Agent/Skill/Tool 编排 · 确定性规则引擎（火情负荷 / 电量 / 药剂 / 时间）</span></div>
+      <div class="down">▼</div>
+      <div class="layer l4"><b>接入层</b><span>YOLO 火焰烟雾检测 · VLM 视觉理解 · GIS / 气象服务 · 机群与物资库存 · 现场影像（图 / 序列 / 视频）</span></div>
+    </div>
+  </div>
+
+  <!-- B 功能分区 -->
+  <div>
+    <div class="sec-head"><i></i>功能分区 —— 四个功能区承载一次完整处置</div>
+    <div class="zones">
+      <div class="zcell">
+        <div class="zhead"><span class="zn">（一）</span><span class="zt">任务输入区</span><span class="zv">报警建档：地点 / 坐标 / 影像 / 约束</span></div>
+        <img src="screenshots/2-analysis-upload.png">
+      </div>
+      <div class="zcell">
+        <div class="zhead"><span class="zn">（二）</span><span class="zt">火场态势区</span><span class="zv">等级卡 · 实景地图 · 路网水源 · 协作流同屏</span></div>
+        <img src="screenshots/1-overview-map.png">
+      </div>
+      <div class="zcell">
+        <div class="zhead"><span class="zn">（三）</span><span class="zt">调度决策区</span><span class="zv">机群状态 · 方案解释 · 三态结论 · 审批操作</span></div>
+        <img src="screenshots/6-dispatch-plan.png">
+      </div>
+      <div class="zcell">
+        <div class="zhead"><span class="zn">（四）</span><span class="zt">反馈报告区</span><span class="zv">轮次账本 · 资源消耗 · 曲线与归档</span></div>
+        <img src="screenshots/7-dispatch-feedback.png">
+      </div>
+    </div>
+  </div>
+
+  <!-- C 九步流程 -->
+  <div>
+    <div class="sec-head"><i></i>操作流程 —— 九步闭环，用户只在三个节点介入</div>
+    <div class="flow">
+      <div class="fstep user"><b>① 报警建档</b><em>用户</em></div><div class="farr">›</div>
+      <div class="fstep sys"><b>② 自动取数</b><em>系统</em></div><div class="farr">›</div>
+      <div class="fstep sys"><b>③ 火情感知</b><em>系统</em></div><div class="farr">›</div>
+      <div class="fstep sys"><b>④ 综合研判</b><em>系统</em></div><div class="farr">›</div>
+      <div class="fstep sys"><b>⑤ 方案生成</b><em>系统</em></div><div class="farr">›</div>
+      <div class="fstep user"><b>⑥ 方案确认</b><em>用户</em></div><div class="farr">›</div>
+      <div class="fstep sys"><b>⑦ 轮次执行</b><em>系统</em></div><div class="farr">›</div>
+      <div class="fstep mix"><b>⑧ 反馈重规划</b><em>系统＋用户</em></div><div class="farr">›</div>
+      <div class="fstep sys"><b>⑨ 结束归档</b><em>系统</em></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
