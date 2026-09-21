@@ -588,6 +588,30 @@ class AnalysisService:
         # 曾在 6-12 FLP 时触发重规划风暴（每轮一个新方案版本）
         if base_flp and base_flp >= 20.0 and next_flp_now is not None and next_flp_now > base_flp * 1.2 and "fire_load_increase_over_20_percent" not in triggers:
             triggers.append("fire_load_increase_over_20_percent")
+        # ---- 兵力不足持续净涨（调度闭环②）：裁决压不住（cannot_control/maintain_only）时，
+        # 账本连续 3 轮「增长 > 压制」即触发持续压制不足——20% 相对涨幅线（上方 BE-12
+        # 绝对基线）在压制追平大半时净涨幅被摊薄，可能长期达不到，系统会陷入
+        # 「每轮确认压不住但零动作」的空转（5322m² 实测 11 轮零触发）。本触发器与
+        # 自动增援扩编配对：触发即重规划，重规划按证据链放宽出动上限（仍需二次审批）。
+        try:
+            _ledger_close = monitor_data.get("flp_ledger") or {}
+            _g_now = float(_ledger_close.get("growth_flp") or 0.0)
+            _s_now = float(_ledger_close.get("suppression_flp") or 0.0)
+            if _g_now > 0 and _s_now > 0 and _g_now > _s_now:
+                _streak = 1
+                for _prev in reversed(item.rounds):
+                    _pl = (_prev.get("after") or {}).get("flp_ledger") or {}
+                    _pg, _ps = float(_pl.get("growth_flp") or 0.0), float(_pl.get("suppression_flp") or 0.0)
+                    if _pg > 0 and _ps > 0 and _pg > _ps:
+                        _streak += 1
+                    else:
+                        break
+                    if _streak >= 3:
+                        break
+                if _streak >= 3 and "suppression_insufficient_persistent" not in triggers:
+                    triggers.append("suppression_insufficient_persistent")
+        except Exception:
+            pass  # 账本缺失时静默跳过（旧任务兼容），不阻断监测主流程
         # ---- 每轮自主研判（AG-2）：LLM 优先 / conservative 降级；仅 GLM 来源可追加 replan 触发器 ----
         # BE-12：rounds 存的是 dict（Envelope.rounds=List[Dict]），曾按模型属性访问
         # .before.fire_load_flp → 第 2 轮起 AttributeError 被 except 静默吞掉，
@@ -664,9 +688,42 @@ class AnalysisService:
         latest = analysis_store.get(analysis_id); analysis_store.update(analysis_id, rounds=[*latest.rounds, round_data])
         if triggers and action != "finish":
             analysis_store.add_event(analysis_id, "replan", "触发重规划关键事件：" + "、".join(triggers), "rules")
-            # Generate and persist a new version immediately; it remains gated by
-            # approval, so monitoring cannot continue on an unapproved plan.
-            self.replan(analysis_id, ReplanRequest(triggers=triggers))
+            # 兵力不足型压不住的自动增援（调度闭环修复）：此前自动重规划沿用原审批上限
+            # （缺省 4 架）——4 架本就压不住时，新方案依旧压不住，下轮涨 20% 再触发，
+            # 无限空转循环：编成内 E5/E6/S3/S4 闲置待命而系统反复"确认压不住"。
+            # 三态裁决已输出 cannot_control/maintain_only（建议增援），触发器甚至含
+            # agent_insufficient（兵力不足）——兵力不足触发的重规划却禁止增加兵力，自相矛盾。
+            # 修复：压不住证据链成立且编成内还有闲置可灭火机时，出动上限自动扩至编成上限；
+            # 扩编方案仍走 awaiting_confirmation 二次审批——指挥员保留批准/驳回权，非自动执行。
+            # 幂等：扩编后 cur_cap==capable，条件天然不再触发，无重规划风暴。
+            constraints = dict((current.result or {}).get("constraints") or {})
+            cur_cap = int(constraints.get("max_drones", 4) or 4)
+            ledger_now = round_data.get("after", {}).get("flp_ledger") or {}
+            growth_now = float(ledger_now.get("growth_flp") or 0.0)
+            suppress_now = float(ledger_now.get("suppression_flp") or 0.0)
+            verdict_now = ((current.result or {}).get("dispatch_plan") or {}).get("control_verdict")
+            losing = (
+                "agent_insufficient" in triggers
+                or verdict_now in {"cannot_control", "maintain_only"}
+                or (growth_now > 0 and suppress_now > 0 and growth_now > suppress_now)
+            )
+            if losing:
+                # 任务实时机队（store 权威快照），非 monitor 返回结构——此处曾误读
+                # result（monitor 返回无 fleet/constraints），capable 恒 0 扩编永不触发
+                capable = sum(
+                    1 for u in (analysis_store.fleet(analysis_id) or [])
+                    if (str(u.get("uav_id", "")).startswith("E") or (str(u.get("uav_id", "")).startswith("S") and u.get("multi_role")))
+                    and u.get("status") != "fault"
+                )
+                if capable > cur_cap:
+                    constraints["max_drones"] = capable
+                    analysis_store.add_event(
+                        analysis_id, "replan",
+                        f"自动增援扩编：压制不足（本轮增长 {growth_now:.1f} / 压制 {suppress_now:.1f} FLP），"
+                        f"出动上限 {cur_cap}→{capable}（编成内闲置灭火机编入），待二次审批",
+                        "rules",
+                    )
+            self.replan(analysis_id, ReplanRequest(triggers=triggers, constraints=constraints or None))
             round_data["next_action"] = "awaiting_confirmation"
         self._persist_dispatch_report(analysis_id)
         return round_data

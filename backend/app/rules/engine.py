@@ -627,7 +627,7 @@ def deterministic_v1_dispatch(state: Dict[str, Any], fire: Dict[str, Any], peopl
         "wind_band": band,
         "scoring": {"method": "J=0.40T+0.30B+0.15E+0.10M+0.05N", "lower_is_better": True, "chosen": chosen["score"], "simulation": {key: simulation[key] for key in ("controlled", "rounds_used", "stalled_reason", "swaps", "refills")}},
         "water_source_plan": _evaluate_water_plan(scene, inventory, base_distance_m=base_distance_m),
-        "replan_trigger": ["fire_load_increase_over_20_percent", "wind_band_changed", "soc_below_return_threshold", "agent_insufficient", "people_status_changed", "signal_below_threshold", "water_source_invalid"],
+        "replan_trigger": ["fire_load_increase_over_20_percent", "wind_band_changed", "soc_below_return_threshold", "agent_insufficient", "people_status_changed", "signal_below_threshold", "water_source_invalid", "suppression_insufficient_persistent"],
         "estimated_control_time": {"earliest_minutes": window[0] if window else None, "latest_minutes": window[1] if window else None, "window_minutes": window, "unit": "min", "simulated": simulation["controlled"]},
         "estimated_minutes": window[1] if window else None,
         "alternative_plan": alternatives,
