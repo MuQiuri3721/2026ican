@@ -13,13 +13,13 @@ def main() -> int:
     try:
         session.goto_app()
         session.page.get_by_text("系统运行正常").wait_for(timeout=15000)
-        session.page.get_by_role("button", name="火情研判").click()
+        session.page.get_by_role("button", name="火情监测").click()
         session.page.set_input_files("input[type=file]", "e2e/small-fire.jpg")
-        session.page.get_by_role("button", name="火情研判").click()
+        session.page.get_by_role("button", name="火情监测").click()
         session.page.get_by_text("影像已接入").wait_for(timeout=10000)
-        session.page.get_by_role("button", name="火情研判").click()
+        session.page.get_by_role("button", name="火情监测").click()
         session.page.get_by_role("button", name="启动智能研判").click()
-        session.page.get_by_role("button", name="任务调度").click()
+        session.page.get_by_role("button", name="机群调度").click()
         session.page.wait_for_function(
             "document.querySelector('.plan-summary')?.textContent?.includes('FLP：')", timeout=300000
         )
@@ -27,22 +27,22 @@ def main() -> int:
 
         # 时限 1 分钟：任何场景下全部可控候选必然超时（处置窗口下限 > 1 分钟）→
         # 规则 §8.2 选最快方案、输出 time_limit 缺口并判不可控（不依赖实时风速标定）
-        session.page.get_by_role("button", name="任务调度").click()
+        session.page.get_by_role("button", name="机群调度").click()
         session.page.locator(".people-risk input.minute-input").fill("1")
-        session.page.get_by_role("button", name="任务调度").click()
+        session.page.get_by_role("button", name="机群调度").click()
         session.page.get_by_role("button", name="按约束调整").click()
-        session.page.get_by_role("button", name="任务调度").click()
+        session.page.get_by_role("button", name="机群调度").click()
         session.page.wait_for_function(
             "document.querySelector('.plan-summary b')?.textContent?.includes('v2')", timeout=30000
         )
-        session.page.get_by_role("button", name="任务调度").click()
+        session.page.get_by_role("button", name="机群调度").click()
         summary = session.page.locator(".plan-summary").inner_text()
         ok &= report(9, "时限缺口 time_limit", "time_limit" in summary, summary[:160].replace("\n", " "))
 
-        # 判为不可控：hero 结论为增援（hero 面板在火情研判页）
+        # 判为不可控：hero 结论为增援（hero 面板在火情监测页）
         # OPT-P0-04/P3-01：时限缺口场景三态归入「维持压制 · 时限内未完成」，
         # 不再误报「暂不可控」（方案本身可控，只是超时限）——旧断言锁的是矛盾结论
-        session.page.get_by_role("button", name="火情研判").click()
+        session.page.get_by_role("button", name="火情监测").click()
         session.page.wait_for_function(
             "document.querySelector('.hero-footer strong')?.textContent?.includes('维持压制')",
             timeout=20000,

@@ -6,19 +6,19 @@
    ===================================================================== */
 
 .map-view.screen{
-  --scr-bg0:#0a1220;
-  --scr-bg1:#0d1a2c;
-  --scr-panel:#101f33;
-  --scr-panel-2:#152741;
-  --scr-line:#1d3452;
-  --scr-line2:#2b4768;
-  --scr-ink:#e6eef7;
-  --scr-muted:#8ba3bd;
+  --scr-bg0:#071322;
+  --scr-bg1:#0a1c38;
+  --scr-panel:#0c2040;
+  --scr-panel-2:#122c54;
+  --scr-line:#1a3a68;
+  --scr-line2:#2a5288;
+  --scr-ink:#eaf2ff;
+  --scr-muted:#8aa5c8;
   --scr-ember:#f0a848;
-  --scr-ok:#5fbd92;
+  --scr-ok:#4fd0a0;
   --scr-warn:#e2b95d;
   --scr-danger:#e07856;
-  --scr-blue:#7fb3ff;
+  --scr-blue:#6fb0ff;
   padding:16px 20px 16px;
   display:flex;
   flex-direction:column;
@@ -284,3 +284,22 @@
 
 /* FE-83：右栏子卡禁收缩——flex 容器子项默认可收缩会顶掉 overflow 滚动 */
 .map-view.screen .evo-panel,.map-view.screen .live-feed-card,.map-view.screen .fleet-mini,.map-view.screen .rail-terrain{flex-shrink:0}
+
+/* =====================================================================
+   UI-REDESIGN（2026-09 设计稿对齐）：总览大屏细节
+   skpi 图标化 / 任务执行环 / 右栏卡片标题蓝条 / 状态栏方案信息
+   ===================================================================== */
+.map-view.screen{border-color:#12294e;background:linear-gradient(180deg,#0a1c38,#071322)}
+.map-view.screen .evo-panel,.map-view.screen .fleet-mini,.map-view.screen .stream-panel,.map-view.screen .live-feed-card{border-radius:10px}
+.map-view.screen .evo-head b,.map-view.screen .fm-head b,.map-view.screen .stream-head b,.map-view.screen .lf-head b,.map-view.screen .deploy-head b,.map-view.screen .water-panel-head b{padding-left:11px;position:relative}
+.map-view.screen .evo-head b::before,.map-view.screen .fm-head b::before,.map-view.screen .stream-head b::before,.map-view.screen .lf-head b::before,.map-view.screen .deploy-head b::before,.map-view.screen .water-panel-head b::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:12px;border-radius:2px;background:linear-gradient(180deg,#3f8cff,#1c5bd8);box-shadow:0 0 8px #2f7bff77}
+.map-view.screen .stream-tab.on{color:#eaf4ff;border-color:#2a5fc4;background:#0d274e}
+.map-view.screen .map-taskbar{border-radius:12px}
+.map-view.screen .fm-bar{background:#081322}
+.map-view.screen .fm-groups i{box-shadow:0 0 6px currentColor}
+/* 大屏 KPI：图标化观感（保留 tone 语义条） */
+.map-view.screen .skpi{background:linear-gradient(180deg,#122c54,#0c2040);border-color:#1a3a68}
+/* 大屏底部状态栏：追加方案信息（与设计稿底部信息条对齐） */
+.map-view.screen .map-statusbar .plan-slice{display:inline-flex;align-items:center;gap:6px;color:var(--scr-muted)}
+.map-view.screen .map-statusbar .plan-slice b{color:var(--scr-ink);font-weight:500}
+.map-view.screen .map-statusbar .plan-slice::before{content:"";width:5px;height:5px;border-radius:50%;background:#2a5fc4}

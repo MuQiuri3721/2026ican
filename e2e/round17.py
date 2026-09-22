@@ -54,7 +54,7 @@ def main() -> int:
         ok &= report(17, "选点模式自动退出", pick_btn.get_attribute("aria-pressed") == "false")
 
         # 上传面板的火点定位提示应与选点坐标同步（回到指挥中枢页签）
-        session.page.get_by_role("button", name="火情研判").click()
+        session.page.get_by_role("button", name="火情监测").click()
         note = session.page.locator(".fire-coord-note")
         note.wait_for(timeout=8000)
         note_text = note.inner_text()

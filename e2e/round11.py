@@ -15,22 +15,22 @@ def main() -> int:
     try:
         session.goto_app()
         # 小火场景（可控）→ 研判 → 批准
-        page.get_by_role("button", name="火情研判").click()
+        page.get_by_role("button", name="火情监测").click()
         page.set_input_files("input[type=file]", "e2e/small-fire.jpg")
-        page.get_by_role("button", name="火情研判").click()
+        page.get_by_role("button", name="火情监测").click()
         page.get_by_text("影像已接入").wait_for(timeout=10000)
-        page.get_by_role("button", name="火情研判").click()
+        page.get_by_role("button", name="火情监测").click()
         page.get_by_role("button", name="启动智能研判").click()
-        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="机群调度").click()
         page.locator(".plan-summary").wait_for(timeout=300000)
         ok &= report(11, "研判完成", True)
-        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="机群调度").click()
         page.get_by_role("button", name="批准主方案").click()
         page.wait_for_function("document.querySelector('.task-badge')?.textContent?.includes('执行中')", timeout=30000)
         ok &= report(11, "批准→执行中", True)
 
         # 出动动画：推演时钟出现；机群标记相位徽章非空；盘旋侦察机坐标持续变化（dataset 实时经纬度）
-        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="机群调度").click()
         page.locator(".sim-clock").wait_for(timeout=8000)
         ok &= report(11, "推演时钟启动", True, page.locator(".sim-clock").inner_text())
         page.get_by_role("button", name="态势总览").click()
@@ -45,17 +45,17 @@ def main() -> int:
 
         # 自动推演：等第 3 轮（每轮 6s）——压制增强后小火常在 2 轮内扑灭归档（FE-41/BE-12b），
         # 提前完成同样算通过，此时推演钟已随归档停止
-        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="机群调度").click()
         try:
-            page.get_by_role("button", name="任务调度").click()
+            page.get_by_role("button", name="机群调度").click()
             page.wait_for_function("document.querySelector('.sim-clock')?.textContent?.includes('第 3 轮')", timeout=40000)
-            page.get_by_role("button", name="任务调度").click()
+            page.get_by_role("button", name="机群调度").click()
             round_note = page.locator(".sim-clock").inner_text()
         except Exception:
             page.wait_for_function("document.querySelector('.task-badge')?.textContent?.includes('已完成')", timeout=40000)
             round_note = "第 2 轮前扑灭归档（压制有效，提前完成）"
         ok &= report(11, "自动推演至第 3 轮", True, round_note)
-        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="机群调度").click()
         monitor_text = page.locator(".monitor-result").inner_text() if page.locator(".monitor-result").count() else ""
         match = re.search(r"E1:(\d+(?:\.\d+)?)%", monitor_text)
         soc_after = float(match.group(1)) if match else None
@@ -80,10 +80,10 @@ def main() -> int:
         ok &= report(11, "相位快照", True, str(phases_now[:5]))
 
         # 终止任务 → 推演停止；若火已提前扑灭归档（已完成），终止 409 属预期，跳过
-        page.get_by_role("button", name="火情研判").click()
+        page.get_by_role("button", name="火情监测").click()
         already_done = page.evaluate("() => (document.querySelector('.task-badge') || {}).textContent?.includes('已完成') || false")
         if not already_done:
-            page.get_by_role("button", name="任务调度").click()
+            page.get_by_role("button", name="机群调度").click()
             page.get_by_placeholder("驳回/终止原因（必填）").fill("推演验证完成，终止")
             page.get_by_role("button", name="终止任务").click()
             page.wait_for_function("document.querySelector('.task-badge')?.textContent?.includes('已终止')", timeout=30000)

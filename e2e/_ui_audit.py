@@ -41,7 +41,7 @@ def main():
         if aid:
             try:
                 session.page.get_by_role("button", name="任务日志").count()
-                hist = session.page.get_by_text("历史复盘")
+                hist = session.page.get_by_text("任务管理")
                 if hist.count():
                     hist.first.click()
                     session.page.wait_for_timeout(600)
@@ -52,7 +52,7 @@ def main():
             except Exception as e:
                 print("恢复任务失败:", str(e)[:80])
 
-        session.page.get_by_role("button", name="火情研判").click()
+        session.page.get_by_role("button", name="火情监测").click()
         session.page.wait_for_timeout(1200)
         session.page.screenshot(path=str(OUT / "2-command-analyzed.png"), full_page=True)
 
@@ -68,7 +68,7 @@ def main():
             except Exception as error:
                 print("推演态截图失败:", str(error)[:80])
 
-        session.page.get_by_role("button", name="无人机管理").click()
+        session.page.get_by_role("button", name="资源管理").click()
         session.page.wait_for_timeout(1200)
         session.page.screenshot(path=str(OUT / "3-fleet.png"), full_page=True)
 

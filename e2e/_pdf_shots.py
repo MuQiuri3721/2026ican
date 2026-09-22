@@ -25,31 +25,31 @@ s.page.get_by_role("button", name="态势总览").click()
 s.page.wait_for_timeout(2500)
 shot("1-overview-map")
 
-# 2 火情研判（任务输入区）
-s.page.get_by_role("button", name="火情研判").click()
+# 2 火情监测（任务输入区）
+s.page.get_by_role("button", name="火情监测").click()
 shot("2-analysis-upload")
 
-# 3 无人机管理
-s.page.get_by_role("button", name="无人机管理").click()
+# 3 资源管理
+s.page.get_by_role("button", name="资源管理").click()
 shot("3-fleet")
 
 # 4 Agent 协作
 s.page.get_by_role("button", name="Agent 协作").click()
 shot("4-agents")
 
-# 5 历史复盘
-s.page.get_by_role("button", name="历史复盘").click()
+# 5 任务管理
+s.page.get_by_role("button", name="任务管理").click()
 s.page.wait_for_timeout(1200)
 shot("5-history")
 
-# 6 恢复任务 A → 任务调度（决策区 + 反馈报告区）
+# 6 恢复任务 A → 机群调度（决策区 + 反馈报告区）
 try:
     s.page.locator(f".history-row", has_text=TASK_A).first.click()
     s.page.wait_for_timeout(2000)
     print("restored", TASK_A)
 except Exception as e:
     print("restore failed:", str(e)[:120])
-s.page.get_by_role("button", name="任务调度").click()
+s.page.get_by_role("button", name="机群调度").click()
 s.page.wait_for_timeout(1800)
 shot("6-dispatch-plan")
 s.page.locator(".decision-panel").evaluate("el => el.scrollTop = el.scrollHeight")

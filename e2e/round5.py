@@ -19,19 +19,19 @@ def main() -> int:
 
         session.goto_app()
         session.page.get_by_text("系统运行正常").wait_for(timeout=15000)
-        session.page.get_by_role("button", name="火情研判").click()
+        session.page.get_by_role("button", name="火情监测").click()
         session.page.set_input_files("input[type=file]", "e2e/small-fire.jpg")
-        session.page.get_by_role("button", name="火情研判").click()
+        session.page.get_by_role("button", name="火情监测").click()
         session.page.get_by_text("影像已接入").wait_for(timeout=10000)
-        session.page.get_by_role("button", name="火情研判").click()
+        session.page.get_by_role("button", name="火情监测").click()
         session.page.get_by_role("button", name="启动智能研判").click()
-        session.page.get_by_role("button", name="任务调度").click()
+        session.page.get_by_role("button", name="机群调度").click()
         session.page.wait_for_function(
             "document.querySelector('.plan-summary')?.textContent?.includes('FLP：')", timeout=300000
         )
 
         # SSE：研判完成后自动建立事件流连接（content-type=text/event-stream）
-        session.page.get_by_role("button", name="任务调度").click()
+        session.page.get_by_role("button", name="机群调度").click()
         session.page.wait_for_function(
             "fetch('/api/analyze/' + (document.querySelector('.plan-summary b') ? '' : '')).then(()=>0)",
             timeout=1000,
@@ -46,7 +46,7 @@ def main() -> int:
         # 批准产生新事件 → 日志更新（SSE 推送 + 事件拉取双路径）
         session.page.get_by_role("button", name="任务日志").click()
         before = session.page.locator(".full-logs").inner_text()
-        session.page.get_by_role("button", name="任务调度").click()
+        session.page.get_by_role("button", name="机群调度").click()
         session.page.get_by_role("button", name="批准主方案").click()
         session.page.wait_for_function(
             "document.querySelector('.task-badge')?.textContent?.includes('执行中')", timeout=30000
@@ -59,7 +59,7 @@ def main() -> int:
         ok &= report(5, "审批事件实时上屏", "方案审批：approve" in after and after != before, "")
 
         # 报告在线查看：打开 → 展开原始 JSON → 含 task_id 与 plan_versions → 收起
-        session.page.get_by_role("button", name="任务调度").click()
+        session.page.get_by_role("button", name="机群调度").click()
         session.page.get_by_role("button", name="在线查看报告").click()
         session.page.locator(".report-viewer").wait_for(timeout=30000)
         session.page.locator(".report-raw summary").click()

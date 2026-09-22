@@ -15,7 +15,7 @@ def main() -> int:
         session.goto_app()
 
         # 生成随机火情
-        page.get_by_role("button", name="火情研判").click()
+        page.get_by_role("button", name="火情监测").click()
         page.get_by_role("button", name="生成随机火情").click()
         page.locator(".scenario-facts").wait_for(timeout=8000)
         facts = page.locator(".scenario-facts").inner_text()
@@ -28,18 +28,18 @@ def main() -> int:
         ok &= report(12, "火点地图预览", "演训火点" in preview.inner_text(), preview.inner_text())
 
         # 开始模拟（无影像，scenario 驱动研判）
-        page.get_by_role("button", name="火情研判").click()
+        page.get_by_role("button", name="火情监测").click()
         page.get_by_role("button", name="开始模拟").click()
-        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="机群调度").click()
         page.locator(".plan-summary").wait_for(timeout=300000)
         badge = page.locator(".task-badge").inner_text()
         ok &= report(12, "开始模拟→待确认", "待确认" in badge, badge)
 
         # 批准 → 出动推演
-        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="机群调度").click()
         page.get_by_role("button", name="批准主方案").click()
         page.wait_for_function("document.querySelector('.task-badge')?.textContent?.includes('执行中')", timeout=30000)
-        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="机群调度").click()
         page.locator(".sim-clock").wait_for(timeout=8000)
         ok &= report(12, "批准→出动推演", True)
 
@@ -49,11 +49,11 @@ def main() -> int:
         badges = page.evaluate("() => Array.from(document.querySelectorAll('.tmap-badge')).map(b => b.textContent).filter(Boolean)")
         ok &= report(12, "推演相位徽章", len(badges) > 0, str(badges[:5]))
 
-        # 自动推演三路任一即通过（都在任务调度页观察——sim-clock 在 DecisionPanel，页面切走不可见）：
+        # 自动推演三路任一即通过（都在机群调度页观察——sim-clock 在 DecisionPanel，页面切走不可见）：
         # A. sim-clock 到第 2 轮（常规推进）
         # B. 提前扑灭归档（扩编压制下小火 2 轮内扑灭，round11 先例）
         # C. 演练扰动（风变/失能）在第 3 轮前触发重规划 → 任务回待确认等二次审批（产品核心卖点，FE-34/风变跨档）
-        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="机群调度").click()
         path = ""
         try:
             page.wait_for_function(

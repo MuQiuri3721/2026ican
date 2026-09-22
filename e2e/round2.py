@@ -17,18 +17,18 @@ def main() -> int:
         session.page.get_by_text("系统运行正常").wait_for(timeout=15000)
         page = session.page
 
-        page.get_by_role("button", name="火情研判").click()
+        page.get_by_role("button", name="火情监测").click()
         # 上传 fixture 影像（input 为 visually-hidden，可直接 set_input_files）
-        page.get_by_role("button", name="火情研判").click()
+        page.get_by_role("button", name="火情监测").click()
         session.page.set_input_files("input[type=file]", FIRE_IMAGE)
-        page.get_by_role("button", name="火情研判").click()
+        page.get_by_role("button", name="火情监测").click()
         session.page.get_by_text("影像已接入").wait_for(timeout=10000)
         ok &= report(2, "影像接入", True)
 
         # 启动智能研判（含真实环境查询，超时放宽）
-        page.get_by_role("button", name="火情研判").click()
+        page.get_by_role("button", name="火情监测").click()
         session.page.get_by_role("button", name="启动智能研判").click()
-        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="机群调度").click()
         session.page.locator(".plan-summary").wait_for(timeout=120000)
         ok &= report(2, "方案生成", True)
 
@@ -41,7 +41,7 @@ def main() -> int:
         ok &= report(2, "任务状态=待确认", "待确认" in badge, badge)
 
         # 方案摘要：large-fire 档（12000m²）按冻结公式判不可控 → 显示缺口、时间区间为 '—'（不产虚假时间窗）
-        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="机群调度").click()
         summary = session.page.locator(".plan-summary").inner_text()
         ok &= report(2, "FLP 展示", "FLP" in summary, "")
         ok &= report(2, "不可控→显示缺口", "缺口：effective_flp" in summary or "缺口：water_20l" in summary or "缺口" in summary, summary[:120].replace("\n", " "))
@@ -53,21 +53,21 @@ def main() -> int:
         # 可控场景：small-fire fixture（260m²）→ 判可控。FLP 含真实风因子（研判默认
         # environment_mode=real，Open-Meteo 实时风随日期变化），不硬编码 FLP 值，
         # 断言摘要切换为新方案（FLP 不再是 360）且时间窗口不再是 '—'。
-        page.get_by_role("button", name="火情研判").click()
+        page.get_by_role("button", name="火情监测").click()
         session.page.get_by_role("button", name="清空并重新接入").click()
-        page.get_by_role("button", name="火情研判").click()
+        page.get_by_role("button", name="火情监测").click()
         session.page.set_input_files("input[type=file]", str(Path(__file__).resolve().parent / "small-fire.jpg"))
-        page.get_by_role("button", name="火情研判").click()
+        page.get_by_role("button", name="火情监测").click()
         session.page.get_by_text("影像已接入").wait_for(timeout=10000)
-        page.get_by_role("button", name="火情研判").click()
+        page.get_by_role("button", name="火情监测").click()
         session.page.get_by_role("button", name="启动智能研判").click()
-        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="机群调度").click()
         session.page.wait_for_function(
             "(() => { const t = document.querySelector('.plan-summary')?.textContent || '';"
             " return t.includes('FLP：') && !t.includes('FLP：360') && !t.includes('时间区间：—'); })()",
             timeout=300000,
         )
-        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="机群调度").click()
         summary2 = session.page.locator(".plan-summary").inner_text()
         window2 = summary2.split("时间区间：")[1].split("分钟")[0] if "时间区间" in summary2 else ""
         ok &= report(2, "可控→时间区间", "—" not in window2 and any(ch.isdigit() for ch in window2), f"window={window2!r}")
@@ -75,19 +75,19 @@ def main() -> int:
         ok &= report(2, "可控→立即处置建议", "启动" in callout2 and "增援" not in callout2, callout2[:80].replace("\n", " "))
 
         # 调度建议 explanation 与任务 chips
-        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="机群调度").click()
         chips = session.page.locator(".task-chips span")
         chips.first.wait_for(timeout=10000)
         ok &= report(2, "任务分工 chips", chips.count() >= 3, f"count={chips.count()}")
 
         # 审批按钮组出现
-        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="机群调度").click()
         approve = session.page.get_by_role("button", name="批准主方案")
         approve.wait_for(timeout=10000)
         ok &= report(2, "审批按钮组", True)
 
         # 无人机集群页签：机群来自后端（R1/E1...）
-        session.page.get_by_role("button", name="无人机管理").click()
+        session.page.get_by_role("button", name="资源管理").click()
         session.page.get_by_text("R1").first.wait_for(timeout=10000)
         ok &= report(2, "集群 R1 展示", True)
 

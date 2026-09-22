@@ -117,7 +117,7 @@ def main() -> int:
                      (head + " | " + body).replace("\n", " ")[:120])
 
         # 演示模式水源 GPS 精准标注（scene.json latitude/longitude 契约）
-        page.get_by_role("button", name="火情研判").click()
+        page.get_by_role("button", name="火情监测").click()
         page.locator(".environment-controls select").select_option("demo")
         page.wait_for_function(
             "document.querySelector('.environment-meta')?.textContent?.includes('demo-data')", timeout=15000

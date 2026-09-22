@@ -15,22 +15,22 @@ def main() -> int:
         session.goto_app()
 
         # 生成随机火情 → 开始模拟 → 批准（与 round12 同链路）
-        page.get_by_role("button", name="火情研判").click()
+        page.get_by_role("button", name="火情监测").click()
         page.get_by_role("button", name="生成随机火情").click()
         page.locator(".scenario-facts").wait_for(timeout=8000)
         page.get_by_role("button", name="开始模拟").click()
-        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="机群调度").click()
         page.locator(".plan-summary").wait_for(timeout=300000)
-        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="机群调度").click()
         page.get_by_role("button", name="批准主方案").click()
         page.wait_for_function("document.querySelector('.task-badge')?.textContent?.includes('执行中')", timeout=30000)
 
         # 自动推演至第 2 轮（sim-clock 是本地时钟会超前于 rounds 数据，等回放刻度 ≥2 才是数据落位）
-        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="机群调度").click()
         page.wait_for_function("document.querySelector('.sim-clock')?.textContent?.includes('第 2 轮')", timeout=40000)
 
         # 回放面板存在且展开（长面板内 sticky 表头会拦截 actionability 点击，用 evaluate click）
-        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="机群调度").click()
         panel = page.locator(".replay-panel")
         panel.wait_for(timeout=10000)
         page.evaluate("document.querySelector('.replay-head').click()")

@@ -407,3 +407,17 @@ select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .full-logs::-webkit-scrollbar{width:6px}
 .full-logs::-webkit-scrollbar-thumb{background:#2b4a72;border-radius:3px}
 .src-note.vlm-mapped{color:#e2b95d;background:#271d0b;border:1px solid #5c4a1f;border-radius:9px;padding:1px 8px;display:inline-block}
+
+/* =====================================================================
+   UI-REDESIGN 第二波（workbench 层保证覆盖顺序）：火情研判页栅格
+   设计稿「火情监测」：左侧大图（影像接入/证据）跨两行，右侧 火情量化 + 现场环境
+   ===================================================================== */
+.dashboard .upload-panel{grid-column:1;grid-row:1/span 2}
+.dashboard .hero-panel{grid-column:2;grid-row:1}
+.dashboard .environment-panel{grid-column:2;grid-row:2}
+.dashboard .metrics-grid{grid-column:1/-1;grid-row:auto;grid-template-columns:repeat(4,1fr)}
+.dashboard .metrics-grid.hero-decision{grid-template-columns:1.7fr 1fr 1fr 1fr 1.1fr}
+@media(max-width:1000px){
+  .dashboard .upload-panel{grid-column:auto;grid-row:auto}
+  .dashboard .hero-panel,.dashboard .environment-panel{grid-column:auto;grid-row:auto}
+}

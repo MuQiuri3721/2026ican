@@ -21,11 +21,11 @@ def main() -> int:
             online = json.loads(resp.read().decode()).get("mode") == "glm"
 
         # 演训模拟建案（无影像路径，最快拿到可问答的任务）
-        page.get_by_role("button", name="火情研判").click()
+        page.get_by_role("button", name="火情监测").click()
         page.get_by_role("button", name="生成随机火情").click()
         page.locator(".scenario-facts").wait_for(timeout=8000)
         page.get_by_role("button", name="开始模拟").click()
-        page.get_by_role("button", name="任务调度").click()
+        page.get_by_role("button", name="机群调度").click()
         page.locator(".plan-summary").wait_for(timeout=300000)
 
         # 问答面板模式标签与 /api/llm-status 一致
