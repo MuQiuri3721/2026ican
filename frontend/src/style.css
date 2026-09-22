@@ -803,7 +803,9 @@ nav button b{background:#ff6f3d;box-shadow:0 0 10px #ff6f3d66;border-radius:8px}
 @media(max-width:1100px){.analysis-grid{grid-template-columns:1fr}.ana-stats{grid-template-columns:repeat(2,1fr)}.report-output{grid-template-columns:1fr}}
 
 /* ---- 13 历史任务卡（设计稿「任务列表」卡片样式） ---- */
-.history-row{display:grid;grid-template-columns:18px 1fr auto;gap:4px 12px;align-items:center;border-radius:10px;padding:12px 14px}
+/* .full-logs>div 的四列模板（0,1,1）会压过单类选择器——这里用组合选择器提高优先级 */
+.full-logs .history-row{display:grid;grid-template-columns:18px minmax(0,1fr) auto auto;gap:4px 12px;align-items:center;border-radius:10px;padding:12px 14px}
+.full-logs .history-row>i:empty{display:none}
 .history-row .log-time{grid-column:2}
 .history-row .hr-title{font:600 13px var(--font-ui);color:var(--ink)}
 .history-row .hr-title small{margin-left:8px;font:400 11.5px var(--font-data);color:var(--ink-3)}
@@ -893,7 +895,7 @@ nav button b{background:#ff6f3d;box-shadow:0 0 10px #ff6f3d66;border-radius:8px}
 .tactical-map-wrap.dispatch-map{height:52vh;min-height:380px;flex:none;border:1px solid var(--panel-border);border-radius:10px}
 .tactical-map-wrap.dispatch-map .evo-panel,.tactical-map-wrap.dispatch-map .dispatch-res-panel{margin:12px}
 .squadron-tables.compact{gap:10px}
-.squadron-tables.compact .gt-scroll{max-height:190px}
+.squadron-tables.compact .gt-scroll{max-height:206px}
 .dispatch-grid2 .decision-panel{display:flex;flex-direction:column}
 @media(max-width:1240px){.dispatch-grid2{grid-template-columns:1fr}}
 /* 调度结论卡（decision-callout 升级为设计稿大盾牌卡） */
