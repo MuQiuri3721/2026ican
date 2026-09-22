@@ -66,7 +66,9 @@ class Session:
         # （vite dev 代理长跑后楔死时必现，round2-5 曾批量挂）。落地若见离线态则重载一次，
         # 重载后仍离线再放行（让脚本以真实失败呈现，不掩盖产品问题）。
         if self.page.get_by_text("本地演示模式").count():
-            self.page.reload(wait_until="networkidle")
+            # networkidle 在新前端（数据分析页持续轮询）下永远达不到——load 即可，
+            # 就绪判定交给下一行的标题等待
+            self.page.reload(wait_until="load")
             self.page.get_by_role("heading", name="森林火灾智能应急指挥平台").wait_for(timeout=30000)
         self.page.get_by_text("系统运行正常").wait_for(timeout=20000)
         # 默认落地页是态势总览（大屏）；绝大多数轮次的上传/研判流程在火情监测页——统一导航
