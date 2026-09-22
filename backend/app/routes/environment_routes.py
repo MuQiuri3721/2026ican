@@ -2,8 +2,11 @@
 
 环境与地理域的对外入口；实现委托 EnvironmentTool 与 terrain_service。
 """
+import json
+
 from fastapi import APIRouter, HTTPException, Query
 
+from ..services import environment_service
 from ..services.terrain_service import generate_contours, generate_grid
 from ..tools.environment import EnvironmentTool
 
@@ -42,3 +45,19 @@ def terrain_contours(
     max_points: int = Query(180, ge=20, le=240),
 ):
     return generate_contours(latitude, longitude, radius_deg, interval_m, max_points)
+
+
+@router.get("/api/geo/overview")
+def geo_overview():
+    """geo-delivery-v2 公开区域索引（BE-52 第三期）：4 个规划展示区多边形。
+
+    仅在 .env 配置了 GEO_DATA_ROOT 时可用；返回 areas_public.geojson
+    （项目派生规划展示区，不含天地图行政边界——授权仅限地图可视化，不入公开仓库）。
+    """
+    root = environment_service.geo_data_root()
+    if root is None:
+        raise HTTPException(status_code=404, detail="GEO_DATA_ROOT 未配置，离线地理数据不可用")
+    public_index = root / "data" / "overview" / "areas_public.geojson"
+    if not public_index.is_file():
+        raise HTTPException(status_code=404, detail="交付包缺少 data/overview/areas_public.geojson")
+    return json.loads(public_index.read_text(encoding="utf-8"))

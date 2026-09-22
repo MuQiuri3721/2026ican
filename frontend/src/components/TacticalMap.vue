@@ -31,7 +31,7 @@ const containerEl = shallowRef(null)
 const map = shallowRef(null)
 // AMap 命名空间只挂实例上，避免被 Vue 深响应式代理（官方 Vue3 建议 shallowRef）。
 const AMapNS = shallowRef(null)
-const layerOverlays = { fire: [], contour: [], water: [], drone: [], road: [], evacuation: [], scenario: [] }
+const layerOverlays = { fire: [], contour: [], water: [], drone: [], road: [], evacuation: [], scenario: [], planning: [] }
 const markerIndex = new Map()
 // 无人机渲染位置平滑插值（FE-20，firepatrol 式 lerp）：吸收相位校准/重渲染带来的跳变
 const animPos = new Map()
@@ -475,8 +475,52 @@ function renderAll() {
   renderDrones()
   renderRoad()
   renderEvacuation()
+  renderPlanning()
   syncActiveClasses()
   applyWaterZoom()
+}
+
+// 规划展示区叠加（BE-52 第三期）：/api/geo/overview 的 4 个项目派生规划区
+// （MultiPolygon，WGS-84 → GCJ-02；未配置 GEO_DATA_ROOT 时端点 404，静默不叠加）。
+// 非行政边界、非可调度区域，仅 province 级规划展示——演示视口（紫金山）外不可见属正常。
+let planningRegions = null
+let planningFetched = false
+function fetchPlanningRegions() {
+  if (planningFetched) return
+  planningFetched = true
+  fetch('/api/geo/overview')
+    .then((response) => (response.ok ? response.json() : null))
+    .then((data) => {
+      if (!data || !Array.isArray(data.features) || !data.features.length) return
+      planningRegions = data
+      renderPlanning()
+    })
+    .catch(() => { /* 离线地理数据不可用时不叠加，演示不受影响 */ })
+}
+function renderPlanning() {
+  clearLayer('planning')
+  if (!planningRegions) return
+  const AMap = AMapNS.value
+  for (const feature of planningRegions.features) {
+    if (feature.geometry?.type !== 'MultiPolygon') continue
+    // MultiPolygon → AMap path：polygon 数组，每 polygon 是环数组，每环是 [lng,lat]（GCJ-02）
+    const paths = feature.geometry.coordinates.map((polygon) =>
+      polygon.map((ring) =>
+        ring.map(([lng, lat]) => {
+          const gcj = wgs2gcj(Number(lat), Number(lng))
+          return [gcj.lng, gcj.lat]
+        })
+      )
+    )
+    const name = feature.properties?.name_zh || feature.properties?.name || ''
+    const polygon = new AMapNS.value.Polygon({
+      path: paths,
+      strokeColor: '#5b8dd9', strokeWeight: 1.5, strokeOpacity: 0.6,
+      fillColor: '#5b8dd9', fillOpacity: 0.07, bubble: true, zIndex: 30,
+      title: `${name}（规划展示区 · 项目派生范围，非行政边界）`,
+    })
+    addOverlay('planning', polygon)
+  }
 }
 
 function applyVisibility() {
@@ -703,6 +747,7 @@ onMounted(async () => {
     renderAll()
     applyWaterZoom()
     restartMissionClock()
+    fetchPlanningRegions()
     emit('ready')
   } catch (error) {
     console.warn('[TacticalMap] 高德地图加载失败，回退示意图', error)

@@ -44,3 +44,7 @@ data/analysis_store.db-journal
 pwm/runs/
 pwm/**/__pycache__/
 pwm/_class_check.jpg
+
+# GIS 交付包（geo-delivery-v2，队友交付；115MB 大文件 + 天地图行政边界授权限制，严禁入库；
+# 完整说明见包内 README.md / THIRD_PARTY_DATA.md，平台通过 GEO_DATA_ROOT 指向）
+geo-delivery-v2-*/

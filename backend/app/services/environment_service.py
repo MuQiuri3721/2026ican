@@ -6,7 +6,9 @@
 
 from pathlib import Path
 from collections import Counter
+import json
 import math
+import os
 import time
 
 import numpy as np
@@ -135,6 +137,296 @@ def safe_call(func, *args, **kwargs):
         return {"status": "ok", **func(*args, **kwargs)}
     except Exception as exc:
         return {"status": "error", "error": str(exc)}
+
+
+# ---------- 离线地理数据包（geo-delivery-v2，BE-52） ----------
+# GEO_DATA_ROOT 指向交付包根目录（含 data/nanjing/...）；
+# GEO_DATA_MODE = live（默认，纯在线）/ auto（覆盖范围内离线优先、范围外回退在线）/ offline（仅离线）。
+# 未设置 GEO_DATA_ROOT 时恒为 live，行为与历史版本完全一致。
+
+GEO_DELIVERY_FILES = {
+    "dem": "data/nanjing/srtm/nanjing_srtmgl1_003_30m_epsg32650_dem.tif",
+    "slope": "data/nanjing/srtm/nanjing_srtmgl1_003_30m_epsg32650_slope.tif",
+    "aspect": "data/nanjing/srtm/nanjing_srtmgl1_003_30m_epsg32650_aspect.tif",
+    "landcover": "data/nanjing/worldcover/nanjing_worldcover_2021_v200_10m_epsg32650_landcover.tif",
+    "water_candidates": "data/nanjing/osm/water_candidates.geojson",
+    "weather_current": "data/nanjing/weather/weather_current.json",
+}
+
+# 南京行政边界+5km 的粗略外扩矩形（WGS84），仅用于 auto 模式判断离线气象是否适用
+GEO_DELIVERY_CITY_BBOX_WGS84 = (31.0, 118.1, 32.8, 119.7)  # (min_lat, min_lon, max_lat, max_lon)
+
+# 交付包 SRTM 裁剪范围为南京市边界 + 5km（EPSG:32650），粗略外扩矩形用于快速覆盖预判
+GEO_DELIVERY_COVER_BBOX_EPSG32650 = (623430, 3451650, 716730, 3614460)
+
+
+def geo_data_root():
+    raw = os.environ.get("GEO_DATA_ROOT", "").strip()
+    return Path(raw) if raw else None
+
+
+def geo_data_mode():
+    mode = os.environ.get("GEO_DATA_MODE", "").strip().lower()
+    if mode in {"live", "auto", "offline"}:
+        return mode
+    return "auto" if geo_data_root() else "live"
+
+
+def offline_geo_file(kind):
+    """返回交付包内指定成果的路径；未配置或文件缺失返回 None。"""
+    root = geo_data_root()
+    if root is None:
+        return None
+    path = root / GEO_DELIVERY_FILES[kind]
+    return path if path.is_file() else None
+
+
+def get_terrain_offline(latitude, longitude):
+    """从交付包 SRTM 成果采样高程 + GEE 预计算坡度/坡向（30m，EPSG:32650）。"""
+    paths = {kind: offline_geo_file(kind) for kind in ("dem", "slope", "aspect")}
+    missing = [kind for kind, path in paths.items() if path is None]
+    if missing:
+        raise RuntimeError(f"离线地形数据缺失: {missing}")
+
+    to_utm = Transformer.from_crs("EPSG:4326", "EPSG:32650", always_xy=True)
+    x, y = to_utm.transform(longitude, latitude)
+
+    values = {}
+    for kind, path in paths.items():
+        with rasterio.open(path) as dataset:
+            row, col = dataset.index(x, y)
+            if not (0 <= row < dataset.height and 0 <= col < dataset.width):
+                raise ValueError("输入坐标不在离线地形数据覆盖范围内")
+            value = dataset.read(
+                1, window=Window(col, row, 1, 1), boundless=True, masked=True
+            )[0, 0]
+            if np.ma.is_masked(value) or not np.isfinite(float(value)):
+                raise ValueError("离线地形数据在该坐标为 NoData")
+            values[kind] = float(value)
+
+    slope_deg = values["slope"]
+    if slope_deg < 0.1:
+        down_deg = None
+        up_deg = None
+    else:
+        down_deg = values["aspect"] % 360
+        up_deg = (down_deg + 180) % 360
+
+    return {
+        "elevation_m": round(values["dem"], 1),
+        "slope_deg": round(slope_deg, 2),
+        "downslope_deg": None if down_deg is None else round(down_deg, 1),
+        "downslope_direction": degree_to_direction(down_deg),
+        "upslope_deg": None if up_deg is None else round(up_deg, 1),
+        "upslope_direction": degree_to_direction(up_deg),
+        "dem_source": "geo-delivery-v2 (NASA SRTMGL1 v003 30m)",
+    }
+
+
+def get_landcover_offline(
+    latitude,
+    longitude,
+    window_size=11,
+    min_burnable_ratio=0.4,
+):
+    """从交付包 WorldCover 2021 v200 本地 tif 采样，输出与在线版逐键一致。"""
+    path = offline_geo_file("landcover")
+    if path is None:
+        raise RuntimeError("离线地表覆盖数据缺失")
+
+    with rasterio.open(path) as dataset:
+        xs, ys = transform("EPSG:4326", dataset.crs, [longitude], [latitude])
+        row, col = dataset.index(xs[0], ys[0])
+        if not (0 <= row < dataset.height and 0 <= col < dataset.width):
+            raise ValueError("输入坐标不在离线地表覆盖数据覆盖范围内")
+
+        center = int(
+            dataset.read(
+                1, window=Window(col, row, 1, 1), boundless=True, fill_value=0
+            )[0, 0]
+        )
+        half = window_size // 2
+        data = dataset.read(
+            1,
+            window=Window(col - half, row - half, window_size, window_size),
+            boundless=True,
+            fill_value=0,
+        )
+
+    valid = data[data != 0]
+    if valid.size == 0:
+        raise RuntimeError("离线 WorldCover 窗口中没有有效像素")
+
+    counts = Counter(valid.ravel().tolist())
+    dominant = int(counts.most_common(1)[0][0])
+    burnable_ratio = float(
+        np.isin(valid, list(BURNABLE_NATURAL)).sum() / valid.size
+    )
+
+    return {
+        "center_class": WORLD_COVER_CLASSES.get(center, "Unknown"),
+        "dominant_class": WORLD_COVER_CLASSES.get(dominant, "Unknown"),
+        "burnable_ratio": round(burnable_ratio, 3),
+        "fuel_possible": burnable_ratio >= min_burnable_ratio,
+        "landcover_source": "geo-delivery-v2 (ESA WorldCover 2021 v200 10m)",
+    }
+
+
+def get_terrain_routed(latitude, longitude, dem_path):
+    """按 GEO_DATA_MODE 路由地形查询；live 模式与历史行为完全一致。"""
+    mode = geo_data_mode()
+    if mode in {"auto", "offline"}:
+        result = safe_call(get_terrain_offline, latitude, longitude)
+        if result["status"] == "ok":
+            return result
+        if mode == "offline":
+            return result
+    return safe_call(get_terrain, latitude, longitude, dem_path)
+
+
+def get_landcover_routed(latitude, longitude, window_size=11, min_burnable_ratio=0.4):
+    mode = geo_data_mode()
+    if mode in {"auto", "offline"}:
+        result = safe_call(
+            get_landcover_offline, latitude, longitude, window_size, min_burnable_ratio
+        )
+        if result["status"] == "ok":
+            return result
+        if mode == "offline":
+            return result
+    return safe_call(
+        get_landcover, latitude, longitude, window_size, min_burnable_ratio
+    )
+
+
+# ---------- 离线气象 ----------
+
+def get_weather_offline(latitude, longitude):
+    """交付包 Open-Meteo 留档（当前天气 + 时间戳/stale 诚实标注），输出与在线版逐键一致。"""
+    path = offline_geo_file("weather_current")
+    if path is None:
+        raise RuntimeError("离线气象数据缺失")
+
+    data = json.loads(path.read_text(encoding="utf-8"))
+    wind_from = data.get("wind_from_10m_deg")
+    wind_to = data.get("wind_to_10m_deg")
+
+    return {
+        "time": data.get("valid_time"),
+        "temperature_c": data.get("temperature_2m_c"),
+        "relative_humidity_pct": data.get("relative_humidity_2m_pct"),
+        "precipitation_mm": data.get("precipitation_current_interval_mm"),
+        "wind_speed_m_s": data.get("wind_speed_10m_m_s"),
+        "wind_from_deg": wind_from,
+        "wind_from_direction": data.get("wind_from_10m_compass")
+        or degree_to_direction(wind_from),
+        "wind_to_deg": wind_to,
+        "wind_to_direction": data.get("wind_to_10m_compass")
+        or (None if wind_to is None else degree_to_direction(wind_to)),
+        "wind_gust_m_s": data.get("wind_gusts_10m_m_s"),
+        "timezone": (data.get("returned_grid") or {}).get("timezone"),
+        "weather_source": (
+            f"geo-delivery-v2 ({data.get('dataset_id', 'open-meteo 留档')}，"
+            f"valid {data.get('valid_time')}，stale={data.get('stale')})"
+        ),
+    }
+
+
+def get_weather_routed(latitude, longitude):
+    mode = geo_data_mode()
+    if mode in {"auto", "offline"}:
+        in_city = (
+            GEO_DELIVERY_CITY_BBOX_WGS84[0] <= latitude <= GEO_DELIVERY_CITY_BBOX_WGS84[2]
+            and GEO_DELIVERY_CITY_BBOX_WGS84[1] <= longitude <= GEO_DELIVERY_CITY_BBOX_WGS84[3]
+        )
+        if mode == "offline" or in_city:
+            result = safe_call(get_weather_offline, latitude, longitude)
+            if result["status"] == "ok":
+                return result
+            if mode == "offline":
+                return result
+    return safe_call(get_weather, latitude, longitude)
+
+
+# ---------- 离线水源候选 ----------
+
+_WATER_CANDIDATES_CACHE = {"path": None, "mtime": None, "features": None}
+
+
+def _load_water_candidates(path: Path):
+    """解析并缓存 water_candidates.geojson（全城 ~9,400 点；按路径+mtime 失效）。"""
+    stat = path.stat()
+    cache = _WATER_CANDIDATES_CACHE
+    if cache["path"] != path or cache["mtime"] != stat.st_mtime:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        cache["path"] = path
+        cache["mtime"] = stat.st_mtime
+        cache["features"] = data.get("features", [])
+    return cache["features"]
+
+
+def get_water_candidates_offline(
+    latitude,
+    longitude,
+    search_radius_m=DEFAULT_WATER_RADIUS_M,
+):
+    """交付包水源候选（含稳定 candidate_id，全部 unverified——地理存在 ≠ 可取水）。"""
+    path = offline_geo_file("water_candidates")
+    if path is None:
+        raise RuntimeError("离线水源候选数据缺失")
+
+    picked = []
+    for feature in _load_water_candidates(path):
+        props = feature.get("properties", {})
+        lon = props.get("longitude")
+        lat = props.get("latitude")
+        if lon is None or lat is None:
+            continue
+        distance = haversine_distance_m(latitude, longitude, lat, lon)
+        if distance > search_radius_m:
+            continue
+        picked.append({
+            "osm_id": props.get("water_id")
+            or props.get("candidate_id")
+            or props.get("osm_id"),
+            "provider": "osm / geo-delivery-v2",
+            "verification_status": props.get("verification_status", "unverified"),
+            "safety_status": props.get("safety"),
+            "capacity_liters": props.get("capacity"),  # null=未知，非 0 耗尽
+            "name": props.get("name") or "未命名水体",
+            "type": props.get("water_type", "water"),
+            "latitude": round(float(lat), 6),
+            "longitude": round(float(lon), 6),
+            "distance_m": round(distance, 1),
+        })
+
+    picked.sort(key=lambda item: item["distance_m"])
+    preferred = [item for item in picked if item["type"] in PREFERRED_WATER_TYPES]
+
+    return {
+        "found": bool(picked),
+        "feature_count": len(picked),
+        "features": picked[:20],
+        "nearest": picked[0] if picked else None,
+        "preferred": preferred[0] if preferred else None,
+        "distance_note": "到离线候选水源代表点的近似距离（geo-delivery-v2，全部 unverified）",
+        "water_candidates_source": "geo-delivery-v2 (OSM water_candidates)",
+    }
+
+
+def get_water_sources_routed(latitude, longitude, search_radius_m):
+    mode = geo_data_mode()
+    if mode in {"auto", "offline"}:
+        result = safe_call(
+            get_water_candidates_offline, latitude, longitude, search_radius_m
+        )
+        if result["status"] == "ok":
+            # offline 模式空结果也是答案；auto 模式半径内无候选时回退在线补充（可用性优先）
+            if mode == "offline" or result.get("found"):
+                return result
+        elif mode == "offline":
+            return result
+    return safe_call(get_water_sources, latitude, longitude, search_radius_m)
 
 
 # ---------- 地形 ----------
@@ -665,24 +957,20 @@ def get_environment(
     )
 
     modules = {
-        "terrain": safe_call(
-            get_terrain,
+        "terrain": get_terrain_routed(
             latitude,
             longitude,
             dem_path,
         ),
-        "weather": safe_call(
-            get_weather,
+        "weather": get_weather_routed(
             latitude,
             longitude,
         ),
-        "landcover": safe_call(
-            get_landcover,
+        "landcover": get_landcover_routed(
             latitude,
             longitude,
         ),
-        "water": safe_call(
-            get_water_sources,
+        "water": get_water_sources_routed(
             latitude,
             longitude,
             water_radius_m,
@@ -707,6 +995,23 @@ def get_environment(
     else:
         status = "error"
 
+    # 来源标注（BE-23）：离线包生效时如实切换，在线路径文案与历史版本一致
+    sources = {
+        "terrain": "NASA SRTM",
+        "weather": "Open-Meteo",
+        "landcover": "ESA WorldCover / Microsoft Planetary Computer",
+        "water": "OpenStreetMap / Overpass API",
+        "road": "OpenStreetMap / Overpass API",
+    }
+    if modules["terrain"].get("dem_source"):
+        sources["terrain"] = "NASA SRTMGL1 v003 / geo-delivery-v2 离线包"
+    if modules["landcover"].get("landcover_source"):
+        sources["landcover"] = "ESA WorldCover 2021 v200 / geo-delivery-v2 离线包"
+    if modules["weather"].get("weather_source"):
+        sources["weather"] = modules["weather"]["weather_source"]
+    if modules["water"].get("water_candidates_source"):
+        sources["water"] = "OSM water_candidates / geo-delivery-v2 离线包（全部 unverified）"
+
     return {
         "status": status,
         "location": {
@@ -714,14 +1019,5 @@ def get_environment(
             "longitude": longitude,
         },
         **modules,
-        "sources": {
-            "terrain": "NASA SRTM",
-            "weather": "Open-Meteo",
-            "landcover": (
-                "ESA WorldCover / "
-                "Microsoft Planetary Computer"
-            ),
-            "water": "OpenStreetMap / Overpass API",
-            "road": "OpenStreetMap / Overpass API",
-        },
+        "sources": sources,
     }
