@@ -1,4 +1,4 @@
-"""反复测试优化轮的套件跑批器：一次跑完 E2E R1-R19，输出紧凑摘要与失败详情。
+"""套件跑批器：一次跑完 E2E R1-R24（FE-85c 起含新 UI 面专项轮），输出紧凑摘要与失败详情。
 
 用法：python e2e/_suite_runner.py [轮次标签]
 输出：每轮 pass/fail 计数 + 失败轮次的 detail 尾部（便于当轮修复）。
@@ -13,7 +13,7 @@ LABEL = sys.argv[1] if len(sys.argv) > 1 else "loop"
 failures = []
 start = time.time()
 
-for n in range(1, 24):
+for n in range(1, 25):
     proc = subprocess.run([sys.executable, str(ROOT / "e2e" / f"round{n}.py")],
                           capture_output=True, text=True, cwd=ROOT, timeout=600)
     out = proc.stdout + proc.stderr
