@@ -214,6 +214,20 @@ class EnvironmentTool(BaseTool):
         features = water.get("features")
         if not isinstance(features, list) or not features:
             features = [item for item in (water.get("nearest"), water.get("preferred")) if item]
+        # 契约 §3.1：信封必须带 preferred_water。离线候选池（BE-52）不再自带 preferred 时，
+        # 按展示层推荐位回填：静水（水库/湖泊/池塘）优先于河流/溪流，同级取最近（features 已按距离排序）。
+        # 仅用于地图★标注与取水路线绘制；执行端取水仍走六条件核验（OPT-P2-02 不变量不受影响）。
+        preferred = water.get("preferred")
+        if not preferred and isinstance(features, list) and features:
+            def _preference_rank(item: Dict[str, Any]) -> int:
+                text = f"{item.get('type') or ''}{item.get('name') or ''}"
+                if any(key in text for key in ("reservoir", "basin", "lake", "pond", "水库", "湖", "池塘")):
+                    return 0
+                if any(key in text for key in ("river", "canal", "江河", "运河")):
+                    return 1
+                return 2
+
+            preferred = min(features, key=_preference_rank)
         status = raw.get("status") or mode
         return {
             "scene_id": scene_id, "mode": mode, "status": status, "source": source,
@@ -227,7 +241,7 @@ class EnvironmentTool(BaseTool):
             "altitude": terrain.get("elevation_m"), "terrain": terrain,
             "water_sources": features,
             "nearest_water": water.get("nearest"),
-            "preferred_water": water.get("preferred"),
+            "preferred_water": preferred,
             "road_context": road, "landcover": landcover, "raw": raw,
         }
 
