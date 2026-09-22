@@ -109,13 +109,13 @@ const children = [
   body([["⑧", true], ["反馈重规划", true], ["（系统＋用户）：", true], ["异常或约束变化触发新方案版本，关键调整再次经用户确认；"]], { noIndent: true }),
   body([["⑨结束归档（系统）：", true], ["扑灭后机群返航回收，任务形成报告归档。"]], { noIndent: true, after: 120 }),
 
-  figure(`${ROOT}/docs/pdf-assets/fig4-1.png`, 580),
+  figure(`${ROOT}/docs/pdf-assets/fig4-1.png`, 560),
   caption("图4-1  系统实现与交互综合图：平台装配（上）· 四个功能区实景（中）· 九步操作流程（下）"),
 
   // 附录
   new Paragraph({
-    heading: HeadingLevel.HEADING_2, pageBreakBefore: true,
-    spacing: { before: 120, after: 140 },
+    heading: HeadingLevel.HEADING_2,
+    spacing: { before: 240, after: 140 },
     children: [new TextRun({ text: "附录  图注与术语核对表（队员核对用，非正文）", bold: true, size: 28, color: "000000", font: F.hei })],
   }),
   body([["正文名称与界面元素、图4-1 区域的对应关系如下，供排版与核对素材使用；最终 PDF 正文只使用用户语言。"]]),
