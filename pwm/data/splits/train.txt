@@ -1201,7 +1201,6 @@ E:\开发\2026ican\data\dfire_yolo\images\train\WEB03548.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB00443.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB00732.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF00074.jpg
-E:\开发\2026ican\data\dfire_yolo\images\train\WEB06094.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB09302.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB09313.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB05538.jpg
@@ -1456,7 +1455,6 @@ E:\开发\2026ican\data\dfire_yolo\images\train\AoF06077.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF04464.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF01223.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB05502.jpg
-E:\开发\2026ican\data\dfire_yolo\images\train\WEB08913.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF04399.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\PublicDataset00216.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB08347.jpg
@@ -1569,7 +1567,6 @@ E:\开发\2026ican\data\dfire_yolo\images\train\AoF04467.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB00708.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB04190.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB09328.jpg
-E:\开发\2026ican\data\dfire_yolo\images\train\WEB02219.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\PublicDataset00827.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB00247.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB07638.jpg
@@ -1783,7 +1780,6 @@ E:\开发\2026ican\data\dfire_yolo\images\train\WEB07937.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF02228.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF03454.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB00642.jpg
-E:\开发\2026ican\data\dfire_yolo\images\train\WEB01923.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB04494.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB02680.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB03038.jpg
@@ -2176,13 +2172,11 @@ E:\开发\2026ican\data\dfire_yolo\images\train\AoF05839.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF03241.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB04522.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB04033.jpg
-E:\开发\2026ican\data\dfire_yolo\images\train\WEB00383.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB06787.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF04670.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF04661.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB00022.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF04106.jpg
-E:\开发\2026ican\data\dfire_yolo\images\train\WEB07361.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB07927.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF00908.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB04790.jpg
@@ -2315,7 +2309,6 @@ E:\开发\2026ican\data\dfire_yolo\images\train\AoF00174.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF04312.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB06369.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB06352.jpg
-E:\开发\2026ican\data\dfire_yolo\images\train\WEB06080.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF03408.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB06186.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF03695.jpg
@@ -3139,7 +3132,6 @@ E:\开发\2026ican\data\dfire_yolo\images\train\WEB00482.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF06475.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF00617.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB06786.jpg
-E:\开发\2026ican\data\dfire_yolo\images\train\WEB04668.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB00552.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF06689.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF05509.jpg
@@ -3158,7 +3150,6 @@ E:\开发\2026ican\data\dfire_yolo\images\train\AoF06673.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF04477.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF01093.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB04187.jpg
-E:\开发\2026ican\data\dfire_yolo\images\train\AoF05078.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF00897.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB08457.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF03903.jpg
@@ -3607,7 +3598,6 @@ E:\开发\2026ican\data\dfire_yolo\images\train\WEB05749.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF01380.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF01645.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\PublicDataset00403.jpg
-E:\开发\2026ican\data\dfire_yolo\images\train\AoF04372.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF00589.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF00759.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF01960.jpg
@@ -3778,7 +3768,6 @@ E:\开发\2026ican\data\dfire_yolo\images\train\WEB09310.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB03941.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB05167.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF00164.jpg
-E:\开发\2026ican\data\dfire_yolo\images\train\WEB01937.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB07477.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF06662.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF03645.jpg
@@ -3922,7 +3911,6 @@ E:\开发\2026ican\data\dfire_yolo\images\train\PublicDataset00271.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB00056.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF06459.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF02159.jpg
-E:\开发\2026ican\data\dfire_yolo\images\train\WEB04683.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB07841.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB01819.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB00546.jpg
@@ -4354,7 +4342,6 @@ E:\开发\2026ican\data\dfire_yolo\images\train\WEB04026.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB04221.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF01800.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF06105.jpg
-E:\开发\2026ican\data\dfire_yolo\images\train\AoF04414.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\WEB03239.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF06688.jpg
 E:\开发\2026ican\data\dfire_yolo\images\train\AoF04311.jpg

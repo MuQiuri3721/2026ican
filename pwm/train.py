@@ -51,42 +51,41 @@ def to_float(preds):
 def ciou_loss(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     """CIoU loss between aligned xyxy boxes, both (n, 4)."""
     eps = 1e-7
+    # 规范化倒置预测框（x2<x1 / y2<y1 交换回正；min/max 可导，梯度正常流动）。
+    # bug#4 根因（同基准训练实测：mAP 恒 0.0099、box loss 为负）：负宽高进入 v 项的
+    # atan 使 v/alpha·v 无上界，损失整体无下界——优化器沿退化方向"学习"。
+    # GT 侧规范化为幂等操作（本就 x1<x2）。
+    px1 = torch.minimum(pred[:, 0], pred[:, 2]); px2 = torch.maximum(pred[:, 0], pred[:, 2])
+    py1 = torch.minimum(pred[:, 1], pred[:, 3]); py2 = torch.maximum(pred[:, 1], pred[:, 3])
+    tx1 = torch.minimum(target[:, 0], target[:, 2]); tx2 = torch.maximum(target[:, 0], target[:, 2])
+    ty1 = torch.minimum(target[:, 1], target[:, 3]); ty2 = torch.maximum(target[:, 1], target[:, 3])
+
     # intersection / union
-    ix1 = torch.maximum(pred[:, 0], target[:, 0])
-    iy1 = torch.maximum(pred[:, 1], target[:, 1])
-    ix2 = torch.minimum(pred[:, 2], target[:, 2])
-    iy2 = torch.minimum(pred[:, 3], target[:, 3])
+    ix1 = torch.maximum(px1, tx1); iy1 = torch.maximum(py1, ty1)
+    ix2 = torch.minimum(px2, tx2); iy2 = torch.minimum(py2, ty2)
     inter = (ix2 - ix1).clamp(0) * (iy2 - iy1).clamp(0)
-    a_p = (pred[:, 2] - pred[:, 0]).clamp(0) * (pred[:, 3] - pred[:, 1]).clamp(0)
-    a_t = (target[:, 2] - target[:, 0]).clamp(0) * (target[:, 3] - target[:, 1]).clamp(0)
+    a_p = (px2 - px1).clamp(min=0) * (py2 - py1).clamp(min=0)
+    a_t = (tx2 - tx1).clamp(min=0) * (ty2 - ty1).clamp(min=0)
     union = a_p + a_t - inter + eps
     iou = inter / union
 
-    # smallest enclosing box diagonal — must cover ALL FOUR corners of both
-    # boxes: predictions can be inverted (x2 < x1) early in training, and a
-    # naive min(x1)/max(x2) enclosing box then fails to contain the centers,
-    # letting rho2/c2 exceed 1 and the loss diverge to -inf.
-    cx1 = torch.minimum(torch.minimum(pred[:, 0], pred[:, 2]),
-                        torch.minimum(target[:, 0], target[:, 2]))
-    cy1 = torch.minimum(torch.minimum(pred[:, 1], pred[:, 3]),
-                        torch.minimum(target[:, 1], target[:, 3]))
-    cx2 = torch.maximum(torch.maximum(pred[:, 0], pred[:, 2]),
-                        torch.maximum(target[:, 0], target[:, 2]))
-    cy2 = torch.maximum(torch.maximum(pred[:, 1], pred[:, 3]),
-                        torch.maximum(target[:, 1], target[:, 3]))
+    # smallest enclosing box diagonal（规范化后两框中心必然在盒内，rho2/c2 ≤ 1 有保证）
+    cx1 = torch.minimum(px1, tx1); cy1 = torch.minimum(py1, ty1)
+    cx2 = torch.maximum(px2, tx2); cy2 = torch.maximum(py2, ty2)
     c2 = ((cx2 - cx1) ** 2 + (cy2 - cy1) ** 2 + eps).clamp(min=1e-4)
 
     # center-point distance
-    rho2 = ((pred[:, 0] + pred[:, 2]) - (target[:, 0] + target[:, 2])) ** 2 / 4 + \
-           ((pred[:, 1] + pred[:, 3]) - (target[:, 1] + target[:, 3])) ** 2 / 4
+    rho2 = ((px1 + px2) - (tx1 + tx2)) ** 2 / 4 + \
+           ((py1 + py2) - (ty1 + ty2)) ** 2 / 4
 
-    # aspect-ratio consistency
+    # aspect-ratio consistency（规范化后宽高非负 → atan 有界 → v ≤ 4，不再无界）
     v = (4 / math.pi ** 2) * (
-        torch.atan((pred[:, 2] - pred[:, 0]) / ((pred[:, 3] - pred[:, 1]) + eps)) -
-        torch.atan((target[:, 2] - target[:, 0]) / ((target[:, 3] - target[:, 1]) + eps))
+        torch.atan((px2 - px1) / (py2 - py1 + eps)) -
+        torch.atan((tx2 - tx1) / (ty2 - ty1 + eps))
     ) ** 2
     alpha = v / (1 - iou + v + eps)
-    return 1.0 - iou - rho2 / c2 - alpha * v
+    # 下界保底：即便数值边缘情况也绝不给优化器"负损失"的退化方向
+    return (1.0 - iou - rho2 / c2 - alpha * v).clamp(min=0)
 
 
 class DetectionLoss(nn.Module):
@@ -97,7 +96,10 @@ class DetectionLoss(nn.Module):
         self.strides = model.strides
         self.cls_weight = cls_weight
         self.box_weight = box_weight
-        self.bce = nn.BCEWithLogitsLoss(reduction='mean')
+        # bug#5（cls 塌缩）：正格子占比 ~0.05%，裸 BCE 均值下"全压背景"是稳定局部
+        # 最优——22 epochs cls sigmoid max 仅 0.12、decode conf 全灭（实测）。
+        # 改逐 batch 动态 pos_weight（负/正比，上限 500）让正格子梯度浮出水面。
+        self.pos_weight_cap = 500.0
 
     def forward(self, preds, targets):
         """preds: model output dict; targets: list of (n_i, 5) [cls,x1,y1,x2,y2]."""
@@ -130,7 +132,12 @@ class DetectionLoss(nn.Module):
                 cls_tgt[b, t[:, 0].long(), cy, cx] = 1.0
                 box_tgt[b, :, cy, cx] = t[:, 1:5].T
 
-            cls_loss = cls_loss + self.bce(cls_map, cls_tgt)
+            pos_n = cls_tgt.sum()
+            neg_n = cls_tgt.numel() - pos_n
+            pw = torch.tensor(min(neg_n / max(pos_n, 1.0), self.pos_weight_cap),
+                              device=cls_map.device)
+            cls_loss = cls_loss + torch.nn.functional.binary_cross_entropy_with_logits(
+                cls_map, cls_tgt, pos_weight=pw)
 
             # decode predicted ltrb -> xyxy at cells where a target exists
             pos = cls_tgt.sum(1) > 0                               # (B,H,W)
