@@ -1,0 +1,312 @@
+{
+  "type": "FeatureCollection",
+  "name": "srtm_fixed_checkpoints",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "point_id": "NJ-MTN-01",
+        "region_group": "nanjing",
+        "point_type": "typical_mountain_zijin",
+        "expected_region": "Nanjing confirmed AOI",
+        "expected_data_status": "VALID_DATA",
+        "actual_data_status": "VALID_DATA",
+        "reference_source": "backend/N32E118.hgt",
+        "reference_elevation_m": "331",
+        "gee_elevation_m": "328",
+        "absolute_difference_m": "3",
+        "slope_degree": "27",
+        "aspect_degree": "208",
+        "inside_confirmed_aoi": "TRUE",
+        "inside_5km_buffer": "TRUE",
+        "inside_jiangsu": "TRUE",
+        "inside_expected_planning_region": "FALSE",
+        "qa_result": "PASS",
+        "notes": "紫金山典型山地点；固定验收坐标，不代表山峰法定标志点。"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.843,
+          32.07
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "point_id": "NJ-MTN-02",
+        "region_group": "nanjing",
+        "point_type": "western_mountain",
+        "expected_region": "Nanjing confirmed AOI",
+        "expected_data_status": "VALID_DATA",
+        "actual_data_status": "VALID_DATA",
+        "reference_source": "backend/N32E118.hgt",
+        "reference_elevation_m": "173",
+        "gee_elevation_m": "170",
+        "absolute_difference_m": "3",
+        "slope_degree": "15",
+        "aspect_degree": "148",
+        "inside_confirmed_aoi": "TRUE",
+        "inside_5km_buffer": "TRUE",
+        "inside_jiangsu": "TRUE",
+        "inside_expected_planning_region": "FALSE",
+        "qa_result": "PASS",
+        "notes": "南京西部山地覆盖与起伏检查点。"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.4,
+          32.05
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "point_id": "NJ-URBAN-01",
+        "region_group": "nanjing",
+        "point_type": "urban_flat",
+        "expected_region": "Nanjing confirmed AOI",
+        "expected_data_status": "VALID_DATA",
+        "actual_data_status": "VALID_DATA",
+        "reference_source": "backend/N32E118.hgt",
+        "reference_elevation_m": "14",
+        "gee_elevation_m": "14",
+        "absolute_difference_m": "0",
+        "slope_degree": "1",
+        "aspect_degree": "1",
+        "inside_confirmed_aoi": "TRUE",
+        "inside_5km_buffer": "TRUE",
+        "inside_jiangsu": "TRUE",
+        "inside_expected_planning_region": "FALSE",
+        "qa_result": "PASS",
+        "notes": "南京主城区平缓地形检查点。"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.797,
+          32.06
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "point_id": "NJ-LOW-01",
+        "region_group": "nanjing",
+        "point_type": "southern_lowland",
+        "expected_region": "Nanjing confirmed AOI",
+        "expected_data_status": "VALID_DATA",
+        "actual_data_status": "VALID_DATA",
+        "reference_source": "spatial extent and raster NoData check",
+        "reference_elevation_m": "",
+        "gee_elevation_m": "6",
+        "absolute_difference_m": "",
+        "slope_degree": "1",
+        "aspect_degree": "46",
+        "inside_confirmed_aoi": "TRUE",
+        "inside_5km_buffer": "TRUE",
+        "inside_jiangsu": "TRUE",
+        "inside_expected_planning_region": "FALSE",
+        "qa_result": "PASS",
+        "notes": "南京南部低地有效覆盖检查点。"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.8,
+          31.3
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "point_id": "NJ-WATER-01",
+        "region_group": "nanjing",
+        "point_type": "water_surface_xuanwu_lake",
+        "expected_region": "Nanjing confirmed AOI",
+        "expected_data_status": "VALID_DATA",
+        "actual_data_status": "VALID_DATA",
+        "reference_source": "backend/N32E118.hgt",
+        "reference_elevation_m": "8",
+        "gee_elevation_m": "8",
+        "absolute_difference_m": "0",
+        "slope_degree": "0",
+        "aspect_degree": "0",
+        "inside_confirmed_aoi": "TRUE",
+        "inside_5km_buffer": "TRUE",
+        "inside_jiangsu": "TRUE",
+        "inside_expected_planning_region": "FALSE",
+        "qa_result": "PASS",
+        "notes": "玄武湖水域像元及低坡度稳定性检查点。"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.796,
+          32.08
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "point_id": "NJ-EAST-01",
+        "region_group": "nanjing",
+        "point_type": "eastern_boundary_interior",
+        "expected_region": "Nanjing confirmed AOI",
+        "expected_data_status": "VALID_DATA",
+        "actual_data_status": "VALID_DATA",
+        "reference_source": "spatial extent and raster NoData check",
+        "reference_elevation_m": "",
+        "gee_elevation_m": "48",
+        "absolute_difference_m": "",
+        "slope_degree": "5",
+        "aspect_degree": "308",
+        "inside_confirmed_aoi": "TRUE",
+        "inside_5km_buffer": "TRUE",
+        "inside_jiangsu": "TRUE",
+        "inside_expected_planning_region": "FALSE",
+        "qa_result": "PASS",
+        "notes": "南京东部边缘内侧覆盖检查点。"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.2179,
+          31.6207
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "point_id": "NJ-WEST-01",
+        "region_group": "nanjing",
+        "point_type": "western_boundary_interior",
+        "expected_region": "Nanjing confirmed AOI",
+        "expected_data_status": "VALID_DATA",
+        "actual_data_status": "VALID_DATA",
+        "reference_source": "spatial extent and raster NoData check",
+        "reference_elevation_m": "",
+        "gee_elevation_m": "23",
+        "absolute_difference_m": "",
+        "slope_degree": "1",
+        "aspect_degree": "91",
+        "inside_confirmed_aoi": "TRUE",
+        "inside_5km_buffer": "TRUE",
+        "inside_jiangsu": "TRUE",
+        "inside_expected_planning_region": "FALSE",
+        "qa_result": "PASS",
+        "notes": "南京西部边缘内侧覆盖检查点。"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.36804,
+          31.94146
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "point_id": "PLAN-01",
+        "region_group": "planning_area",
+        "point_type": "planning_yuntai_representative",
+        "expected_region": "planning_yuntai",
+        "expected_data_status": "NO_DATA_OUTSIDE_DELIVERY",
+        "actual_data_status": "NO_DATA_OUTSIDE_DELIVERY",
+        "reference_source": "spatial extent and raster NoData check",
+        "reference_elevation_m": "",
+        "gee_elevation_m": "",
+        "absolute_difference_m": "",
+        "slope_degree": "",
+        "aspect_degree": "",
+        "inside_confirmed_aoi": "FALSE",
+        "inside_5km_buffer": "FALSE",
+        "inside_jiangsu": "TRUE",
+        "inside_expected_planning_region": "TRUE",
+        "qa_result": "PASS",
+        "notes": "云台山规划展示区代表点；应明确返回南京SRTM交付范围外。"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.316664,
+          34.65879
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "point_id": "JS-OTHER-01",
+        "region_group": "jiangsu_non_demo",
+        "point_type": "jiangsu_outside_nanjing",
+        "expected_region": "Jiangsu outside Nanjing delivery",
+        "expected_data_status": "NO_DATA_OUTSIDE_DELIVERY",
+        "actual_data_status": "NO_DATA_OUTSIDE_DELIVERY",
+        "reference_source": "spatial extent and raster NoData check",
+        "reference_elevation_m": "",
+        "gee_elevation_m": "",
+        "absolute_difference_m": "",
+        "slope_degree": "",
+        "aspect_degree": "",
+        "inside_confirmed_aoi": "FALSE",
+        "inside_5km_buffer": "FALSE",
+        "inside_jiangsu": "TRUE",
+        "inside_expected_planning_region": "FALSE",
+        "qa_result": "PASS",
+        "notes": "江苏省内南京外检查点；不能从南京交付栅格伪造数值。"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          117.2,
+          34.3
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "point_id": "OUT-01",
+        "region_group": "outside_region",
+        "point_type": "outside_jiangsu",
+        "expected_region": "Outside Jiangsu",
+        "expected_data_status": "NO_DATA_OUTSIDE_DELIVERY",
+        "actual_data_status": "NO_DATA_OUTSIDE_DELIVERY",
+        "reference_source": "spatial extent and raster NoData check",
+        "reference_elevation_m": "",
+        "gee_elevation_m": "",
+        "absolute_difference_m": "",
+        "slope_degree": "",
+        "aspect_degree": "",
+        "inside_confirmed_aoi": "FALSE",
+        "inside_5km_buffer": "FALSE",
+        "inside_jiangsu": "FALSE",
+        "inside_expected_planning_region": "FALSE",
+        "qa_result": "PASS",
+        "notes": "省外检查点；应明确返回南京SRTM交付范围外。"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.47,
+          31.23
+        ]
+      }
+    }
+  ]
+}

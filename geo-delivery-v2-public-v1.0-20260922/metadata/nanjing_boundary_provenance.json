@@ -1,0 +1,68 @@
+{
+  "schema_version": "fire-patrol-boundary-provenance-v1",
+  "region_id": "nanjing",
+  "region_name_zh": "南京市",
+  "source_platform": "天地图",
+  "acquired_at": "2026-09-10",
+  "source_crs": {
+    "name": "China Geodetic Coordinate System 2000",
+    "epsg": 4490
+  },
+  "processing_crs": {
+    "name": "WGS 84 / UTM zone 50N",
+    "epsg": 32650
+  },
+  "converted_crs": {
+    "name": "WGS 84",
+    "epsg": 4326
+  },
+  "delivery_crs": {
+    "name": "WGS 84",
+    "epsg": 4326
+  },
+  "gee_asset_id": "projects/my-project-260421-494009/assets/nanjing_boundary_wgs84",
+  "buffer": {
+    "method": "Earth Engine Geometry.buffer",
+    "processing_crs": "EPSG:32650",
+    "distance_m": 5000,
+    "direction": "outward"
+  },
+  "boundary_export": {
+    "crs": "EPSG:4326",
+    "format": "GeoJSON",
+    "file": "data/nanjing/srtm/nanjing_srtm_boundaries.geojson"
+  },
+  "used_for": [
+    "SRTM DEM clipping",
+    "SRTM slope clipping",
+    "SRTM aspect clipping"
+  ],
+  "scope_distinction": {
+    "administrative_boundary": "Nanjing municipal administrative boundary obtained from Tianditu",
+    "analysis_aoi": "Technical analysis extent formed by buffering the administrative boundary outward by 5000 m in EPSG:32650; it is not an administrative or forest-right boundary"
+  },
+  "processing_chain": "Tianditu administrative division (CGCS2000 / EPSG:4490) -> WGS84 / EPSG:4326 -> WGS 84 / UTM zone 50N / EPSG:32650 -> outward buffer 5000 m -> WGS84 / EPSG:4326 boundary delivery",
+  "source_url": "https://cloudcenter.tianditu.gov.cn/administrativeDivision",
+  "source_version": "not_provided_by_source",
+  "license_or_terms": {
+    "status": "restricted_visualization_use",
+    "standard_open_license": "not_provided_by_source",
+    "attribution_required": true,
+    "attribution": "天地图",
+    "usage_restriction": "该数据仅供地图可视化使用",
+    "redistribution_status": "not_permitted_for_public_repository",
+    "public_repository_recommendation": "do_not_redistribute_raw_or_reconstructable_boundary_vectors",
+    "internal_project_usage": "allowed_for_visualization_and_spatial_processing",
+    "note": "The Tianditu download interface states that the data is for map visualization only. The public repository must not distribute the downloaded boundary vectors or derived vectors from which the complete administrative boundary can be substantially reconstructed."
+  },
+  "public_distribution": {
+    "raw_boundary_vector": "excluded",
+    "reconstructable_boundary_vector": "excluded",
+    "metadata_and_provenance": "included",
+    "rendered_qa_images": "included",
+    "project_derived_planning_regions": "included",
+    "public_area_index": "data/overview/areas_public.geojson"
+  },
+  "qa_status": "PASS",
+  "statement_basis": "User-confirmed acquisition provenance and the usage notice shown on the Tianditu download interface; no unprovided source version or standard open-license identifier has been inferred"
+}

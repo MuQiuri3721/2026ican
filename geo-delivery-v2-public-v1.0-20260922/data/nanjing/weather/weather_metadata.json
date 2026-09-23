@@ -1,0 +1,54 @@
+{
+  "dataset_id": "open_meteo_nanjing_weather_delivery_20260921",
+  "region_id": "nanjing",
+  "scope": "one representative query point for the confirmed Nanjing AOI",
+  "request_point": {
+    "latitude": 31.925519,
+    "longitude": 118.737221,
+    "crs": "EPSG:4326",
+    "selection_method": "representative_point_of_confirmed_nanjing_aoi_in_epsg32650",
+    "boundary_source": "data/nanjing/srtm/nanjing_srtm_boundaries.geojson"
+  },
+  "forecast_request_url": "https://api.open-meteo.com/v1/forecast?latitude=31.925519&longitude=118.737221&timezone=Asia%2FShanghai&wind_speed_unit=ms&temperature_unit=celsius&precipitation_unit=mm&timeformat=iso8601&current=temperature_2m%2Crelative_humidity_2m%2Cprecipitation%2Cwind_speed_10m%2Cwind_direction_10m%2Cwind_gusts_10m&hourly=temperature_2m%2Crelative_humidity_2m%2Cprecipitation%2Cwind_speed_10m%2Cwind_direction_10m%2Cwind_gusts_10m&forecast_hours=24",
+  "historical_request_url": "https://archive-api.open-meteo.com/v1/archive?latitude=31.925519&longitude=118.737221&timezone=Asia%2FShanghai&wind_speed_unit=ms&temperature_unit=celsius&precipitation_unit=mm&timeformat=iso8601&hourly=temperature_2m%2Crelative_humidity_2m%2Cprecipitation%2Cwind_speed_10m%2Cwind_direction_10m%2Cwind_gusts_10m&start_date=2026-09-13&end_date=2026-09-15",
+  "fetched_at_utc": "2026-09-21T11:19:48+00:00",
+  "forecast_model_selection": "best_match",
+  "historical_model_selection": "best_match historical API",
+  "replay_period_local": {
+    "start": "2026-09-13",
+    "end": "2026-09-15",
+    "expected_hours": 72
+  },
+  "timezone": "Asia/Shanghai",
+  "crs": "EPSG:4326",
+  "temporal_resolution": "1 hour",
+  "recommended_refresh_interval_minutes": 15,
+  "stale_threshold_minutes": 30,
+  "temperature_height": "2 m above ground",
+  "humidity_height": "2 m above ground",
+  "wind_height": "10 m above ground",
+  "wind_direction_convention": "meteorological from-direction, north=0 degrees, clockwise; to=(from+180) mod 360",
+  "precipitation_semantics": {
+    "current": "sum for the current source interval; interval_seconds retained in weather_current.json",
+    "hourly": "sum over the preceding hour"
+  },
+  "units": {
+    "temperature": "degree Celsius",
+    "relative_humidity": "percent",
+    "precipitation": "millimetre",
+    "wind_speed_and_gust": "metre per second",
+    "wind_direction": "degree"
+  },
+  "source": "Open-Meteo Forecast API and Historical Weather API",
+  "documentation": [
+    "https://open-meteo.com/en/docs",
+    "https://open-meteo.com/en/docs/historical-weather-api"
+  ],
+  "license": "CC BY 4.0",
+  "license_url": "https://open-meteo.com/en/licence",
+  "limitations": [
+    "Weather values are model or reanalysis outputs, not an independent weather station observation.",
+    "The 72-hour replay is a fixed historical sequence for reproducible simulation and is not a historical forecast verification dataset.",
+    "forecast_issued_at is null because the combined best-match response does not provide one authoritative issue time."
+  ]
+}

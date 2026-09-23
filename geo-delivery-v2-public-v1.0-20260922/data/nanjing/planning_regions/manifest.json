@@ -1,0 +1,38 @@
+{
+  "dataset_id": "jiangsu_planning_regions_overview_v1",
+  "qa_status": "PASS",
+  "planning_display_only": true,
+  "generated_at_utc": "2026-09-21T14:55:28.546770+00:00",
+  "files": [
+    {
+      "path": "planning_regions_overview.geojson",
+      "size_bytes": 202857,
+      "sha256": "A4CA3971D73729DB9ECB31B169E1AC32D4597D3F0A24F925AA1E2356BCC1B8BA"
+    },
+    {
+      "path": "planning_regions_metadata.csv",
+      "size_bytes": 3683,
+      "sha256": "5F0E70548B3C33A03C59A709BC758313022144D7D1EF630A1DD81195E6E2379B"
+    },
+    {
+      "path": "planning_regions_qa_map.png",
+      "size_bytes": 336640,
+      "sha256": "0A5FF9745ABA3D2AF968A1678686E4462644F7EDDB5D349957E62011A413E5B1"
+    },
+    {
+      "path": "planning_regions_qa_report.md",
+      "size_bytes": 1548,
+      "sha256": "989FECCDF12E200A8C5DD227502C0C5330C9C62481A3E98D977857C067E6C03C"
+    },
+    {
+      "path": "planning_regions_forest_terrain_core.geojson",
+      "size_bytes": 2511874,
+      "sha256": "09B53265124EC7988CB2622D301978E67BD1BC1489221D33C650D97C36E8FFAC"
+    },
+    {
+      "path": "planning_regions_rebuild_statistics.json",
+      "size_bytes": 3510,
+      "sha256": "74D69CD78DCE9DF548F6CAF6A0956EB9F81D90D96BA229B8013A273A2CF7401C"
+    }
+  ]
+}

@@ -22,8 +22,7 @@ data/audit_store.db
 # e2e/_real_images/ 检验图片与结果已按用户指令入库（2026-09-10）；网络来源版权不明，仅作测试 fixture
 e2e/e2e/
 
-# E-1 替代：本地 YOLO 训练产物与数据集（CC BY 4.0，权重走队内渠道不入库）
-yolo_server/best.pt
+# E-1 替代：本地 YOLO 训练数据集不入库（CC BY 4.0，可从 HF 重新下载）；权重 best.pt/best_v2.pt 已入库（clone 即可启动 yolo_server）
 runs/
 data/dfire/
 data/dfire_yolo/
@@ -36,7 +35,6 @@ data/yolo_sample_check/
 
 # 第三方官方仓库克隆（复现参考用，不入库；来源见 scripts/yolo/pwm/pwm_modules.py 头注释）
 /external/
-yolo_server/best_v2.pt
 e2e/_app_compiled.js
 data/analysis_store.db-journal
 
@@ -45,6 +43,7 @@ pwm/runs/
 pwm/**/__pycache__/
 pwm/_class_check.jpg
 
-# GIS 交付包（geo-delivery-v2，队友交付；115MB 大文件 + 天地图行政边界授权限制，严禁入库；
-# 完整说明见包内 README.md / THIRD_PARTY_DATA.md，平台通过 GEO_DATA_ROOT 指向）
-geo-delivery-v2-*/
+# GIS 交付包：geo-delivery-v2-public-v1.0（公开裁剪版）已入库（2026-09-23，clone 即可离线地理数据）——
+# 单文件最大 26MB、无天地图行政边界矢量（受限 areas.geojson 不在 public 包），合规依据包内 THIRD_PARTY_DATA.md。
+# 若后续引入本地完整交付包（含受限边界数据），保持排除，严禁入库：
+geo-delivery-v2-full-*

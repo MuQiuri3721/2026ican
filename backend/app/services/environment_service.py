@@ -162,7 +162,13 @@ GEO_DELIVERY_COVER_BBOX_EPSG32650 = (623430, 3451650, 716730, 3614460)
 
 def geo_data_root():
     raw = os.environ.get("GEO_DATA_ROOT", "").strip()
-    return Path(raw) if raw else None
+    if not raw:
+        return None
+    path = Path(raw)
+    if not path.is_absolute():
+        # 相对路径按仓库根（backend/ 上一级）解析：clone 到任意位置 .env 无需改动
+        path = Path(__file__).resolve().parents[3] / path
+    return path
 
 
 def geo_data_mode():

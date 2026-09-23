@@ -1,0 +1,40 @@
+# Python caches and local temporary files
+__pycache__/
+*.py[cod]
+*.tmp
+*.log
+
+# Large raw OSM downloads are reproducible from the documented source and date.
+raw/osm/
+
+# Large generated OSM graph files exceed GitHub's regular-file limit.
+data/nanjing/osm/roads.geojson
+data/nanjing/osm/road_nodes.geojson
+
+# Local/team manifests reference files that the public repository excludes.
+/manifest.json
+/manifest_full.json
+/manifest_platform.json
+data/nanjing/osm/manifest.json
+data/overview/manifest.json
+metadata/nanjing_srtm_file_manifest.json
+
+# Processing intermediates are kept in the local archive, not the public repo.
+data/nanjing/planning_regions/raw/
+data/nanjing/planning_regions/rebuilt/
+
+# Tianditu-derived administrative geometries are for local visualization and
+# internal spatial processing only. Do not redistribute in a public repository.
+scripts/jiangsu_province_boundary_wgs84.*
+scripts/jiangsu_prefecture_boundaries_wgs84.*
+scripts/nanjing_boundary_wgs84.*
+scripts/江苏省_省.geojson
+scripts/江苏省_市.geojson
+scripts/南京市_市.geojson
+data/nanjing/srtm/nanjing_srtm_boundaries.geojson
+data/overview/areas.geojson
+
+# Keep the public, project-derived planning index:
+# data/overview/areas_public.geojson
+# Keep the public repository manifest:
+# manifest_public.json

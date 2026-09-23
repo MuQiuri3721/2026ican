@@ -68,7 +68,10 @@ tests/            # 契约和接口测试
 
 ## 安装与启动
 
-后端：
+> **clone 即可运行**：离线地理数据包（`geo-delivery-v2-public-v1.0-20260922/`）与 YOLO 检测权重（`yolo_server/best.pt`）均已随仓库分发，无需额外下载。唯一需要自备的是 GLM/VLM 的 API Key（不随仓库分发）。
+
+1. 配置环境变量：复制 `.env.example` 为 `.env`（仓库根），填入 `FIREOPS_LLM_API_KEY` 与 `FIRE_VLM_API_KEY`（不填则全系统确定性离线运行，功能不中断）；`GEO_DATA_ROOT` 已是仓库相对路径无需改动。
+2. 后端：
 
 ```bash
 python -m venv .venv
@@ -78,13 +81,15 @@ pip install -r backend/requirements.txt
 uvicorn backend.app.main:app --reload --port 8000
 ```
 
-前端另开终端：
+3. 前端另开终端：
 
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+
+4. （可选）真实 YOLO 检测服务：`python yolo_server/server.py --port 9000`（需 `pip install ultralytics fastapi uvicorn`，torch 建议 CUDA 版；未启动时系统自动回落 fixture 检测并在来源标注中注明）。
 
 访问工作台 `http://localhost:5173`，Swagger `http://localhost:8000/docs`。
 
