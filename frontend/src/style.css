@@ -880,14 +880,6 @@ nav button b{background:#ff6f3d;box-shadow:0 0 10px #ff6f3d66;border-radius:8px}
 .env-foot{display:flex;align-items:center;gap:8px;color:var(--scr-muted);font:400 11.5px var(--font-data);padding-top:7px;border-top:1px solid #16345e}
 .env-foot svg{color:#6fb0ff;flex-shrink:0}
 /* 地图内图例卡 */
-.map-legend-card{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:500;display:flex;gap:14px;padding:8px 14px;border-radius:10px;background:#0a1830d9;border:1px solid #1a3a68;backdrop-filter:blur(6px);font:400 11.5px var(--font-data);color:var(--ink-2);pointer-events:none;white-space:nowrap}
-.map-legend-card span{display:inline-flex;align-items:center;gap:6px}
-.map-legend-card i{display:inline-block;width:9px;height:9px;border-radius:50%}
-.lg-fire{background:var(--fire);box-shadow:0 0 6px var(--fire)}
-.lg-water{background:#41b6c4}
-.lg-drone{background:#3f8cff}
-.lg-route{width:14px!important;height:2px!important;border-radius:1px!important;background:#7fd4ff}
-.lg-evac{width:14px!important;height:2px!important;border-radius:1px!important;background:var(--ok)}
 
 /* ---- C 任务调度页：左地图+编组 / 右调度结论+方案审批 ---- */
 .dispatch-grid2{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start;min-height:calc(100vh - 240px)}
@@ -1029,3 +1021,5 @@ nav button b{background:#ff6f3d;box-shadow:0 0 10px #ff6f3d66;border-radius:8px}
 /* 数据分析空演化格：撑满单元格 */
 .analysis-grid .evo-panel,.ana-bottom .evo-panel{height:100%}
 .ana-bottom-left .panel{height:100%}
+/* 遮挡治理：图例移左下后，光标读数下移避开浮动任务条（任务条 bottom:40px） */
+.map-view.screen .map-coords{bottom:6px}

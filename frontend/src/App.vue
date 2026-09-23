@@ -1939,13 +1939,6 @@ onMounted(() => {
 <div class="marker-detail-body"><div v-for="row in activeMarker.rows" :key="row.k" class="marker-detail-row"><span>{{ row.k }}</span><b>{{ row.v }}</b></div></div>
 </div>
       <div v-if="amapReady && mapMode === '2d'" class="map-coords" aria-live="polite" aria-label="光标经纬度"><Crosshair :size="13" /> <template v-if="cursorCoords">{{ cursorCoords.longitude.toFixed(6) }}°E · {{ cursorCoords.latitude.toFixed(6) }}°N</template><template v-else>移动鼠标读取经纬度</template></div>
-      <div class="map-legend-card" aria-label="地图图例">
-        <span><i class="lg-fire"></i>火点</span>
-        <span><i class="lg-water"></i>水源</span>
-        <span><i class="lg-drone"></i>无人机</span>
-        <span><i class="lg-route"></i>取水路线</span>
-        <span><i class="lg-evac"></i>疏散路线</span>
-      </div>
       <div v-if="windArrowDeg != null" class="map-wind-indicator" aria-label="风向指示">
         <svg viewBox="0 0 24 24" :style="{ transform: `rotate(${windArrowDeg}deg)` }"><path d="M12 2 L18 12 L14 12 L14 22 L10 22 L10 12 L6 12 Z" /></svg>
         <span>风向 · {{ result.environment.wind_direction }}风</span>

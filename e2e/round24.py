@@ -1,5 +1,5 @@
 """第 24 轮：FE-84/85 新 UI 面专项——数据分析页、任务管理详情、资源总览 KPI、
-机群调度轮次条、火情监测趋势分析条、态势总览环形图/图例/风向标。
+机群调度轮次条、火情监测趋势分析条、态势总览环形图/风向标。
 只读断言（不创建任务、不上传影像），可安全并入全量跑批。"""
 import sys
 from pathlib import Path
@@ -22,8 +22,6 @@ def main() -> int:
         page.get_by_role("button", name="态势总览").click()
         page.locator(".fm-donut").wait_for(timeout=10000)
         ok &= report(24, "任务执行环形图", True)
-        page.locator(".map-legend-card").wait_for(timeout=10000)
-        ok &= report(24, "地图内图例卡", "火点" in page.locator(".map-legend-card").inner_text())
         page.locator(".map-wind-indicator").wait_for(timeout=15000)
         ok &= report(24, "风向指示标", "风向" in page.locator(".map-wind-indicator").inner_text())
 
