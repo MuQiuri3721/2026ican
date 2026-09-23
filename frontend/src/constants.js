@@ -22,7 +22,22 @@ export const VLM_ERROR_LABELS = {
   invalid_response: '模型响应异常',
 }
 
-export const MODULE_LABELS = { none: '无载荷', water_20l: '水剂 20L', co2_6kg: 'CO₂ 6kg', sup_10: '补给 10kg' }
+// 页面设计（2026-09）全局视觉规则：主界面不出现英文机读码——重规划触发器统一中文
+export const REPLAN_TRIGGER_LABELS = {
+  fire_load_increase_over_20_percent: '火情负荷增长超 20%',
+  wind_band_changed: '风档跨档变化',
+  soc_below_return_threshold: '电量低于返航阈值',
+  agent_insufficient: '可用灭火机不足',
+  people_status_changed: '人员状态变化',
+  signal_below_threshold: '信号强度不足',
+  water_source_invalid: '水源失效',
+  suppression_insufficient_persistent: '压制持续不足',
+  uav_fault: '单机失能',
+  time_limit_exceeded: '超出处置时限',
+  soc_below_return: '电量低于返航阈值',
+}
+
+export const MODULE_LABELS = { none: '无载荷', 'EO/IR': '光电吊舱', water_20l: '水剂 20L', co2_6kg: 'CO₂ 6kg', sup_10: '补给 10kg' }
 
 export const LAYER_LABELS = { fire: '火点', water: '水源', road: '道路', drone: '无人机', contour: '等高线', evacuation: '疏散路线' }
 

@@ -1,5 +1,11 @@
 /* 展示层标签换算：后端枚举/机读值 → 中文界面文案。纯函数，无状态。 */
-import { AGENT_MSG_LABELS, AGENT_SOURCE_LABELS, MODULE_LABELS, STREAM_TYPE_META } from '../constants'
+import { AGENT_MSG_LABELS, AGENT_SOURCE_LABELS, MODULE_LABELS, REPLAN_TRIGGER_LABELS, STREAM_TYPE_META } from '../constants'
+
+export function replanTriggerLabel(trigger) {
+  if (trigger == null) return ''
+  const text = String(trigger)
+  return REPLAN_TRIGGER_LABELS[text] || text.replaceAll('_', ' ')
+}
 
 export function agentMsgLabel(type) {
   return AGENT_MSG_LABELS[type] || type

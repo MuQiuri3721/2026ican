@@ -14,12 +14,13 @@ def main() -> int:
     try:
         session.goto_app()
 
-        # LLM 离线态徽标（未配置 key：确定性降级）
-        llm_badge = page.locator(".topbar-right .status-tag", has_text="LLM")
+        # GLM 状态标识（未配置 key：确定性降级）。页面设计 2026-09：顶栏不再展示技术接口
+        # 状态，GLM 在线/离线随「火情监测」页影像接入面板的模型状态区展示
+        llm_badge = page.locator(".upload-panel .model-status", has_text="GLM")
         llm_badge.wait_for(timeout=8000)
-        # LLM 在线/离线均为合法状态（key 可选）：徽标存在且标注其一即可
+        # GLM 在线/离线均为合法状态（key 可选）：标识存在且标注其一即可
         badge_text = llm_badge.inner_text()
-        ok &= report(13, "LLM 状态徽标", "在线" in badge_text or "离线" in badge_text, badge_text)
+        ok &= report(13, "GLM 状态标识", "在线" in badge_text or "离线" in badge_text, badge_text)
 
         # 演训模拟（scenario 路径，无影像）
         page.get_by_role("button", name="火情监测").click()
@@ -50,9 +51,11 @@ def main() -> int:
         page.wait_for_function("document.querySelector('.task-badge')?.textContent?.includes('执行中')", timeout=30000)
         page.get_by_role("button", name="机群调度").click()
         page.wait_for_function("document.querySelector('.sim-clock')?.textContent?.includes('第 2 轮')", timeout=30000)
-        page.get_by_role("button", name="Agent 协作").click()
+        # 折叠栏在第 35 行已打开；此处幂等确保打开——折叠体是 v-if，二次点击「Agent 协作」
+        # 会把已开的栏关掉并从 DOM 移除 .agent-timeline，下方等待必然超时（参考图改版回归实测）
+        page.evaluate("() => { if (!document.querySelector('.decision-fold-body')) document.querySelector('.decision-fold-head')?.click(); }")
         page.wait_for_function(
-            "document.querySelector('.agent-timeline')?.textContent?.includes('自主研判')", timeout=20000
+            "document.querySelector('.agent-timeline')?.textContent?.includes('自主研判')", timeout=60000
         )
         ok &= report(13, "每轮自主研判消息", True)
         timeline2 = page.locator(".agent-timeline").inner_text()

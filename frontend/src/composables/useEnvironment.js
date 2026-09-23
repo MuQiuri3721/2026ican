@@ -20,7 +20,13 @@ export function useEnvironment({ sceneId, addLog, onCoordinateApplied }) {
     return `${Math.floor(seconds / 3600)} 小时前`
   })
   const environmentStatus = computed(() => environment.value?.status || '未加载')
-  const environmentSource = computed(() => environment.value?.source || '—')
+  // 页面设计（2026-09）：主界面不出现内部服务名，来源统一换算为中文口径
+  const ENV_SOURCE_LABELS = { environment_service: '环境服务实测', open_meteo: '气象服务实测', amap: '高德实测', osm: '开放街图', overpass: '开放街图', environment_cache: '环境缓存', demo: '演示数据' }
+  const environmentSource = computed(() => {
+    const raw = environment.value?.source
+    if (!raw) return '—'
+    return ENV_SOURCE_LABELS[raw] || (raw.includes('cache') ? '环境缓存' : raw.includes('demo') ? '演示数据' : '实测数据')
+  })
   const environmentStale = computed(() => Boolean(environment.value?.stale))
   const environmentFallback = computed(() => environment.value?.fallback?.message || '')
   const environmentLocation = computed(() => environment.value?.location || environmentCoordinates.value)

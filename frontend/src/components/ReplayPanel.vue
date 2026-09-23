@@ -1,19 +1,24 @@
 <script setup>
-// 推演回放面板（FE-67 复盘层）：逐轮回放轮次快照——FLP 账本/触发器/机群状态。
+// 推演回放面板（FE-67 复盘层 + 2026-09 数据分析设计稿）：逐轮回放轮次快照——
+// 回放示意图（火区范围随机收缩 + 机群位置）+ FLP 账本/触发器/机群状态。
 // 数据全部来自 rounds[].before/after（BE-13 起每轮已存全量快照），零后端依赖。
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { ChevronLeft, ChevronRight, Pause, Play, Rewind } from 'lucide-vue-next'
-import { statusLabels } from '../constants'
+import { statusLabels, SUBGROUP_COLORS } from '../constants'
 import { formatNumber } from '../utils/labels'
 
 const props = defineProps({
   rounds: { type: Array, default: () => [] },
   areaPerFlp: { type: Number, default: 0 },
+  fireOrigin: { type: Object, default: null },
+  // 数据分析页设计稿要求回放面板默认展开；机群调度页保持折叠（round18 e2e 先点击再等展开）
+  defaultOpen: { type: Boolean, default: false },
 })
 
-const open = ref(false)
+const open = ref(props.defaultOpen)
 const index = ref(0)
 const playing = ref(false)
+const speed = ref(1)
 let timer = null
 
 const current = computed(() => props.rounds[index.value] || null)
@@ -39,6 +44,41 @@ const actionText = computed(() => {
   return names[action] || action || '—'
 })
 
+// 回放示意图（设计稿「复盘回放」）：火区等效圆 + 机群位置，以火点为投影原点。
+// 火区面积 = 轮后 FLP × area_per_flp；机群坐标为相对米制，与火点同系。
+const MAP_W = 340
+const MAP_H = 216
+const replayMap = computed(() => {
+  const fleet = current.value?.after?.fleet || []
+  const origin = props.fireOrigin || fleet.reduce(
+    (acc, d) => ({ x: acc.x + (d.position?.x ?? 0) / fleet.length, y: acc.y + (d.position?.y ?? 0) / fleet.length }),
+    { x: 0, y: 0 },
+  )
+  const flp = Number(current.value?.after?.fire_load_flp ?? current.value?.after?.flp)
+  const area = Number.isFinite(flp) && props.areaPerFlp ? flp * props.areaPerFlp : 0
+  const fireR = area > 0 ? Math.sqrt(area / Math.PI) : 0
+  const distances = fleet.map((d) => Math.hypot((d.position?.x ?? 0) - origin.x, (d.position?.y ?? 0) - origin.y))
+  const extent = Math.max(fireR * 1.3, ...distances, 120)
+  const scaleX = (MAP_W / 2 - 16) / extent
+  const scaleY = (MAP_H / 2 - 16) / extent
+  const project = (x, y) => ({
+    cx: MAP_W / 2 + (x - origin.x) * scaleX,
+    cy: MAP_H / 2 - (y - origin.y) * scaleY,
+  })
+  const fire = project(origin.x, origin.y)
+  return {
+    fire: { ...fire, r: Math.max(fireR * Math.min(scaleX, scaleY), 6) },
+    area,
+    drones: fleet.map((d) => ({
+      id: d.uav_id || d.id,
+      color: SUBGROUP_COLORS[d.subgroup] || '#8fa39a',
+      soc: d.soc,
+      status: d.status,
+      ...project(d.position?.x ?? 0, d.position?.y ?? 0),
+    })),
+  }
+})
+
 // 逐分钟 FLP 火花线：账本 per_minute 的 after 序列归一化到 100×30 视窗
 const spark = computed(() => {
   const points = perMinute.value.map((m) => Number(m.after_flp ?? m.after ?? 0)).filter((v) => Number.isFinite(v))
@@ -53,14 +93,23 @@ function stopTimer() {
   if (timer) { clearInterval(timer); timer = null }
   playing.value = false
 }
+function startTimer() {
+  timer = setInterval(() => {
+    if (index.value >= props.rounds.length - 1) { stopTimer(); return }
+    index.value += 1
+  }, 1600 / speed.value)
+}
 function togglePlay() {
   if (playing.value) { stopTimer(); return }
   if (index.value >= props.rounds.length - 1) index.value = 0
   playing.value = true
-  timer = setInterval(() => {
-    if (index.value >= props.rounds.length - 1) { stopTimer(); return }
-    index.value += 1
-  }, 1600)
+  startTimer()
+}
+const SPEED_STEPS = [0.5, 1, 2, 4]
+function cycleSpeed() {
+  const next = SPEED_STEPS[(SPEED_STEPS.indexOf(speed.value) + 1) % SPEED_STEPS.length]
+  speed.value = next
+  if (playing.value) { stopTimer(); playing.value = true; startTimer() }
 }
 function step(delta) {
   stopTimer()
@@ -76,11 +125,40 @@ onBeforeUnmount(stopTimer)
   <div class="replay-panel">
     <button class="replay-head" @click="open = !open">
       <Rewind :size="14" />
-      <b>推演回放</b>
-      <span>{{ rounds.length }} 轮快照 · 复盘逐轮态势</span>
+      <b>复盘回放</b>
+      <span>{{ rounds.length }} 轮快照 · 火区随机收缩 · 机群位置逐轮重演</span>
       <i>{{ open ? '收起' : '展开' }}</i>
     </button>
     <div v-if="open" class="replay-body">
+      <div class="replay-stage">
+        <svg class="replay-map" :viewBox="`0 0 ${MAP_W} ${MAP_H}`" role="img" aria-label="轮次回放示意图">
+          <defs>
+            <pattern id="replayGrid" width="28" height="28" patternUnits="userSpaceOnUse">
+              <path d="M28 0 L0 0 0 28" fill="none" stroke="#16283f" stroke-width="0.7" />
+            </pattern>
+            <radialGradient id="replayFire">
+              <stop offset="0%" stop-color="#ff9d4d" stop-opacity="0.85" />
+              <stop offset="55%" stop-color="#e05a2b" stop-opacity="0.45" />
+              <stop offset="100%" stop-color="#c23c14" stop-opacity="0.12" />
+            </radialGradient>
+          </defs>
+          <rect :width="MAP_W" :height="MAP_H" fill="#0a1626" />
+          <rect width="100%" height="100%" fill="url(#replayGrid)" />
+          <circle class="rm-fire" :cx="replayMap.fire.cx" :cy="replayMap.fire.cy" :r="replayMap.fire.r" fill="url(#replayFire)" stroke="#e05a2b" stroke-opacity="0.55" stroke-width="1.2" />
+          <text v-if="replayMap.area" class="rm-area" :x="replayMap.fire.cx" :y="replayMap.fire.cy - replayMap.fire.r - 6" text-anchor="middle">火区 ≈ {{ formatNumber(replayMap.area) }} m²</text>
+          <g v-for="d in replayMap.drones" :key="d.id" class="rm-drone" :style="{ color: d.color }" :title="`${d.id} · SOC ${Math.round(d.soc ?? 0)}% · ${statusLabels[d.status] || d.status || '待命'}`">
+            <circle :cx="d.cx" :cy="d.cy" r="7.5" fill="none" stroke="currentColor" stroke-opacity="0.28" />
+            <circle :cx="d.cx" :cy="d.cy" r="3.4" fill="currentColor" />
+            <text class="rm-drone-label" :x="d.cx" :y="d.cy - 10" text-anchor="middle">{{ d.id }}</text>
+          </g>
+        </svg>
+        <div class="replay-legend">
+          <span><i class="lg-fire"></i>火区范围</span>
+          <span><i class="lg-recon"></i>侦察机</span>
+          <span><i class="lg-suppress"></i>灭火机</span>
+          <span><i class="lg-support"></i>支援机</span>
+        </div>
+      </div>
       <div class="replay-controls">
         <button class="replay-btn" title="上一轮" @click="step(-1)"><ChevronLeft :size="15" /></button>
         <button class="replay-btn play" :title="playing ? '暂停' : '播放'" @click="togglePlay">
@@ -91,6 +169,7 @@ onBeforeUnmount(stopTimer)
           <button v-for="(r, i) in rounds" :key="r.round || i" :class="['tick', { on: i === index, good: r.next_action === 'finish' }]"
                   :title="`第 ${r.round || i + 1} 轮`" @click="stopTimer(); index = i">{{ r.round || i + 1 }}</button>
         </div>
+        <button class="replay-speed" :title="`播放速度 ${speed}x（点击切换）`" @click="cycleSpeed">{{ speed }}x</button>
         <span class="replay-pos">第 {{ current?.round || index + 1 }} / {{ rounds.length }} 轮</span>
       </div>
       <template v-if="current">
@@ -132,7 +211,22 @@ onBeforeUnmount(stopTimer)
 .replay-head span{font:400 11.5px var(--font-data);color:var(--ink-3)}
 .replay-head i{margin-left:auto;font:500 11.5px var(--font-ui);font-style:normal;color:var(--accent)}
 .replay-body{padding:0 13px 13px;display:flex;flex-direction:column;gap:10px}
-.replay-controls{display:flex;align-items:center;gap:8px}
+.replay-stage{position:relative;border:1px solid var(--scr-line,var(--line));border-radius:8px;overflow:hidden;background:#0a1626}
+.replay-map{display:block;width:100%;height:auto}
+.rm-fire{transition:r .6s ease,cx .6s ease,cy .6s ease}
+.rm-area{font:600 10.5px var(--font-data);fill:#f3a06b}
+.rm-drone circle{transition:cx .6s ease,cy .6s ease}
+.rm-drone-label{font:600 9px var(--font-data);fill:#c8d6e5;paint-order:stroke;stroke:#0a1626;stroke-width:2.5px}
+.replay-legend{position:absolute;left:8px;bottom:7px;display:flex;gap:10px;flex-wrap:wrap;padding:3px 8px;border-radius:999px;background:#0a1626cc;border:1px solid #1c3450;backdrop-filter:blur(3px)}
+.replay-legend span{display:inline-flex;align-items:center;gap:4px;font:400 10.5px var(--font-data);color:#9db4cc}
+.replay-legend i{width:8px;height:8px;border-radius:50%}
+.lg-fire{background:radial-gradient(circle,#ffb066,#e05a2b)!important}
+.lg-recon{background:#7fb3ff}
+.lg-suppress{background:#e07856}
+.lg-support{background:#5fbd92}
+.replay-speed{min-width:34px;padding:2px 7px;border:1px solid var(--line);border-radius:999px;background:transparent;font:500 11.5px var(--font-data);color:var(--ink-2);cursor:pointer}
+.replay-speed:hover{color:var(--accent);border-color:var(--accent-line)}
+.replay-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .replay-btn{display:grid;place-items:center;width:28px;height:28px;border:1px solid var(--line-strong);border-radius:50%;background:transparent;color:var(--ink-2);cursor:pointer}
 .replay-btn:hover{color:var(--accent);border-color:var(--accent-line)}
 .replay-btn.play{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent)}
