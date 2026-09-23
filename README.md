@@ -90,6 +90,7 @@ npm run dev
 ```
 
 4. （可选）真实 YOLO 检测服务：`python yolo_server/server.py --port 9000`（需 `pip install ultralytics fastapi uvicorn`，torch 建议 CUDA 版；未启动时系统自动回落 fixture 检测并在来源标注中注明）。
+5. （可选）高德卫星底图：把 `frontend/.env.example` 复制为 `frontend/.env`，填入高德开放平台免费申请的「Web端(JS API)」Key 与安全密钥后重启前端。**未配置时态势总览自动回退等高线示意图**（数据与功能全部正常，仅底图样式不同，非故障）。
 
 访问工作台 `http://localhost:5173`，Swagger `http://localhost:8000/docs`。
 
