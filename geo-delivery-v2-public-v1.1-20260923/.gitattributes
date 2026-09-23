@@ -1,0 +1,15 @@
+# Delivery manifests hash exact file bytes. Disable Git line-ending conversion
+# for this subtree so SHA256 values stay stable across Windows, macOS and Linux.
+* -text
+
+# Keep useful textual diffs without enabling line-ending conversion.
+*.md diff
+*.txt diff
+*.csv diff
+*.json diff
+*.geojson diff
+*.py diff
+*.js diff
+*.yml diff
+*.yaml diff
+*.toml diff

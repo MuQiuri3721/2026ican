@@ -1,0 +1,22 @@
+{
+  "region_id": "nanjing",
+  "extent": "Nanjing administrative boundary plus 5 km",
+  "generated_at": "2026-09-21T10:36:24+00:00",
+  "items": [
+    {
+      "dataset": "water_candidates",
+      "gap": "Public OSM geometry does not prove current safety, capacity, or practical water access.",
+      "handling": "Candidate fields remain null and verification_status is unverified."
+    },
+    {
+      "dataset": "facilities",
+      "gap": "Public OSM features do not prove landing, assembly, staffing, or current operational capability.",
+      "handling": "Operational capability fields remain null; candidates require field verification."
+    },
+    {
+      "dataset": "roads",
+      "gap": "Missing OSM access tags mean unknown, not unrestricted access; the graph is not production navigation.",
+      "handling": "Raw access/foot/motor_vehicle tags are retained without inferred defaults."
+    }
+  ]
+}

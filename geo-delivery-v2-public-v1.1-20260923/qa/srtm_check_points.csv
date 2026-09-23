@@ -1,0 +1,11 @@
+﻿point_id,region_group,point_type,longitude,latitude,expected_region,expected_data_status,actual_data_status,reference_source,reference_elevation_m,gee_elevation_m,absolute_difference_m,slope_degree,aspect_degree,inside_confirmed_aoi,inside_5km_buffer,inside_jiangsu,inside_expected_planning_region,qa_result,notes
+NJ-MTN-01,nanjing,typical_mountain_zijin,118.843000,32.070000,Nanjing confirmed AOI,VALID_DATA,VALID_DATA,backend/N32E118.hgt,331,328,3,27,208,TRUE,TRUE,TRUE,FALSE,PASS,紫金山典型山地点；固定验收坐标，不代表山峰法定标志点。
+NJ-MTN-02,nanjing,western_mountain,118.400000,32.050000,Nanjing confirmed AOI,VALID_DATA,VALID_DATA,backend/N32E118.hgt,173,170,3,15,148,TRUE,TRUE,TRUE,FALSE,PASS,南京西部山地覆盖与起伏检查点。
+NJ-URBAN-01,nanjing,urban_flat,118.797000,32.060000,Nanjing confirmed AOI,VALID_DATA,VALID_DATA,backend/N32E118.hgt,14,14,0,1,1,TRUE,TRUE,TRUE,FALSE,PASS,南京主城区平缓地形检查点。
+NJ-LOW-01,nanjing,southern_lowland,118.800000,31.300000,Nanjing confirmed AOI,VALID_DATA,VALID_DATA,spatial extent and raster NoData check,,6,,1,46,TRUE,TRUE,TRUE,FALSE,PASS,南京南部低地有效覆盖检查点。
+NJ-WATER-01,nanjing,water_surface_xuanwu_lake,118.796000,32.080000,Nanjing confirmed AOI,VALID_DATA,VALID_DATA,backend/N32E118.hgt,8,8,0,0,0,TRUE,TRUE,TRUE,FALSE,PASS,玄武湖水域像元及低坡度稳定性检查点。
+NJ-EAST-01,nanjing,eastern_boundary_interior,119.217900,31.620700,Nanjing confirmed AOI,VALID_DATA,VALID_DATA,spatial extent and raster NoData check,,48,,5,308,TRUE,TRUE,TRUE,FALSE,PASS,南京东部边缘内侧覆盖检查点。
+NJ-WEST-01,nanjing,western_boundary_interior,118.368040,31.941460,Nanjing confirmed AOI,VALID_DATA,VALID_DATA,spatial extent and raster NoData check,,23,,1,91,TRUE,TRUE,TRUE,FALSE,PASS,南京西部边缘内侧覆盖检查点。
+PLAN-01,planning_area,planning_yuntai_representative,119.316664,34.658790,planning_yuntai,NO_DATA_OUTSIDE_DELIVERY,NO_DATA_OUTSIDE_DELIVERY,spatial extent and raster NoData check,,,,,,FALSE,FALSE,TRUE,TRUE,PASS,云台山规划展示区代表点；应明确返回南京SRTM交付范围外。
+JS-OTHER-01,jiangsu_non_demo,jiangsu_outside_nanjing,117.200000,34.300000,Jiangsu outside Nanjing delivery,NO_DATA_OUTSIDE_DELIVERY,NO_DATA_OUTSIDE_DELIVERY,spatial extent and raster NoData check,,,,,,FALSE,FALSE,TRUE,FALSE,PASS,江苏省内南京外检查点；不能从南京交付栅格伪造数值。
+OUT-01,outside_region,outside_jiangsu,121.470000,31.230000,Outside Jiangsu,NO_DATA_OUTSIDE_DELIVERY,NO_DATA_OUTSIDE_DELIVERY,spatial extent and raster NoData check,,,,,,FALSE,FALSE,FALSE,FALSE,PASS,省外检查点；应明确返回南京SRTM交付范围外。

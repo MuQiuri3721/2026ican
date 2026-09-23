@@ -1,0 +1,62 @@
+{
+  "schema_version": "fire-patrol-weather-manifest-v1",
+  "dataset_id": "Open_Meteo_Zijinshan_Current_Forecast_Replay_20260923",
+  "region_id": "nanjing",
+  "generated_at_utc": "2026-09-23T06:04:18+00:00",
+  "qa_status": "PASS",
+  "source_urls": [
+    "https://api.open-meteo.com/v1/forecast",
+    "https://archive-api.open-meteo.com/v1/archive"
+  ],
+  "license": "CC BY 4.0",
+  "files": [
+    {
+      "role": "current_raw",
+      "path": "data/nanjing/weather/weather_current_raw.json",
+      "size_bytes": 3602,
+      "sha256": "7157381FC87D9C1DBEB4EBFB5F1AE6165A902F80B7DA72A5F120DD47886779AB"
+    },
+    {
+      "role": "current",
+      "path": "data/nanjing/weather/weather_current.json",
+      "size_bytes": 1388,
+      "sha256": "92DB4490590284BBF616FF49300BB625EDE51FD6935491A7AA4A3FABC105D44C"
+    },
+    {
+      "role": "forecast_raw",
+      "path": "data/nanjing/weather/weather_forecast_raw.json",
+      "size_bytes": 3602,
+      "sha256": "7157381FC87D9C1DBEB4EBFB5F1AE6165A902F80B7DA72A5F120DD47886779AB"
+    },
+    {
+      "role": "forecast",
+      "path": "data/nanjing/weather/weather_forecast.json",
+      "size_bytes": 12181,
+      "sha256": "8501E8A308B8FC4B8A5A2EDD72F22CFD8A096E5F329013F5098D91D50BA9EB01"
+    },
+    {
+      "role": "replay_raw",
+      "path": "data/nanjing/weather/weather_replay_raw.json",
+      "size_bytes": 7830,
+      "sha256": "D147E94A432093B29857290D0EC09BA68D75BB92DB8AF0339D16B934182425FE"
+    },
+    {
+      "role": "replay",
+      "path": "data/nanjing/weather/weather_replay.csv",
+      "size_bytes": 6910,
+      "sha256": "5705B85CE1256A152A26D166ED5A9FB651EF5F94F8D773FA0D25A3893226276B"
+    },
+    {
+      "role": "metadata",
+      "path": "data/nanjing/weather/weather_metadata.json",
+      "size_bytes": 3143,
+      "sha256": "004A0AD3EBA11F9AF4EC6F4D2AF68AD3E64D1C16262D4C7CEA842A564A644F9C"
+    },
+    {
+      "role": "qa_report",
+      "path": "qa/nanjing_weather_qa_report.md",
+      "size_bytes": 1064,
+      "sha256": "9A300B1A229F4A45A5E1410D6B12AC61BD45F9ED46278AEAB119BF07935FBEF5"
+    }
+  ]
+}

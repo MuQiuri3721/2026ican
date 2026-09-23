@@ -1,0 +1,94 @@
+{
+  "schema_version": "fire-patrol-geo-metadata-v1",
+  "product_group": "SRTM elevation and terrain derivatives",
+  "source": {
+    "dataset_id": "NASA_SRTMGL1_003",
+    "gee_asset_id": "USGS/SRTMGL1_003",
+    "source_version": "SRTMGL1 v003",
+    "source_url": "https://developers.google.com/earth-engine/datasets/catalog/USGS_SRTMGL1_003",
+    "provider": "NASA / USGS / JPL-Caltech",
+    "sensor_or_model": "Shuttle Radar Topography Mission interferometric radar",
+    "source_band": "elevation",
+    "source_band_unit": "m",
+    "native_resolution": "1 arc-second (~30 m)",
+    "native_crs": "EPSG:4326",
+    "temporal_coverage": "2000-02-11/2000-02-22",
+    "data_currency_type": "static",
+    "static_data_date": "2000-02-11/2000-02-22",
+    "vertical_datum": "EGM96 geoid",
+    "license_or_terms": "NASA Earthdata data-use policy; attribution is recommended"
+  },
+  "boundary_source": {
+    "platform": "天地图",
+    "acquired_at": "2026-09-10",
+    "source_crs": "EPSG:4490",
+    "converted_crs": "EPSG:4326",
+    "gee_asset_id": "projects/my-project-260421-494009/assets/nanjing_boundary_wgs84",
+    "buffer_processing_crs": "EPSG:32650",
+    "buffer_method": "Earth Engine Geometry.buffer",
+    "buffer_m": 5000,
+    "boundary_export_crs": "EPSG:4326",
+    "source_url": "https://cloudcenter.tianditu.gov.cn/administrativeDivision",
+    "source_version": "not_provided_by_source",
+    "license_or_terms": {
+      "status": "subject_to_tianditu_terms",
+      "standard_open_license": "not_provided_by_source",
+      "attribution_required": true,
+      "attribution": "天地图"
+    },
+    "provenance_ref": "metadata/nanjing_boundary_provenance.json"
+  },
+  "processing": {
+    "software": "Google Earth Engine",
+    "processing_crs": "EPSG:32650",
+    "output_resolution_m": 30,
+    "resampling": "bilinear",
+    "terrain_algorithm": "ee.Terrain.products",
+    "buffer_m": 5000,
+    "nodata": -9999,
+    "output_format": "Cloud Optimized GeoTIFF",
+    "method": "Reproject SRTM elevation to EPSG:32650 at 30 m, derive slope and aspect, then clip all outputs to the Nanjing municipal boundary plus 5 km buffer.",
+    "edge_note": "ee.Terrain.products uses 4-connected neighbors; edge pixels may be masked."
+  },
+  "regions": [
+    {
+      "region_id": "nanjing",
+      "region_name_zh": "南京市",
+      "processing_crs": "EPSG:32650",
+      "aoi_asset_id": "projects/my-project-260421-494009/assets/nanjing_boundary_wgs84",
+      "aoi_status": "CONFIRMED_USED_FOR_EXPORT"
+    }
+  ],
+  "outputs_per_region": [
+    {
+      "product": "dem",
+      "band": "elevation",
+      "unit": "m",
+      "pixel_type": "Int16"
+    },
+    {
+      "product": "slope",
+      "band": "slope",
+      "unit": "degree",
+      "pixel_type": "Float32"
+    },
+    {
+      "product": "aspect",
+      "band": "aspect",
+      "unit": "degree",
+      "pixel_type": "Float32"
+    }
+  ],
+  "post_download_fields": {
+    "downloaded_at": "2026-09-10",
+    "sha256_by_file": {
+      "nanjing_srtmgl1_003_30m_epsg32650_dem.tif": "CCCC17158743A03D5FC528DF5855CA832D567C9F4E0DB7E39BF9722B3DDE8085",
+      "nanjing_srtmgl1_003_30m_epsg32650_slope.tif": "E6D56FD2FCAB418A317ABBED424452A2A3C122ACF0720D02F384E7B17D233BFE",
+      "nanjing_srtmgl1_003_30m_epsg32650_aspect.tif": "4440A10840EEEFF6915B5CBE4B6FB8CC2335D22B28CFCB13D3C09FE770478108"
+    },
+    "technical_qa_status": "PASS",
+    "fixed_checkpoint_qa_status": "PASS",
+    "overall_qa_status": "PASS",
+    "qa_report": "qa/nanjing_srtm_qa_report.md"
+  }
+}

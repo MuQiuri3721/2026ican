@@ -1,0 +1,12 @@
+class_value,class_name,pixel_count,area_m2,area_km2,valid_area_percent,present_in_delivery,region_id,region_name_zh,source_dataset_id,output_crs,output_resolution_m,valid_pixel_count_all_classes,statistics_basis
+10,Tree cover,29029492,2902949200,2902.9492,30.728249824387,true,nanjing,南京市,ESA_WorldCover_2021_v200,EPSG:32650,10,94471674,exact integer count from delivered landcover TIFF
+20,Shrubland,712,71200,0.0712,0.000753665062,true,nanjing,南京市,ESA_WorldCover_2021_v200,EPSG:32650,10,94471674,exact integer count from delivered landcover TIFF
+30,Grassland,6626947,662694700,662.6947,7.014744970011,true,nanjing,南京市,ESA_WorldCover_2021_v200,EPSG:32650,10,94471674,exact integer count from delivered landcover TIFF
+40,Cropland,34918841,3491884100,3491.8841,36.962233780255,true,nanjing,南京市,ESA_WorldCover_2021_v200,EPSG:32650,10,94471674,exact integer count from delivered landcover TIFF
+50,Built-up,13838441,1383844100,1383.8441,14.648243662963,true,nanjing,南京市,ESA_WorldCover_2021_v200,EPSG:32650,10,94471674,exact integer count from delivered landcover TIFF
+60,Bare / sparse vegetation,2209204,220920400,220.9204,2.338482961570,true,nanjing,南京市,ESA_WorldCover_2021_v200,EPSG:32650,10,94471674,exact integer count from delivered landcover TIFF
+70,Snow and ice,0,0,0.0000,0.000000000000,false,nanjing,南京市,ESA_WorldCover_2021_v200,EPSG:32650,10,94471674,exact integer count from delivered landcover TIFF
+80,Permanent water bodies,7790867,779086700,779.0867,8.246775641977,true,nanjing,南京市,ESA_WorldCover_2021_v200,EPSG:32650,10,94471674,exact integer count from delivered landcover TIFF
+90,Herbaceous wetland,57170,5717000,5.7170,0.060515493776,true,nanjing,南京市,ESA_WorldCover_2021_v200,EPSG:32650,10,94471674,exact integer count from delivered landcover TIFF
+95,Mangroves,0,0,0.0000,0.000000000000,false,nanjing,南京市,ESA_WorldCover_2021_v200,EPSG:32650,10,94471674,exact integer count from delivered landcover TIFF
+100,Moss and lichen,0,0,0.0000,0.000000000000,false,nanjing,南京市,ESA_WorldCover_2021_v200,EPSG:32650,10,94471674,exact integer count from delivered landcover TIFF

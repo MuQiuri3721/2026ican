@@ -1,0 +1,478 @@
+{
+  "schema_version": "fire-patrol-distribution-manifest-v1",
+  "manifest_id": "geo-delivery-v2-public-github",
+  "release_version": "v1.1-20260923",
+  "generated_at_utc": "2026-09-23T06:07:45+00:00",
+  "distribution_scope": "public_github_repository",
+  "description": "Public repository inventory containing code, documentation, QA, metadata and permitted lightweight outputs. Restricted Tianditu geometries and oversized OSM files are excluded.",
+  "status": "PASS",
+  "hash_algorithm": "SHA256",
+  "file_count": 74,
+  "total_size_bytes": 119403102,
+  "role_counts": {
+    "delivery_data": 38,
+    "documentation_or_policy": 5,
+    "metadata": 3,
+    "processing_or_reproduction": 13,
+    "quality_assurance": 15
+  },
+  "entry_points": {
+    "public_area_index": "data/overview/areas_public.geojson",
+    "readme": "README.md",
+    "third_party_policy": "THIRD_PARTY_DATA.md"
+  },
+  "exclusion_policy": [
+    "Tianditu-derived raw or reconstructable administrative geometries",
+    "raw OSM downloads",
+    "roads.geojson and road_nodes.geojson",
+    "local-only manifests that reference excluded files",
+    "planning intermediate directories",
+    "Git metadata and Python cache files"
+  ],
+  "files": [
+    {
+      "path": ".gitattributes",
+      "role": "documentation_or_policy",
+      "size_bytes": 352,
+      "sha256": "5101DB9015C481C161B0ED40F7D6B7EDED608CFF7C69AB64F83F4CE7559D0434"
+    },
+    {
+      "path": ".gitignore",
+      "role": "documentation_or_policy",
+      "size_bytes": 1293,
+      "sha256": "5F56BAA83B1CBE9ABA40E0A42300B249028A9C8D8CAEC7C46701A1CD1218A68E"
+    },
+    {
+      "path": "data/nanjing/jiangsu_tree_cover_overview/jiangsu_tree_cover_overview_2021_v200_100m_epsg3857.tif",
+      "role": "delivery_data",
+      "size_bytes": 9817543,
+      "sha256": "8C51B704195289402007B76E9FCF2C474B4D50C4810E639D492789DB3BC19955"
+    },
+    {
+      "path": "data/nanjing/jiangsu_tree_cover_overview/jiangsu_tree_cover_overview_2021_v200_metadata.csv",
+      "role": "delivery_data",
+      "size_bytes": 2462,
+      "sha256": "E28FA8C3B6882218D05398B6A1AC5F2358E7A634F48F62CE270DDD5001C035B3"
+    },
+    {
+      "path": "data/nanjing/jiangsu_tree_cover_overview/jiangsu_tree_cover_statistics_2021_v200_province_and_prefectures.csv",
+      "role": "delivery_data",
+      "size_bytes": 4490,
+      "sha256": "9C37A5CC13E1BDFF10EF0A1BD9C422E857AEAAAA21AE30CAA67F21185F3AE108"
+    },
+    {
+      "path": "data/nanjing/osm/coverage_gaps.json",
+      "role": "delivery_data",
+      "size_bytes": 924,
+      "sha256": "576D7BF8177E48648387244BBA4C5BE61B14658E3DD76F1A4ECE17776CA031BE"
+    },
+    {
+      "path": "data/nanjing/osm/facilities.geojson",
+      "role": "delivery_data",
+      "size_bytes": 405304,
+      "sha256": "A5650FAB6897C04A1027EFA4EDBAAE3B5DAAED25896308DE6E03BEA426037144"
+    },
+    {
+      "path": "data/nanjing/osm/nanjing_osm_metadata.csv",
+      "role": "delivery_data",
+      "size_bytes": 1233,
+      "sha256": "412DC4C81CBFFCD3574C9139B3774DB9C5C0BEEB7C4B5448FB3045D678A6448A"
+    },
+    {
+      "path": "data/nanjing/osm/nanjing_osm_qa_overlay.png",
+      "role": "delivery_data",
+      "size_bytes": 921885,
+      "sha256": "A5AAE6E76FCA2890DAA8C1838FE5E28FB6AB25AA24FE2E0EA9490AB8C2E8AAD8"
+    },
+    {
+      "path": "data/nanjing/osm/nanjing_osm_qa_report.md",
+      "role": "delivery_data",
+      "size_bytes": 1414,
+      "sha256": "FEC2DA29C8A722B96A7954363BCAE309BEBB758805A7958F0AA772C7B9EC3109"
+    },
+    {
+      "path": "data/nanjing/osm/water_bodies.geojson",
+      "role": "delivery_data",
+      "size_bytes": 12450498,
+      "sha256": "BD050561830631EFA4B50D1BF606E27CC019496DB2FDAFD26D6826B0293461A1"
+    },
+    {
+      "path": "data/nanjing/osm/water_candidates.geojson",
+      "role": "delivery_data",
+      "size_bytes": 4217505,
+      "sha256": "EC4510673F8E5A6380FF79D6E157037CAB1839EF4482CF389A2486B5E0BB43E0"
+    },
+    {
+      "path": "data/nanjing/planning_regions/manifest.json",
+      "role": "delivery_data",
+      "size_bytes": 1277,
+      "sha256": "4CD4F406CD353F0EA9D40D0A024150DA722F06E86F9198E9DEFAA323DC646072"
+    },
+    {
+      "path": "data/nanjing/planning_regions/planning_regions_forest_terrain_core.geojson",
+      "role": "delivery_data",
+      "size_bytes": 2511874,
+      "sha256": "09B53265124EC7988CB2622D301978E67BD1BC1489221D33C650D97C36E8FFAC"
+    },
+    {
+      "path": "data/nanjing/planning_regions/planning_regions_metadata.csv",
+      "role": "delivery_data",
+      "size_bytes": 3683,
+      "sha256": "5F0E70548B3C33A03C59A709BC758313022144D7D1EF630A1DD81195E6E2379B"
+    },
+    {
+      "path": "data/nanjing/planning_regions/planning_regions_overview.geojson",
+      "role": "delivery_data",
+      "size_bytes": 202857,
+      "sha256": "A4CA3971D73729DB9ECB31B169E1AC32D4597D3F0A24F925AA1E2356BCC1B8BA"
+    },
+    {
+      "path": "data/nanjing/planning_regions/planning_regions_qa_map.png",
+      "role": "delivery_data",
+      "size_bytes": 336640,
+      "sha256": "0A5FF9745ABA3D2AF968A1678686E4462644F7EDDB5D349957E62011A413E5B1"
+    },
+    {
+      "path": "data/nanjing/planning_regions/planning_regions_qa_report.md",
+      "role": "delivery_data",
+      "size_bytes": 1548,
+      "sha256": "989FECCDF12E200A8C5DD227502C0C5330C9C62481A3E98D977857C067E6C03C"
+    },
+    {
+      "path": "data/nanjing/planning_regions/planning_regions_rebuild_statistics.json",
+      "role": "delivery_data",
+      "size_bytes": 3510,
+      "sha256": "74D69CD78DCE9DF548F6CAF6A0956EB9F81D90D96BA229B8013A273A2CF7401C"
+    },
+    {
+      "path": "data/nanjing/srtm/nanjing_srtm_metadata.csv",
+      "role": "delivery_data",
+      "size_bytes": 5591,
+      "sha256": "24AD237B2FF0246F8F11B1EA839E0CA32BBF013C9E0ECFBBE3D1994A307F3629"
+    },
+    {
+      "path": "data/nanjing/srtm/nanjing_srtm_statistics.csv",
+      "role": "delivery_data",
+      "size_bytes": 783,
+      "sha256": "36A965350F4B607782CA851E327BFD9E633DF597DD66314AAB1675631E3E3B9D"
+    },
+    {
+      "path": "data/nanjing/srtm/nanjing_srtmgl1_003_30m_epsg32650_aspect.tif",
+      "role": "delivery_data",
+      "size_bytes": 26974747,
+      "sha256": "4440A10840EEEFF6915B5CBE4B6FB8CC2335D22B28CFCB13D3C09FE770478108"
+    },
+    {
+      "path": "data/nanjing/srtm/nanjing_srtmgl1_003_30m_epsg32650_dem.tif",
+      "role": "delivery_data",
+      "size_bytes": 8928254,
+      "sha256": "CCCC17158743A03D5FC528DF5855CA832D567C9F4E0DB7E39BF9722B3DDE8085"
+    },
+    {
+      "path": "data/nanjing/srtm/nanjing_srtmgl1_003_30m_epsg32650_slope.tif",
+      "role": "delivery_data",
+      "size_bytes": 21504704,
+      "sha256": "E6D56FD2FCAB418A317ABBED424452A2A3C122ACF0720D02F384E7B17D233BFE"
+    },
+    {
+      "path": "data/nanjing/weather/manifest.json",
+      "role": "delivery_data",
+      "size_bytes": 2122,
+      "sha256": "22B47FA2FFD65887E60404FEE4ADE9E5E4ACF91BB54D83E4CEE1DDF2E0AA51A1"
+    },
+    {
+      "path": "data/nanjing/weather/weather_current.json",
+      "role": "delivery_data",
+      "size_bytes": 1388,
+      "sha256": "92DB4490590284BBF616FF49300BB625EDE51FD6935491A7AA4A3FABC105D44C"
+    },
+    {
+      "path": "data/nanjing/weather/weather_current_raw.json",
+      "role": "delivery_data",
+      "size_bytes": 3602,
+      "sha256": "7157381FC87D9C1DBEB4EBFB5F1AE6165A902F80B7DA72A5F120DD47886779AB"
+    },
+    {
+      "path": "data/nanjing/weather/weather_forecast.json",
+      "role": "delivery_data",
+      "size_bytes": 12181,
+      "sha256": "8501E8A308B8FC4B8A5A2EDD72F22CFD8A096E5F329013F5098D91D50BA9EB01"
+    },
+    {
+      "path": "data/nanjing/weather/weather_forecast_raw.json",
+      "role": "delivery_data",
+      "size_bytes": 3602,
+      "sha256": "7157381FC87D9C1DBEB4EBFB5F1AE6165A902F80B7DA72A5F120DD47886779AB"
+    },
+    {
+      "path": "data/nanjing/weather/weather_metadata.json",
+      "role": "delivery_data",
+      "size_bytes": 3143,
+      "sha256": "004A0AD3EBA11F9AF4EC6F4D2AF68AD3E64D1C16262D4C7CEA842A564A644F9C"
+    },
+    {
+      "path": "data/nanjing/weather/weather_replay.csv",
+      "role": "delivery_data",
+      "size_bytes": 6910,
+      "sha256": "5705B85CE1256A152A26D166ED5A9FB651EF5F94F8D773FA0D25A3893226276B"
+    },
+    {
+      "path": "data/nanjing/weather/weather_replay_raw.json",
+      "role": "delivery_data",
+      "size_bytes": 7830,
+      "sha256": "D147E94A432093B29857290D0EC09BA68D75BB92DB8AF0339D16B934182425FE"
+    },
+    {
+      "path": "data/nanjing/worldcover/nanjing_worldcover_2021_v200_10m_epsg32650_landcover.tif",
+      "role": "delivery_data",
+      "size_bytes": 15817417,
+      "sha256": "B118CC683251E589ECB9EDC1E20D057A304FCD97A95B66B4DB8484FD1C32F55C"
+    },
+    {
+      "path": "data/nanjing/worldcover/nanjing_worldcover_2021_v200_10m_epsg32650_tree_cover.tif",
+      "role": "delivery_data",
+      "size_bytes": 8290076,
+      "sha256": "B821575A660810D1B2350B6EE699986D8BE02AE1AF091577D449ABE740E1CB00"
+    },
+    {
+      "path": "data/nanjing/worldcover/nanjing_worldcover_2021_v200_metadata.csv",
+      "role": "delivery_data",
+      "size_bytes": 4420,
+      "sha256": "0179A82EDABF6D2077C2DA41B7A21B34E97C10FBAB43640E25E9F7BD4C9A4D08"
+    },
+    {
+      "path": "data/nanjing/worldcover/nanjing_worldcover_2021_v200_statistics.csv",
+      "role": "delivery_data",
+      "size_bytes": 2145,
+      "sha256": "4F0EB9F8427DA5609DB7DEB2FEE342B64EDF481A2232F0DE677569687617203B"
+    },
+    {
+      "path": "data/overview/areas_metadata.csv",
+      "role": "delivery_data",
+      "size_bytes": 10381,
+      "sha256": "3DEB6CA30E86BD02398A8EFD1C3A2C3FA050443D6E0366DB3D14F6F53E315337"
+    },
+    {
+      "path": "data/overview/areas_public.geojson",
+      "role": "delivery_data",
+      "size_bytes": 481917,
+      "sha256": "81EE74F4FE68903CFEF934E944813959CA4FBBFD5E9E5CBDC2529E553F0DF004"
+    },
+    {
+      "path": "data/overview/areas_qa_map.png",
+      "role": "delivery_data",
+      "size_bytes": 371483,
+      "sha256": "2E26C1430A22E261E7F2EE2BC79072783F45FE33FAAC02028EF174C381AA0500"
+    },
+    {
+      "path": "data/overview/areas_qa_report.md",
+      "role": "delivery_data",
+      "size_bytes": 1526,
+      "sha256": "0451A902680337F59ACD1F2DA43DC5B9417EEBB694653B6BEBCF61281F3F5317"
+    },
+    {
+      "path": "metadata/nanjing_boundary_provenance.json",
+      "role": "metadata",
+      "size_bytes": 2943,
+      "sha256": "D60E85537070D37FE78B16A1FFD74F414E4150B16EC6FF9878A83F19192B8972"
+    },
+    {
+      "path": "metadata/nanjing_srtm_metadata_augmented.csv",
+      "role": "metadata",
+      "size_bytes": 308,
+      "sha256": "7BD2BD5699A4C6E3B8B7EBB495380AB314930C1BF121334F52B3B38D3BC2EE76"
+    },
+    {
+      "path": "metadata/srtm_product_metadata.json",
+      "role": "metadata",
+      "size_bytes": 3493,
+      "sha256": "83B3EE12658B5B4C1E56928DAA2129052679F98542B53094E1F50A2BCB5ED8B0"
+    },
+    {
+      "path": "qa/jiangsu_tree_cover_overview_qa.png",
+      "role": "quality_assurance",
+      "size_bytes": 1271655,
+      "sha256": "DF7290B8A63BBC7914F1E9895149BE46676428F6566C041C7C8CDD180E57F6E8"
+    },
+    {
+      "path": "qa/jiangsu_tree_cover_overview_qa_report.md",
+      "role": "quality_assurance",
+      "size_bytes": 4292,
+      "sha256": "BC672C4947CD43669EB7E6281CE892AE0A4E85A810613A98F475C2589D20B05E"
+    },
+    {
+      "path": "qa/nanjing_srtm_qa_report.md",
+      "role": "quality_assurance",
+      "size_bytes": 5391,
+      "sha256": "69993650DB3A55D4876B03EFFDFBBE020A0394DDE195B62FF28579A336F8C21F"
+    },
+    {
+      "path": "qa/nanjing_srtm_technical_samples.csv",
+      "role": "quality_assurance",
+      "size_bytes": 1922,
+      "sha256": "A444DCC557B10014C4B3FD5FB9656EF1FE9E2AF93E36FB8A5B1D94A5257D6879"
+    },
+    {
+      "path": "qa/nanjing_srtm_visual_qa.png",
+      "role": "quality_assurance",
+      "size_bytes": 2385354,
+      "sha256": "30CBABDDDC234BC875EBA7C77ED36F6B08105BC6096D22DD0E2E8ED1C8061FFE"
+    },
+    {
+      "path": "qa/nanjing_weather_qa_report.md",
+      "role": "quality_assurance",
+      "size_bytes": 1064,
+      "sha256": "9A300B1A229F4A45A5E1410D6B12AC61BD45F9ED46278AEAB119BF07935FBEF5"
+    },
+    {
+      "path": "qa/nanjing_worldcover_qa_report.md",
+      "role": "quality_assurance",
+      "size_bytes": 2999,
+      "sha256": "634BDB3053C27E0D67D7DE6519BB2FBEF3D4E9FC2CC644FBBC48FABAAADAF1F8"
+    },
+    {
+      "path": "qa/srtm_check_points.csv",
+      "role": "quality_assurance",
+      "size_bytes": 2734,
+      "sha256": "A0FD5F7D27C9ED92271BA2E21A793BDBF56BAD2B5F33FCECFCF413C5D8185EBE"
+    },
+    {
+      "path": "qa/srtm_fixed_checkpoints.geojson",
+      "role": "quality_assurance",
+      "size_bytes": 10089,
+      "sha256": "BD9D6CD531987ADFE5378575731CE9899D9F278D71140673C6480C0017FE6647"
+    },
+    {
+      "path": "qa/srtm_fixed_checkpoints_map.png",
+      "role": "quality_assurance",
+      "size_bytes": 601567,
+      "sha256": "690F668201F1613D51F5E24B3BD4EACEE7D0E398918D81004D9AE2BEA698AB4B"
+    },
+    {
+      "path": "qa/srtm_visual_qa.py",
+      "role": "quality_assurance",
+      "size_bytes": 2947,
+      "sha256": "E388A0D91C6A18A6EB51697C14B678D759ADB4B3D18175AD20781BBA6224FDA6"
+    },
+    {
+      "path": "qa/worldcover_boundary_overlay.png",
+      "role": "quality_assurance",
+      "size_bytes": 671793,
+      "sha256": "2D0DBA0453202955CB4EFF9467CCB72D59E3E031648A06AF957CC16BC41D889F"
+    },
+    {
+      "path": "qa/worldcover_finalize.py",
+      "role": "quality_assurance",
+      "size_bytes": 20657,
+      "sha256": "B71684AD49318E0EF1F93F34F666E7A3E5848E98B016F9B48C1DDBBE57CE9112"
+    },
+    {
+      "path": "qa/worldcover_nanjing_overview.png",
+      "role": "quality_assurance",
+      "size_bytes": 605419,
+      "sha256": "7F5B717FBC0CD2EF25D3EDA303BFD4DDA21653D74003E508EC3B633258C77184"
+    },
+    {
+      "path": "qa/worldcover_tree_cover_detail.png",
+      "role": "quality_assurance",
+      "size_bytes": 296054,
+      "sha256": "1008ACD909CD29FF0534D9033D7BC13F075B10DE9A8969026CD9009B4F02D310"
+    },
+    {
+      "path": "README.md",
+      "role": "documentation_or_policy",
+      "size_bytes": 7012,
+      "sha256": "5F8BAB84E14D218CC5A229EF801BC97672B0D8AAC0E902E367653A20AF8B5F7F"
+    },
+    {
+      "path": "scripts/build_areas_index.py",
+      "role": "processing_or_reproduction",
+      "size_bytes": 20831,
+      "sha256": "6ABD54736A0F1D3B388F8BA0867B5F13D0761F42EFE7BFD3814771A14A671BBC"
+    },
+    {
+      "path": "scripts/build_distribution_manifests.py",
+      "role": "processing_or_reproduction",
+      "size_bytes": 8186,
+      "sha256": "8E94EA01D0504DAF9B149BD74082803211D333BEB887ABC722B4B349D7FB6F51"
+    },
+    {
+      "path": "scripts/build_root_manifest.py",
+      "role": "processing_or_reproduction",
+      "size_bytes": 10785,
+      "sha256": "1DFF26B64FF21C75C72EECCDDEA44754BE1C6497E95D2CBA7B1097E38A2E6F70"
+    },
+    {
+      "path": "scripts/fetch_nanjing_weather.py",
+      "role": "processing_or_reproduction",
+      "size_bytes": 16916,
+      "sha256": "3CA52151AC09A334C0B80C150724E199C415AD731FCD0015133CDE6EAC9EAC06"
+    },
+    {
+      "path": "scripts/finalize_nanjing_osm.py",
+      "role": "processing_or_reproduction",
+      "size_bytes": 6471,
+      "sha256": "4885A49986ABAB543D39B881587CB3B02C8B4499C7CDBE4308E4FCA88AC394C4"
+    },
+    {
+      "path": "scripts/finalize_planning_regions.py",
+      "role": "processing_or_reproduction",
+      "size_bytes": 14584,
+      "sha256": "D997A9C068D591079B26DBA0EBD44DF77752335ED8AD7D7697B081133F6DE55E"
+    },
+    {
+      "path": "scripts/finalize_srtm_fixed_checkpoints.py",
+      "role": "processing_or_reproduction",
+      "size_bytes": 17271,
+      "sha256": "4AD46712184A3875610B1D4A2A80D62C9691041D313B21C17B722D2E3F7F0D3A"
+    },
+    {
+      "path": "scripts/gee_jiangsu_tree_cover_overview_export.js",
+      "role": "processing_or_reproduction",
+      "size_bytes": 12914,
+      "sha256": "6A8ADD556AEC3FEF807AD3F1D101E5EC83293BD746AD3C4F69B8B363715D5377"
+    },
+    {
+      "path": "scripts/gee_planning_regions_overview.js",
+      "role": "processing_or_reproduction",
+      "size_bytes": 11717,
+      "sha256": "8A58505D531E8DE818560A2DF7D7C97F03F3EB704F604BEFCB9F3E978D29273F"
+    },
+    {
+      "path": "scripts/gee_srtm_terrain_export.js",
+      "role": "processing_or_reproduction",
+      "size_bytes": 11020,
+      "sha256": "996ABF236CC64593DB0EC478C0B6576529905601D0B5F162C9206320EA605D2A"
+    },
+    {
+      "path": "scripts/gee_worldcover_export.js",
+      "role": "processing_or_reproduction",
+      "size_bytes": 11438,
+      "sha256": "1E3D1FF68EB6E18B27DC92C74B60E1D8E8CC0D452A31CA45995D846AFCC20FBC"
+    },
+    {
+      "path": "scripts/process_nanjing_osm.py",
+      "role": "processing_or_reproduction",
+      "size_bytes": 27383,
+      "sha256": "B444129FE125FDEE79917707F0D60ABA96020CD24B2013507AACB2318620AB63"
+    },
+    {
+      "path": "scripts/rebuild_planning_regions_local.py",
+      "role": "processing_or_reproduction",
+      "size_bytes": 9576,
+      "sha256": "41A392A4F342B7CE3A5EB6788006118C039063FF605A8ABF759CD830850E09DC"
+    },
+    {
+      "path": "TEAM_DATA_DELIVERY.md",
+      "role": "documentation_or_policy",
+      "size_bytes": 2646,
+      "sha256": "6780BDFBBD0F5015283AFE26CCFDDD2A071BB1E97047443264A20FB4960F4ABA"
+    },
+    {
+      "path": "THIRD_PARTY_DATA.md",
+      "role": "documentation_or_policy",
+      "size_bytes": 3157,
+      "sha256": "D94BB2BDCF9628553B4F2886E814064B2153875C72A36099AEDE1ACD3E2BCC8B"
+    }
+  ]
+}

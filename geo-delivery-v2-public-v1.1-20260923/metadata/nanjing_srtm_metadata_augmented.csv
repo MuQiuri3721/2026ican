@@ -1,0 +1,2 @@
+metadata_status,superseded_by,note
+superseded,data/nanjing/srtm/nanjing_srtm_metadata.csv,"Historical augmented copy retired after its verified download date, hashes, boundary provenance and QA fields were merged into the authoritative delivery metadata. Retained only as an explicit compatibility pointer."

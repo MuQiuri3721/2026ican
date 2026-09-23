@@ -1,0 +1,46 @@
+{
+  "dataset_id": "open_meteo_zijinshan_current_20260923",
+  "region_id": "nanjing",
+  "location_name": "紫金山演示报警点",
+  "location_role": "demonstration_alarm_point_within_nanjing_aoi",
+  "request_point": {
+    "latitude": 32.0688,
+    "longitude": 118.8432,
+    "crs": "EPSG:4326"
+  },
+  "returned_grid": {
+    "latitude": 32.09139,
+    "longitude": 118.804344,
+    "elevation_m": 287.0,
+    "timezone": "Asia/Shanghai",
+    "utc_offset_seconds": 28800
+  },
+  "valid_time": "2026-09-23T14:00",
+  "fetched_at_utc": "2026-09-23T06:04:13+00:00",
+  "age_minutes_at_fetch": 4.22,
+  "stale_threshold_minutes": 30,
+  "stale": false,
+  "interval_seconds": 900,
+  "temperature_2m_c": 25.2,
+  "relative_humidity_2m_pct": 65,
+  "precipitation_current_interval_mm": 0.0,
+  "wind_speed_10m_m_s": 2.16,
+  "wind_gusts_10m_m_s": 5.4,
+  "wind_from_10m_deg": 94,
+  "wind_from_10m_compass": "E",
+  "wind_to_10m_deg": 274.0,
+  "wind_to_10m_compass": "W",
+  "units_from_source": {
+    "time": "iso8601",
+    "interval": "seconds",
+    "temperature_2m": "°C",
+    "relative_humidity_2m": "%",
+    "precipitation": "mm",
+    "wind_speed_10m": "m/s",
+    "wind_direction_10m": "°",
+    "wind_gusts_10m": "m/s"
+  },
+  "source": "Open-Meteo Forecast API model output",
+  "source_url": "https://api.open-meteo.com/v1/forecast",
+  "license": "CC BY 4.0"
+}

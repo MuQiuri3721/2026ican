@@ -1,0 +1,116 @@
+{
+  "generated_at_utc": "2026-09-21T14:55:18.824224+00:00",
+  "parameters": {
+    "area_crs": "EPSG:6933",
+    "minimum_component_area_km2": 3.0,
+    "maximum_filled_hole_area_km2": 3.0,
+    "closing_radius_m": 500,
+    "simplify_tolerance_m": 100
+  },
+  "regions": {
+    "planning_yuntai": {
+      "raw_core": {
+        "area_km2": 188.25183600873376,
+        "polygon_parts": 6,
+        "holes": 47,
+        "largest_component_percent": 57.59802386906059,
+        "components_under_3_km2": 3,
+        "holes_under_3_km2": 47
+      },
+      "rebuilt_outline": {
+        "area_km2": 196.8591791645997,
+        "polygon_parts": 3,
+        "holes": 0,
+        "largest_component_percent": 57.741927109463965,
+        "components_under_3_km2": 0,
+        "holes_under_3_km2": 0
+      },
+      "repaired_core": {
+        "area_km2": 187.45383168016483,
+        "polygon_parts": 4,
+        "holes": 47,
+        "largest_component_percent": 57.66033218503065,
+        "components_under_3_km2": 1,
+        "holes_under_3_km2": 47
+      }
+    },
+    "planning_ningzhen_east": {
+      "raw_core": {
+        "area_km2": 1226.5144089514931,
+        "polygon_parts": 54,
+        "holes": 374,
+        "largest_component_percent": 84.99081221351084,
+        "components_under_3_km2": 47,
+        "holes_under_3_km2": 371
+      },
+      "rebuilt_outline": {
+        "area_km2": 1279.2892933251271,
+        "polygon_parts": 7,
+        "holes": 3,
+        "largest_component_percent": 85.16317990560236,
+        "components_under_3_km2": 0,
+        "holes_under_3_km2": 0
+      },
+      "repaired_core": {
+        "area_km2": 1217.5405684779516,
+        "polygon_parts": 20,
+        "holes": 371,
+        "largest_component_percent": 85.51162285807582,
+        "components_under_3_km2": 13,
+        "holes_under_3_km2": 368
+      }
+    },
+    "planning_yili": {
+      "raw_core": {
+        "area_km2": 1025.169217822325,
+        "polygon_parts": 106,
+        "holes": 548,
+        "largest_component_percent": 86.4301598119476,
+        "components_under_3_km2": 97,
+        "holes_under_3_km2": 545
+      },
+      "rebuilt_outline": {
+        "area_km2": 1038.0253059944412,
+        "polygon_parts": 8,
+        "holes": 5,
+        "largest_component_percent": 88.80018179859908,
+        "components_under_3_km2": 0,
+        "holes_under_3_km2": 0
+      },
+      "repaired_core": {
+        "area_km2": 993.7958406607299,
+        "polygon_parts": 31,
+        "holes": 494,
+        "largest_component_percent": 89.0150676347081,
+        "components_under_3_km2": 22,
+        "holes_under_3_km2": 491
+      }
+    },
+    "planning_taihu_hills": {
+      "raw_core": {
+        "area_km2": 1556.0032312276785,
+        "polygon_parts": 657,
+        "holes": 1845,
+        "largest_component_percent": 46.70268838062904,
+        "components_under_3_km2": 626,
+        "holes_under_3_km2": 1827
+      },
+      "rebuilt_outline": {
+        "area_km2": 1653.001992303759,
+        "polygon_parts": 27,
+        "holes": 21,
+        "largest_component_percent": 52.83709873583262,
+        "components_under_3_km2": 0,
+        "holes_under_3_km2": 0
+      },
+      "repaired_core": {
+        "area_km2": 1437.0334698249444,
+        "polygon_parts": 216,
+        "holes": 1737,
+        "largest_component_percent": 50.476378401866654,
+        "components_under_3_km2": 185,
+        "holes_under_3_km2": 1719
+      }
+    }
+  }
+}
