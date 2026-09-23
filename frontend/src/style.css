@@ -993,3 +993,39 @@ nav button b{background:#ff6f3d;box-shadow:0 0 10px #ff6f3d66;border-radius:8px}
 .live-feed-card .lf-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;height:112px;border:1px dashed #255191;border-radius:8px;color:var(--ink-3);font-size:12px}
 .live-feed-card .lf-empty svg{color:#5f7a96}
 .live-feed-card .lf-empty small{font-size:10.5px;color:#5f7a96}
+
+/* ---- 18 留白治理：列等高拉伸 + 面板填充（对齐设计稿的满版观感） ---- */
+.detail-view{min-height:calc(100vh - 150px)}
+/* 火情监测右列：量化/环境面板内部随行高拉伸 */
+.dashboard .hero-panel,.dashboard .environment-panel{display:flex;flex-direction:column}
+.dashboard .environment-panel .environment-grid{flex:1;grid-auto-rows:1fr}
+/* 机群调度：左地图弹性撑满，右列 结论+审批+编组 顺排 */
+.dispatch-grid2{align-items:stretch}
+.dispatch-map-col{display:flex;flex-direction:column;gap:16px}
+.tactical-map-wrap.dispatch-map{flex:1;height:auto;min-height:380px}
+.dispatch-right{display:flex;flex-direction:column;gap:16px;min-width:0}
+.dispatch-right>.dispatch-squadron{flex:1;display:flex;flex-direction:column}
+.dispatch-right>.dispatch-squadron .squadron-tables{flex:1;align-content:start}
+/* 任务管理：双栏拉伸至视口满高，列表内部滚动 */
+.history-two-col{align-items:stretch;align-content:stretch;min-height:calc(100vh - 252px)}
+.full-logs.history-list{max-height:calc(100vh - 268px)}
+.history-detail{min-height:0}
+/* 数据分析：上下两段等高填充 */
+.analysis-grid,.ana-bottom{align-items:stretch}
+.ana-col>.panel:last-child{flex:1;display:flex;flex-direction:column}
+.ana-bottom-left{display:flex;flex-direction:column}
+.ana-bottom-left>*{flex:1}
+/* 火情监测：趋势分析两格等高 */
+.trend-grid{align-items:stretch}
+.trend-media{display:flex;flex-direction:column}
+.trend-media .tm-empty{flex:1;height:auto}
+
+/* ---- 19 拉伸面板的内容填充（消除拉伸后的内部空腔） ---- */
+/* 火情监测左卡：拖拽区弹性吸收富余高度（大图区观感），流程/演训块贴底 */
+.upload-panel .dropzone{flex:1;min-height:200px}
+.upload-panel .scenario-block{margin-top:auto}
+/* 任务管理详情占位：垂直居中铺满 */
+.history-detail .hd-placeholder{min-height:320px;height:100%;display:grid;place-items:center;align-content:center}
+/* 数据分析空演化格：撑满单元格 */
+.analysis-grid .evo-panel,.ana-bottom .evo-panel{height:100%}
+.ana-bottom-left .panel{height:100%}
