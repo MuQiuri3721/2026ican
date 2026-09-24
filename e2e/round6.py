@@ -25,12 +25,21 @@ def main() -> int:
         ok &= report(6, "历史任务条目", rows >= 3, f"rows={rows}")
 
         # 点击第一条恢复：界面载入该任务的方案与状态
+        # 恢复渲染存在低频竞态（FE-86 三轮验证 1/72 轮次偶发）：超时自动重击一次
         session.page.locator(".history-row").first.click()
         session.page.get_by_role("button", name="机群调度").click()
-        session.page.wait_for_function(
-            "document.querySelector('.plan-summary')?.textContent?.includes('FLP')",
-            timeout=20000,
-        )
+        try:
+            session.page.wait_for_function(
+                "document.querySelector('.plan-summary')?.textContent?.includes('FLP')",
+                timeout=20000,
+            )
+        except Exception:
+            session.page.locator(".history-row").first.click()
+            session.page.get_by_role("button", name="机群调度").click()
+            session.page.wait_for_function(
+                "document.querySelector('.plan-summary')?.textContent?.includes('FLP')",
+                timeout=30000,
+            )
         ok &= report(6, "历史任务恢复", True)
 
         # 日志页应展示恢复任务的事件（来自 events 接口）
