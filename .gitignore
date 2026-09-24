@@ -50,3 +50,10 @@ geo-delivery-v2-full-*
 
 # Python 虚拟环境
 .venv/
+
+# 本地训练/评估运行残留（PWM 训练会话产物，不入库）
+FINAL_EVAL_RESULT.txt
+pwm/FINAL_EVAL_RESULT.txt
+train_run.log
+pwm/train_run.log
+pwm/train_run.bat
