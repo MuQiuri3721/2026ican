@@ -303,3 +303,365 @@
 .map-view.screen .map-statusbar .plan-slice{display:inline-flex;align-items:center;gap:6px;color:var(--scr-muted)}
 .map-view.screen .map-statusbar .plan-slice b{color:var(--scr-ink);font-weight:500}
 .map-view.screen .map-statusbar .plan-slice::before{content:"";width:5px;height:5px;border-radius:50%;background:#2a5fc4}
+
+/* =====================================================================
+   页面设计（2026-09-23 设计稿落地层）
+   一级导航冻结六页 · 顶栏全局信息 · 火情监测三段式 · 机群调度决策过程折叠栏
+   ===================================================================== */
+
+/* ---------- 顶栏：当前林区/任务 + 指挥员头像（设计稿顶栏全局信息项） ---------- */
+.topbar-scene{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border:1px solid var(--sidebar-line);border-radius:999px;background:#0f2748;color:#cfe0f5;font:500 12px var(--font-data);white-space:nowrap;max-width:230px;overflow:hidden}
+.topbar-scene svg{color:#6fb0ff;flex-shrink:0}
+.topbar-scene i{font-style:normal;color:var(--ink-3);font-size:11px;border-left:1px solid var(--sidebar-line);padding-left:8px;margin-left:2px;overflow:hidden;text-overflow:ellipsis}
+.topbar-user{display:flex;align-items:center;gap:9px;padding:4px 6px 4px 4px;border:1px solid var(--sidebar-line);border-radius:999px;background:#0f2748;flex-shrink:0}
+.topbar-user .avatar{width:30px;height:30px;margin:0}
+.topbar-user strong{display:block;font:700 12.5px var(--font-ui);color:#fff;line-height:1.2}
+.topbar-user small{display:block;font:400 10.5px var(--font-data);color:var(--ink-3)}
+.model-status b.llm-on{color:var(--ok)}
+.model-status b.llm-off{color:var(--warn)}
+@media(max-width:1380px){.topbar-scene i{display:none}.topbar-user div{display:none}.topbar-user{padding:4px}}
+
+/* ---------- 火情监测页：左影像 55-60% + 右（识别/量化/环境）三段 ---------- */
+.monitor-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px;align-items:start}
+.monitor-left,.monitor-right{display:flex;flex-direction:column;gap:16px;min-width:0}
+.monitor-left .upload-panel{margin:0}
+.evidence-panel .ew-stage{border:1px solid var(--line);border-radius:var(--radius-s);overflow:hidden}
+.evidence-panel .src-note{display:block;margin-top:9px;font:400 11.5px var(--font-data);color:var(--ink-3)}
+.ev-toggle{display:inline-flex;gap:2px;border:1px solid var(--line);border-radius:8px;padding:2px;background:var(--surface-2)}
+.ev-toggle .legend-item{padding:4px 10px;color:var(--ink-3)}
+.ev-toggle .legend-item.on{background:var(--accent-soft);color:var(--accent)}
+.fm-rows{display:flex;flex-direction:column;margin-top:12px}
+.fm-row{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:7px 0;border-bottom:1px dashed #16345e;font:400 12.5px var(--font-data)}
+.fm-row:last-child{border-bottom:none}
+.fm-row i{font-style:normal;color:var(--ink-3);flex-shrink:0}
+.fm-row b{color:var(--ink);font-weight:500;text-align:right;overflow-wrap:anywhere}
+.fm-row b.bad{color:#ff9c72}
+.fm-row b.warn{color:var(--warn)}
+.fm-row b.ok{color:var(--ok)}
+.fm-summary{margin:10px 0 0;padding:10px 13px;background:var(--surface-2);border-left:3px solid var(--accent);border-radius:var(--radius-s);font-size:12.5px;line-height:1.65;color:var(--ink-2)}
+.fm-summary i{display:block;font-style:normal;font:600 11.5px var(--font-ui);color:var(--ink-3);margin-bottom:4px}
+.model-badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.model-badges span{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border:1px solid var(--line);border-radius:999px;background:var(--surface-2);font:400 11.5px var(--font-data);color:var(--ink-3)}
+.model-badges span b{color:var(--ink-2);font-weight:600}
+.model-badges span small{color:var(--ink-3);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.model-badges span.ok{border-color:var(--ok-line);background:#0a2620}
+.model-badges span.ok b{color:var(--ok)}
+
+/* ---------- 火情监测底部：时间趋势 + 主操作条 ---------- */
+.monitor-bottom{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;margin-top:16px;align-items:stretch}
+.monitor-trend{min-width:0}
+.monitor-actions{display:flex;flex-direction:column;gap:10px;justify-content:center;padding:16px;background:var(--panel-grad,var(--surface));border:1px solid var(--panel-border,var(--line));border-radius:10px}
+.monitor-actions .primary,.monitor-actions .outline-btn{margin-top:0;justify-content:center}
+.monitor-actions .ma-gap{height:1px;background:var(--line);margin:4px 0}
+.people-risk-line{margin:2px 0 0;font:400 12px var(--font-data);color:var(--warn);line-height:1.6}
+@media(max-width:1240px){.monitor-grid{grid-template-columns:1fr}.monitor-bottom{grid-template-columns:1fr}}
+
+/* ---------- 机群调度：决策过程折叠栏（原 Agent 协作一级页合并） ---------- */
+.decision-fold{margin-top:14px;border:1px solid var(--panel-border,#16345e);border-radius:10px;background:var(--panel-grad,var(--surface));overflow:hidden}
+.decision-fold-head{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;padding:12px 16px;font:700 13.5px var(--font-ui);color:var(--ink);cursor:pointer;text-align:left}
+.decision-fold-head:hover{background:var(--surface-2)}
+.decision-fold-head svg{color:var(--accent)}
+.decision-fold-head small{margin-left:4px;font:400 11.5px var(--font-data);color:var(--ink-3)}
+.decision-fold-head .fold-arrow{margin-left:auto;color:var(--ink-3);transition:transform var(--speed) ease}
+.decision-fold.open .decision-fold-head .fold-arrow{transform:rotate(90deg)}
+.decision-fold-body{border-top:1px solid var(--panel-border,#16345e);padding:14px 16px 16px}
+.fold-cols{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:start}
+.fold-cols .fold-stream{max-height:420px}
+.fold-cols .chat-panel{margin:0}
+@media(max-width:1100px){.fold-cols{grid-template-columns:1fr}}
+
+/* ---------- 态势总览右栏/底部微调（页面设计：右栏 实时画面→任务执行→环境与趋势） ---------- */
+.live-feed-card .lf-go{margin-top:8px;align-self:flex-start}
+.map-view.screen .map-statusbar{gap:8px 18px}
+.map-statusbar .map-meta{font:400 11.5px var(--font-data);color:var(--ink-3);white-space:nowrap}
+.map-view.screen .map-statusbar .map-source.map-meta::before{background:#2a5fc4}
+.map-toolbar-heading .scr-hint{font:400 12px var(--font-data)}
+
+/* ---------- 任务管理：任务归档行表（参考图样式 · 编号/等级/面积/人员/结论/耗时/状态） ---------- */
+.history-two-col{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr)}
+.archive-list{gap:0;padding:0;overflow:auto}
+.arc-filters{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid #1a3a68;position:sticky;top:0;z-index:3;background:linear-gradient(180deg,#0b1f3f 82%,rgba(11,31,63,.92));border-radius:10px 10px 0 0}
+.arc-filter{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border:1px solid #25519e;border-radius:999px;background:#0d2140;color:var(--ink-2);font:600 12.5px var(--font-ui);cursor:pointer;transition:border-color var(--speed) ease,color var(--speed) ease}
+.arc-filter i{font:600 11px var(--font-data);font-style:normal;min-width:16px;text-align:center;padding:0 4px;border-radius:8px;background:#122c55;color:var(--ink-3)}
+.arc-filter:hover{color:var(--ink);border-color:var(--accent)}
+.arc-filter.on{color:#eaf3ff;border-color:var(--accent);background:linear-gradient(180deg,#123364,#0d2140);box-shadow:0 0 10px #2f7bff33 inset}
+.arc-filter.on i{background:#1c4aa0;color:#dce8f8}
+.arc-grid{display:grid;grid-template-columns:34px 70px 96px 82px 86px 74px 136px 88px 76px minmax(58px,1fr);align-items:center;gap:6px;padding:8px 14px;min-width:880px}
+.arc-head{position:sticky;top:47px;z-index:2;background:#0c2547;border-bottom:1px solid #1e4276;color:#8fb0d9;font:600 12px var(--font-ui);white-space:nowrap}
+.arc-head .ah-pick{text-align:center}
+.arc-row{border-bottom:1px solid rgba(26,58,104,.55);cursor:pointer;transition:background var(--speed) ease}
+.arc-row:hover{background:rgba(47,123,255,.09)}
+.arc-row .cmp-pick{justify-self:center}
+.arc-no{font:700 13px var(--font-data);letter-spacing:.6px;color:#eaf3ff}
+.arc-time,.arc-dur,.arc-area{font:400 12.5px var(--font-data);color:var(--ink-2);white-space:nowrap}
+.arc-area{text-align:right}
+.arc-lv{display:inline-flex;justify-content:center;padding:2px 0;border-radius:4px;font:700 12px var(--font-ui);border:1px solid transparent;white-space:nowrap}
+.arc-lv.lv1{color:#7fe0a8;border-color:#1e5c3c;background:#0a2620}
+.arc-lv.lv2{color:#ffe17d;border-color:#7a6a1e;background:#2b2509}
+.arc-lv.lv3{color:#ffb26b;border-color:#6b511e;background:#2b1f09}
+.arc-lv.lv4{color:#ff8d8d;border-color:#7a2c34;background:#2b0d10}
+.arc-lv.slate{color:var(--ink-3);border-color:#255191;background:#0d2140}
+.dt-chip.warn{color:#ffe17d;border-color:#7a6a1e;background:#2b2509}
+.arc-mini{display:inline-flex;justify-content:center;padding:2px 8px;border-radius:4px;font-size:12px;white-space:nowrap}
+.arc-row .hr-actions{justify-self:end;display:flex;align-items:center;gap:2px;opacity:.45;transition:opacity var(--speed) ease}
+.arc-row:hover .hr-actions{opacity:1}
+.arc-row .hr-detail{padding:3px 8px;font-size:12px;gap:3px}
+.arc-row .hr-go{color:var(--ink-3)}
+.archive-list .empty-hint{margin:14px}
+@media(max-width:1240px){.history-two-col{grid-template-columns:1fr}.archive-list .arc-grid{min-width:880px}}
+
+/* =====================================================================
+   火情监测页 · 设计稿参考图第二版（2026-09-23）
+   左侧影像主舞台（画面为主角）+ 右侧识别/量化/环境三卡
+   + 底部「趋势分析」五联图 + 四钮操作条（生成调度方案为绿色主行动）
+   ===================================================================== */
+
+/* ---------- 页头 ---------- */
+.fm-head{align-items:flex-start}
+.fm-data-mode{margin-left:auto;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface-2);color:var(--ink-3);font:400 11.5px var(--font-data);white-space:nowrap}
+
+/* ---------- 主栅格：左舞台伸展填满 ---------- */
+.monitor-grid{align-items:stretch}
+.monitor-left{flex:1;min-width:0}
+.fm-stage{display:flex;flex-direction:column;min-height:520px;border:1px solid var(--panel-border,#1c4076);border-radius:12px;background:var(--panel-grad,var(--surface));box-shadow:var(--shadow-1);overflow:hidden}
+
+/* ---------- 舞台头：来源信息 + 原图/检测切换 ---------- */
+.fm-stage-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--panel-border,#16345e);background:rgba(8,22,40,.55)}
+.fm-stage-src{display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap;min-width:0}
+.fm-live-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;border:1px solid #7a2c34;background:#2b0d10;color:#ff8d8d;font:700 11px var(--font-ui);letter-spacing:.6px}
+.fm-live-chip i{width:7px;height:7px;border-radius:50%;background:#ff5f52;box-shadow:0 0 8px #ff5f52cc;animation:fmLivePulse 1.6s ease-out infinite}
+.fm-live-chip.demo{border-color:var(--line);background:var(--surface-2);color:var(--ink-3)}
+.fm-live-chip.demo i{background:var(--ink-3);box-shadow:none;animation:none}
+@keyframes fmLivePulse{0%{box-shadow:0 0 0 0 #ff5f5266}70%{box-shadow:0 0 0 7px #ff5f5200}100%{box-shadow:0 0 0 0 #ff5f5200}}
+.fm-src-item{color:var(--ink-3);font:400 12px var(--font-data);white-space:nowrap}
+.fm-src-item b{color:var(--ink-2);font-weight:500;margin-left:4px}
+
+/* ---------- 舞台画面区 ---------- */
+.fm-stage-body{position:relative;flex:1;min-height:380px;display:flex;align-items:center;justify-content:center;background:#050d18;overflow:hidden}
+.fm-stage-body>img{display:block;width:100%;height:100%;max-height:560px;object-fit:contain}
+.fm-stage-body .ew-box{border-width:2.5px}
+.fm-stage-body .ew-box em{font-size:11px;padding:2px 6px}
+.fm-stage-body .ew-box.ew-smoke{border-style:dashed;border-color:#e8c06a}
+.fm-stage-body .ew-box.ew-smoke em{background:#6b511e;color:#ffe17d}
+.fm-frame-pos{position:absolute;left:12px;bottom:10px;padding:4px 10px;border-radius:999px;background:#050d18cc;border:1px solid #1c4076;color:var(--ink-2);font:400 11.5px var(--font-data);backdrop-filter:blur(4px);max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* 空态 */
+.fm-stage-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:40px 24px;text-align:center;cursor:pointer}
+.fm-empty-orb{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-line);box-shadow:var(--glow-blue)}
+.fm-stage-empty b{font:700 15px var(--font-ui);color:var(--ink)}
+.fm-stage-empty span{max-width:420px;color:var(--ink-3);font:400 12.5px var(--font-data);line-height:1.7}
+.fm-empty-actions{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;justify-content:center}
+.fm-empty-actions .primary,.fm-empty-actions .outline-btn{margin-top:0}
+
+/* 相机采集 */
+.fm-stage-body video{width:100%;height:100%;max-height:560px;object-fit:contain;background:#000}
+.fm-camera-actions{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:10px}
+.fm-camera-actions .primary,.fm-camera-actions .outline-btn{margin-top:0}
+.fm-camera-error{margin:8px 0 0;color:var(--warn);font:400 12px var(--font-data)}
+
+/* 分析中覆盖层 */
+.fm-analyzing{position:absolute;left:12px;right:12px;bottom:12px;padding:10px 14px;border:1px solid var(--accent-line);border-radius:10px;background:#0a1c36ee;backdrop-filter:blur(6px)}
+.fm-analyzing-row{display:flex;justify-content:space-between;gap:10px;color:var(--ink-2);font:400 12px var(--font-data);margin-bottom:7px}
+.fm-analyzing-row b{color:var(--accent);font-weight:600}
+.fm-progress{height:6px;border-radius:4px;background:#0d2140;overflow:hidden}
+.fm-progress i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#1e63e9,#3d8bff);box-shadow:0 0 10px #3d8bff88;transition:width .4s ease}
+
+/* ---------- 舞台底条：缩略图 + 翻帧 + 接入控制 ---------- */
+.fm-stage-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--panel-border,#16345e);background:rgba(8,22,40,.55);flex-wrap:wrap}
+.fm-nav-btn{width:30px;height:30px;flex-shrink:0;display:grid;place-items:center;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);color:var(--ink-2);cursor:pointer;transition:border-color var(--speed) ease,color var(--speed) ease}
+.fm-nav-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.fm-nav-btn:disabled{opacity:.35;cursor:not-allowed}
+.fm-thumbs{flex:1;min-width:0;display:flex;gap:8px;overflow-x:auto;padding:3px 2px;scrollbar-width:thin;scrollbar-color:#2b4a72 transparent}
+.fm-thumbs::-webkit-scrollbar{height:5px}
+.fm-thumbs::-webkit-scrollbar-thumb{background:#2b4a72;border-radius:3px}
+.fm-thumb{position:relative;flex-shrink:0;width:74px;height:48px;padding:0;border:2px solid var(--line);border-radius:8px;overflow:hidden;background:#0a1626;cursor:pointer;transition:border-color var(--speed) ease}
+.fm-thumb img{width:100%;height:100%;object-fit:cover;display:block;opacity:.85}
+.fm-thumb:hover{border-color:var(--accent-line)}
+.fm-thumb.active{border-color:var(--accent);box-shadow:0 0 0 2px #3d8bff44}
+.fm-thumb.latest::after{content:"最新";position:absolute;right:3px;top:3px;padding:1px 5px;border-radius:4px;background:#1c4aa0dd;color:#fff;font:600 9.5px var(--font-ui)}
+.fm-thumb-time{position:absolute;left:0;right:0;bottom:0;padding:1px 3px;background:#050d18cc;color:#b9cfe8;font:400 9.5px var(--font-data);text-align:center}
+.fm-thumbs-empty{flex:1;color:var(--ink-3);font:400 11.5px var(--font-data);padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fm-stage-actions{display:flex;gap:8px;flex-wrap:wrap}
+.fm-ctl-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border:1px solid var(--line-strong);border-radius:8px;background:var(--surface-2);color:var(--ink-2);font:500 12px var(--font-ui);cursor:pointer;white-space:nowrap;transition:border-color var(--speed) ease,color var(--speed) ease;-webkit-tap-highlight-color:transparent}
+.fm-ctl-btn:hover{border-color:var(--accent);color:#dce9ff}
+.fm-stage-note{display:flex;align-items:center;gap:6px;margin:0;padding:8px 14px;border-top:1px solid var(--panel-border,#16345e);color:var(--ink-3);font:400 11.5px var(--font-data)}
+.fm-stage-note svg{color:var(--accent);flex-shrink:0}
+
+/* ---------- 工具抽屉（UploadPanel 收纳，默认折叠保持画面主角） ---------- */
+.fm-tools-drawer{border:1px dashed var(--line-strong);border-radius:10px;background:rgba(8,22,40,.4);margin-top:12px}
+.fm-tools-drawer summary{padding:10px 14px;font:600 12.5px var(--font-ui);color:var(--ink-3);cursor:pointer;user-select:none;list-style:none;display:flex;align-items:center;gap:8px}
+.fm-tools-drawer summary::before{content:"▸";color:var(--accent);transition:transform var(--speed) ease}
+.fm-tools-drawer[open] summary::before{transform:rotate(90deg)}
+.fm-tools-drawer summary:hover{color:var(--ink-2)}
+.fm-tools-drawer .upload-panel{margin:0 12px 12px}
+
+/* ---------- 右侧三卡（识别 / 量化 / 环境） ---------- */
+.monitor-right .fm-card{margin:0}
+
+/* 环境卡：模式/坐标收纳为折叠行 */
+.fm-env-controls{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
+.fm-env-controls summary{padding:4px 0;font:600 11.5px var(--font-ui);color:var(--ink-3);cursor:pointer;user-select:none;list-style:none}
+.fm-env-controls summary::before{content:"▸ ";color:var(--accent)}
+.fm-env-controls[open] summary::before{content:"▾ "}
+.fm-env-controls summary:hover{color:var(--ink-2)}
+
+/* ---------- 底部：趋势分析五联图 ---------- */
+.fm-trend-section{margin-top:16px;border:1px solid var(--panel-border,#1c4076);border-radius:12px;background:var(--panel-grad,var(--surface));box-shadow:var(--shadow-1);overflow:hidden}
+.fm-trend-head{display:flex;align-items:baseline;gap:12px;padding:11px 16px;border-bottom:1px solid var(--panel-border,#16345e);flex-wrap:wrap}
+.fm-trend-head h3{margin:0;font:700 14px var(--font-ui);color:var(--ink)}
+.fm-frame-trend{margin-left:auto;color:var(--ink-2);font:400 11.5px var(--font-data)}
+.fm-trend-strip{display:grid;grid-template-columns:1.25fr repeat(4,1fr);gap:1px;background:var(--panel-border,#16345e)}
+.fm-trend-panel{position:relative;display:flex;flex-direction:column;min-width:0;padding:11px 12px 9px;background:linear-gradient(180deg,#0e2140 0%,#0a1830 100%)}
+.fm-tp-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+.fm-tp-head b{font:700 12.5px var(--font-ui);color:var(--ink);white-space:nowrap}
+.fm-tp-head span{color:var(--ink-3);font:400 11px var(--font-data);white-space:nowrap}
+.fm-tp-unit{padding:1px 7px;border:1px solid var(--line);border-radius:5px;background:var(--surface-2)}
+.fm-tp-legend{display:inline-flex;align-items:center;gap:5px;flex-wrap:nowrap}
+.fm-tp-legend i{display:inline-block;width:14px;height:0;border-top:2px solid var(--ink-3)}
+.fm-tp-legend i.solid{border-top-style:solid;border-color:#ff9f43}
+.fm-tp-legend i.dash{border-top-style:dashed;border-color:#3d8bff}
+.fm-tp-legend i.sw{width:9px;height:9px;border-radius:2px;border:0}
+.fm-tp-svg{width:100%;height:96px;display:block;flex:1}
+.fm-tp-empty{flex:1;display:grid;place-items:center;min-height:86px;color:#5c7797;font:400 11.5px/1.7 var(--font-data);text-align:center}
+.fm-tp-last{margin-top:6px;color:var(--ink-3);font:400 11px var(--font-data)}
+.fm-tp-last b{color:var(--ink);font-weight:600}
+
+/* 面板1 · 图像时间序列 */
+.fm-tp-thumbs{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:86px}
+.fm-tt-rail{display:flex;align-items:stretch;gap:6px}
+.fm-tt-cell{flex:1;min-width:0;aspect-ratio:16/10;padding:0;border:2px solid var(--line);border-radius:7px;overflow:hidden;background:#0a1626;cursor:pointer;transition:border-color var(--speed) ease}
+.fm-tt-cell img{width:100%;height:100%;object-fit:cover;display:block}
+.fm-tt-cell:hover{border-color:var(--accent-line)}
+.fm-tt-cell.active{border-color:var(--accent);box-shadow:0 0 0 2px #3d8bff44}
+.fm-tt-axis{display:flex;gap:6px;margin-top:6px}
+.fm-tt-axis span{flex:1;text-align:center;color:#5c7797;font:400 10px var(--font-data);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fm-tt-axis span.active{color:var(--accent)}
+
+/* 面板4 · 人员状态分段带 */
+.fm-people-band{flex:1;display:flex;gap:3px;min-height:24px;align-items:stretch;margin-top:4px}
+.fm-people-band span{flex:1;display:grid;place-items:center;border-radius:6px;font:600 11px var(--font-ui);color:#fff;min-width:0;overflow:hidden;white-space:nowrap;padding:4px 2px}
+.fm-people-band .people-confirmed{background:linear-gradient(180deg,#8a2e2e,#6b1f22);border:1px solid #7a2c34;color:#ffb3b3}
+.fm-people-band .people-absent{background:linear-gradient(180deg,#155843,#0d3f30);border:1px solid #1c5544;color:#9fe8cd}
+.fm-people-band .people-unknown{background:linear-gradient(180deg,#5c4a1f,#3f3315);border:1px solid #6b511e;color:#ffe17d}
+.fm-people-note{margin:6px 0 0;color:#5c7797;font:400 10.5px var(--font-data);line-height:1.5}
+
+/* ---------- 底部操作条：四钮（生成调度方案 = 绿色主行动） ---------- */
+.fm-action-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding:12px 16px;border:1px solid var(--panel-border,#1c4076);border-radius:12px;background:var(--panel-grad,var(--surface));box-shadow:var(--shadow-1)}
+.fm-action-bar .primary,.fm-action-bar .outline-btn{margin-top:0}
+.fm-action-bar .ma-gap{width:1px;align-self:stretch;background:var(--line)}
+.fm-ab-analyze{min-width:128px}
+.fm-ab-people,.fm-ab-fix{min-width:132px}
+.fm-ab-dispatch{display:inline-flex;align-items:center;gap:7px;margin-top:0;padding:10px 18px;border:0;border-radius:9px;background:linear-gradient(180deg,#1fae7d,#178a63);color:#fff;font:700 13.5px var(--font-ui);cursor:pointer;box-shadow:0 2px 12px #178a6344;transition:filter var(--speed) ease,transform var(--speed) ease;-webkit-tap-highlight-color:transparent}
+.fm-ab-dispatch:hover{filter:brightness(1.1)}
+.fm-ab-dispatch:active{transform:translateY(1px)}
+.fm-action-bar .people-risk-line{flex-basis:100%;margin:0}
+
+/* ---------- 响应式 ---------- */
+@media(max-width:1440px){
+  .fm-trend-strip{grid-template-columns:repeat(3,1fr)}
+  .fm-trend-panel:first-child{grid-column:1/-1}
+}
+@media(max-width:1240px){
+  .monitor-grid{grid-template-columns:1fr}
+  .fm-stage{min-height:420px}
+  .fm-stage-body{min-height:300px}
+  .fm-trend-strip{grid-template-columns:repeat(2,1fr)}
+  .fm-trend-panel:first-child{grid-column:auto}
+}
+@media(max-width:760px){
+  .fm-trend-strip{grid-template-columns:1fr}
+  .fm-action-bar .primary,.fm-action-bar .outline-btn,.fm-ab-dispatch{flex:1;justify-content:center}
+}
+
+/* 可达性：新控件聚焦环与既有口径一致 */
+.fm-nav-btn:focus-visible,.fm-ctl-btn:focus-visible,.fm-thumb:focus-visible,.fm-tt-cell:focus-visible,.fm-ab-dispatch:focus-visible,.fm-tools-drawer summary:focus-visible,.fm-env-controls summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+@media (prefers-reduced-motion: reduce){
+  .fm-live-chip i{animation:none}
+  .fm-progress i{transition:none}
+}
+
+/* =====================================================================
+   机群调度页 · 设计稿参考图第二版（2026-09-23）
+   三态裁决 hero + 指标盒行 + 方案审批表单卡 + 机群编组三表并排
+   + 地图左上火情告警卡；E2E 依赖的类名全部原位（样式覆盖层）
+   ===================================================================== */
+
+/* ---------- 调度结论：三态 hero 横幅 ---------- */
+.dp-hero{margin-top:14px;padding:14px 16px;border-radius:12px;border:1px solid;align-items:flex-start}
+.dp-hero .decision-icon{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;margin-top:0;background:#fff1}
+.dp-hero strong{font:800 15px/1.35 var(--font-ui);color:var(--ink);display:block}
+.dp-hero p{margin:5px 0 0;font:400 12.5px/1.65 var(--font-ui);color:var(--ink-2)}
+.dp-hero.v-ok{background:linear-gradient(135deg,#0a2a20 0%,#0a1c33 70%);border-color:var(--ok-line)}
+.dp-hero.v-ok .decision-icon{color:var(--ok);border:1px solid var(--ok-line);background:#0a3328}
+.dp-hero.v-mid{background:linear-gradient(135deg,#2b2509 0%,#0a1c33 70%);border-color:#7a6a1e}
+.dp-hero.v-mid .decision-icon{color:var(--warn);border:1px solid #7a6a1e;background:#2b2509}
+.dp-hero.v-bad{background:linear-gradient(135deg,#2b0d10 0%,#0a1c33 70%);border-color:#7a2c34}
+.dp-hero.v-bad .decision-icon{color:#ff8d8d;border:1px solid #7a2c34;background:#2b0d10}
+
+/* ---------- 指标盒行 ---------- */
+.dp-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:12px}
+.dp-metric{display:flex;flex-direction:column;gap:5px;min-width:0;padding:10px 12px;border:1px solid var(--panel-border,#1c4076);border-radius:10px;background:linear-gradient(180deg,#102750 0%,#0a1830 100%)}
+.dp-metric span{color:var(--ink-3);font:600 11px var(--font-ui);white-space:nowrap}
+.dp-metric b{color:var(--ink);font:600 13px var(--font-data);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dp-metric.tone-ok b{color:var(--ok)}
+.dp-metric.tone-warn b{color:var(--warn)}
+.dp-metric.tone-bad b{color:#ff8d8d}
+@media(max-width:1500px){.dp-metrics{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:900px){.dp-metrics{grid-template-columns:repeat(2,1fr)}}
+
+/* ---------- 方案审批表单卡 ---------- */
+.dp-approval{margin-top:14px;border:1px solid var(--panel-border,#1c4076);border-radius:12px;background:rgba(8,22,40,.45);overflow:hidden}
+.dp-approval-head{display:flex;align-items:baseline;gap:10px;padding:10px 14px;border-bottom:1px solid var(--panel-border,#16345e);background:rgba(13,33,64,.6)}
+.dp-approval-head b{font:700 13.5px var(--font-ui);color:var(--ink)}
+.dp-approval-head small{font:400 11.5px var(--font-data);color:var(--ink-3)}
+.dp-approval .people-risk{margin:12px 14px 0;border:0;background:transparent;padding:0;row-gap:10px}
+.dp-approval .people-risk>span{flex-basis:100%}
+.dp-approval .approval-actions{margin:10px 14px 14px}
+.dp-approval .approval-actions .reason-input{margin-top:0}
+.dp-btn-approve{min-width:120px;justify-content:center}
+.dp-monitor-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dp-monitor-row .monitor-btn{margin-top:14px}
+
+/* ---------- 机群编组：三表并排 + 状态圆点 ---------- */
+.squadron-tables.dsp3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+.squadron-tables.dsp3 .gt-scroll{max-height:236px}
+.squadron-tables.dsp3 .data-table th,.squadron-tables.dsp3 .data-table td{padding:7px 8px;font-size:12px}
+.squadron-tables.dsp3 .gt-task{max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gt-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.gt-dot.idle{background:#7e9abf;box-shadow:0 0 5px #7e9abf66}
+.gt-dot.busy{background:#3d8bff;box-shadow:0 0 6px #3d8bff88;animation:gtBusy 1.6s ease-in-out infinite}
+.gt-dot.ret{background:#9d8bef;box-shadow:0 0 6px #9d8bef88}
+.gt-dot.fault{background:#ff5f52;box-shadow:0 0 6px #ff5f5288}
+@keyframes gtBusy{0%,100%{opacity:1}50%{opacity:.45}}
+@media(max-width:1100px){.squadron-tables.dsp3{grid-template-columns:1fr}}
+
+/* ---------- 态势总览「实时画面」卡（设计稿参考图第三版） ---------- */
+.lf-head{gap:8px}
+.lf-live{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;border:1px solid #7a2c34;background:#2b0d10;color:#ff8d8d;font:700 9.5px var(--font-ui);letter-spacing:.8px}
+.lf-live i{width:6px;height:6px;border-radius:50%;background:#ff5f52;box-shadow:0 0 8px #ff5f52cc;animation:fmLivePulse 1.6s ease-out infinite}
+.lf-expand{margin-left:auto;border:0;background:transparent;color:var(--scr-muted);cursor:pointer;padding:3px;display:grid;place-items:center;border-radius:5px;transition:color var(--speed) ease,background var(--speed) ease}
+.lf-expand:hover{color:var(--scr-ink);background:#122c54}
+.lf-yolo{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:6px 9px;border:1px solid var(--scr-line);border-radius:7px;background:#0a1a33;font:400 10.5px var(--font-data);color:var(--scr-muted)}
+.lf-yolo b{font-weight:700;font-size:10.5px}
+.lf-fire{color:#ff9c72}
+.lf-smoke{color:#ffe17d}
+.lf-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.lf-thumbs{display:flex;gap:4px;flex-shrink:0}
+.lf-thumbs img{width:44px;height:28px;object-fit:cover;border-radius:4px;border:1px solid var(--scr-line);display:block}
+.lf-src{color:var(--scr-muted);font:400 10px var(--font-data);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.lf-expand:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+/* ---------- 地图左上火情告警卡（调度页叠加） ---------- */
+.dispatch-alert-card{position:absolute;z-index:20;top:14px;left:14px;width:250px;border:1px solid #6b3018;border-radius:12px;background:#0c1c33ee;backdrop-filter:blur(6px);box-shadow:var(--shadow-2);overflow:hidden}
+.dispatch-alert-card .dac-head{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid #2a2030;background:linear-gradient(90deg,#2b0d10,#160b1298)}
+.dispatch-alert-card .dac-flame{color:#ff6f3d;display:inline-flex}
+.dispatch-alert-card .dac-head b{font:700 13px var(--font-ui);color:#ff9c72}
+.dispatch-alert-card.lvb-1 .dac-head b{color:#7fe0a8}
+.dispatch-alert-card.lvb-2 .dac-head b{color:#ffe17d}
+.dispatch-alert-card.lvb-3 .dac-head b{color:#ffb26b}
+.dispatch-alert-card.lvb-4 .dac-head b{color:#ff8d8d}
+.dac-rows{display:flex;flex-direction:column;padding:7px 12px 9px}
+.dac-rows span{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px dashed #1c3350;color:var(--ink-3);font:400 11.5px var(--font-data)}
+.dac-rows span:last-child{border-bottom:none}
+.dac-rows span b{color:var(--ink-2);font-weight:500;text-align:right;overflow-wrap:anywhere}
+@media(max-width:900px){.dispatch-alert-card{width:210px}}

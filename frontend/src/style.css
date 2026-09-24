@@ -811,8 +811,16 @@ nav button b{background:#ff6f3d;box-shadow:0 0 10px #ff6f3d66;border-radius:8px}
 .history-row .hr-title small{margin-left:8px;font:400 11.5px var(--font-data);color:var(--ink-3)}
 
 /* ---- 14 UI-REDESIGN 补充：新增模板块样式 ---- */
-.res-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0 4px}
+/* 资源总览十卡（设计稿 2026-09-23）：5 列 × 2 行 */
+.res-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:18px 0 4px}
+@media(max-width:1400px){.res-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:1240px){.res-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* 资源池小节标题 + 页面职责提示（设计稿「ⓘ 此页面展示资源事实与状态」） */
+.res-section-head{display:flex;align-items:baseline;gap:12px;margin:16px 0 2px;flex-wrap:wrap}
+.res-section-head h3{font:700 14px var(--font-ui);color:var(--ink);letter-spacing:.5px}
+.res-tip{font:400 11px var(--font-data);color:var(--ink-3);background:#0d2140;border:1px solid #1d4076;border-radius:var(--chip-radius);padding:3px 10px;white-space:nowrap}
+.cell-note{display:block;font:400 10px var(--font-data);color:var(--ink-3);margin-top:2px}
+.data-table td b.warn{color:#ffb26b}
 .squadron-tables{display:flex;flex-direction:column;gap:12px;margin-top:14px}
 .gt-scroll{max-height:300px;overflow-y:auto}
 .fleet-bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
@@ -951,12 +959,24 @@ nav button b{background:#ff6f3d;box-shadow:0 0 10px #ff6f3d66;border-radius:8px}
 .hr-actions{display:inline-flex;align-items:center;gap:8px}
 .hr-detail{margin-top:0;padding:4px 10px;font-size:11.5px}
 
-/* ---- F 数据分析页：底部回放+报告行 / 八小卡 ---- */
-.ana-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}
-.ana-stat.kpi b{font-size:18px}
+/* ---- F 数据分析页：底部回放+报告行 / 双趋势图 / 资源消耗与次级卡 ---- */
+.ana-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px}
+.ana-kpis-5{grid-template-columns:repeat(5,minmax(0,1fr))}
+.ana-stat.kpi b{font-size:18px;display:inline-flex;align-items:baseline;gap:4px}
+.ana-stat.kpi b i{font:500 11px var(--font-data);font-style:normal;color:var(--ink-3)}
+.ana-subhead{margin:14px 0 0;font:600 12px var(--font-ui);color:var(--ink-3);letter-spacing:.04em}
+.ana-secondary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+.ana-stat.secondary b{font-size:16px}
+.ana-charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.ana-charts .evo-panel{height:100%}
+.ana-rounds-scroll{max-height:320px;overflow:auto}
+.ana-rounds-scroll .data-table th,.ana-rounds-scroll .data-table td{white-space:nowrap}
+.ana-stock{font:500 11.5px var(--font-data);color:var(--ink-2)}
 .ana-bottom{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start;margin-top:16px}
 .ana-bottom-left{display:flex;flex-direction:column;gap:0;min-width:0}
-@media(max-width:1240px){.ana-bottom{grid-template-columns:1fr}}
+.ana-bottom-left .replay-panel{margin-top:0;height:100%;display:flex;flex-direction:column}
+.ana-bottom-left .replay-body{flex:1}
+@media(max-width:1240px){.ana-bottom{grid-template-columns:1fr}.ana-charts{grid-template-columns:1fr}.ana-kpis-5{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
 /* ---- 16 细节对齐：地图锚定修正 / 风向标 / 资源卡四旋翼 / 方案按钮 ---- */
 .map-main-col{position:relative}

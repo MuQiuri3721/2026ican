@@ -251,6 +251,24 @@ def llm_status():
     return _llm_status()
 
 
+def _slim_summary(item) -> dict:
+    """任务归档行摘要（UI 设计稿 2026-09）：等级/过火面积/FLP/处置结论/人员状态。
+    浅读内部 result 标量（shallow 引用只读约定），不触发整包深拷贝。"""
+    result = item.result or {}
+    fire = result.get("fire_assessment") or {}
+    plan = result.get("dispatch_plan") or {}
+    scenario = (item.input.scenario if item.input else None) or {}
+    people = plan.get("people_branch") or (item.input.people_status.value if item.input else None)
+    return {
+        "level": fire.get("level"),
+        "level_label": fire.get("label"),
+        "fire_area_m2": fire.get("fire_area_m2") or scenario.get("fire_area_m2"),
+        "fire_load_flp": fire.get("fire_load_flp"),
+        "control_verdict": plan.get("control_verdict"),
+        "people_status": people,
+    }
+
+
 @router.get("/api/analyzes")
 def list_analyses(limit: int | None = Query(None, gt=0, le=1000), slim: bool = Query(False)):
     """任务列表。`limit` 截取最新 N 条；`slim=1` 只返回列表页摘要字段（不含 result 等重负载），
@@ -258,7 +276,11 @@ def list_analyses(limit: int | None = Query(None, gt=0, le=1000), slim: bool = Q
     BE-22：limit/slim 下推到 store——1137 任务时全量深拷贝曾把本接口拖到 10s+（历史页超时）。"""
     if slim:
         keys = ("analysis_id", "status", "created_at", "updated_at", "monitor_round", "resource_locks", "input")
-        items = [item.model_dump(include=set(keys)) for item in analysis_store.list(limit=limit, shallow=True)]
+        items = []
+        for item in analysis_store.list(limit=limit, shallow=True):
+            payload = item.model_dump(include=set(keys))
+            payload["summary"] = _slim_summary(item)
+            items.append(payload)
         return {"items": items}
     return {"items": analysis_store.list(limit=limit)}
 

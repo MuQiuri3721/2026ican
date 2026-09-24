@@ -25,10 +25,12 @@ def main() -> int:
         page.locator(".map-wind-indicator").wait_for(timeout=15000)
         ok &= report(24, "风向指示标", "风向" in page.locator(".map-wind-indicator").inner_text())
 
-        # —— 火情监测：趋势分析条（演化 + 图像时序空态/数据态二选一）——
+        # —— 火情监测：影像主舞台 + 趋势分析五联图 + 底部操作条（设计稿参考图第二版 2026-09-23）——
         page.get_by_role("button", name="火情监测").click()
-        page.locator(".trend-panel").wait_for(timeout=10000)
-        ok &= report(24, "趋势分析条", "趋势分析" in page.locator(".trend-panel .panel-heading").inner_text())
+        page.locator(".fm-stage").wait_for(timeout=10000)
+        ok &= report(24, "影像主舞台", True)
+        ok &= report(24, "趋势分析五联图", page.locator(".fm-trend-panel").count() == 5)
+        ok &= report(24, "底部操作条", "生成调度方案" in page.locator(".fm-action-bar").inner_text())
 
         # —— 机群调度：地图 + 机群编组三组表 + 轮次与重规划条 ——
         page.get_by_role("button", name="机群调度").click()
@@ -38,11 +40,11 @@ def main() -> int:
         page.locator(".round-bar").wait_for(timeout=10000)
         ok &= report(24, "轮次与重规划条", "轮次与重规划" in page.locator(".round-bar .rb-title").inner_text())
 
-        # —— 资源管理：资源总览八卡 + 12 张无人机卡 + 物资库/水源表 ——
+        # —— 资源管理：资源总览十卡 + 12 张无人机卡 + 物资库/水源与驻防点表（设计稿 2026-09-23）——
         page.get_by_role("button", name="资源管理").click()
         page.locator(".res-kpis").wait_for(timeout=10000)
         kpis = page.locator(".res-kpis .res-kpi").count()
-        ok &= report(24, "资源总览 KPI 八卡", kpis == 8, f"kpis={kpis}")
+        ok &= report(24, "资源总览 KPI 十卡", kpis == 10, f"kpis={kpis}")
         page.wait_for_function(
             "document.querySelectorAll('.drone-card').length === 12", timeout=15000
         )

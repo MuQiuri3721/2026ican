@@ -6,6 +6,8 @@ import { formatNumber } from '../utils/labels'
 
 const props = defineProps({
   ids: { type: Array, default: () => [] },
+  // layout=rows：任务为行、指标为列（数据分析页设计稿）；默认 metrics：指标为行、任务为列
+  layout: { type: String, default: 'metrics' },
 })
 const emit = defineEmits(['error'])
 
@@ -50,6 +52,8 @@ const columns = computed(() => items.value.map((task) => {
     water: task.resources?.water_liters ?? 0,
     co2: task.resources?.co2_kg ?? 0,
     people: peopleText(task.people_status),
+    // 控制时间口径：轮次 × 每轮 5 仿真分钟（轮次监测节奏），已扑灭任务即实际控制用时
+    control: review.round_count ? `${review.round_count * 5} min` : '—',
   }
 }))
 
@@ -67,6 +71,28 @@ function deltaText(value) {
   <div class="compare-panel">
     <div class="compare-head"><b>多任务对比</b><span>{{ columns.length }} 个任务 · 数字出自后端复盘档案，无独立口径</span></div>
     <div v-if="loading" class="compare-loading">对比数据加载中…</div>
+    <template v-else-if="columns.length && layout === 'rows'">
+      <div class="compare-scroll">
+        <table class="compare-table cmp-rows">
+          <thead>
+            <tr><th>任务编号</th><th>火情规模</th><th>处置结论</th><th>控制时间</th><th>出动数量</th><th>重规划次数</th><th>资源消耗</th><th>最终 FLP</th><th>人员</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="col in columns" :key="col.id">
+              <td class="cmp-id"><b>{{ col.id.slice(-8) }}</b><small>{{ col.time }}</small></td>
+              <td>{{ col.level }}</td>
+              <td><span :class="['cmp-verdict', col.verdictTone]">{{ col.verdictText }}</span></td>
+              <td>{{ col.control }}</td>
+              <td>{{ col.units }} 架</td>
+              <td>{{ col.replans }} 次</td>
+              <td>{{ col.water }} L / {{ col.co2 }} kg</td>
+              <td :class="{ 'cmp-final-down': Number(col.delta) < 0 }">{{ formatNumber(col.finalFlp) }}{{ col.extinguished ? ' · 已扑灭' : '' }}</td>
+              <td>{{ col.people }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
     <template v-else-if="columns.length">
       <div class="compare-scroll">
         <table class="compare-table">
@@ -112,4 +138,10 @@ function deltaText(value) {
 .cmp-verdict.bad{color:var(--fire);background:var(--fire-soft)}
 .cmp-delta td.down{color:var(--ok);font-weight:600}
 .cmp-delta td.up{color:var(--fire);font-weight:600}
+.cmp-rows td{font:500 12px var(--font-data)}
+.cmp-rows .cmp-id b{display:block;font:700 12.5px var(--font-data);color:var(--ink)}
+.cmp-rows .cmp-id small{display:block;font:400 10.5px var(--font-data);color:var(--ink-3);margin-top:2px}
+.cmp-rows .cmp-final-down{color:var(--ok);font-weight:600}
+.cmp-rows th,.cmp-rows td{text-align:center}
+.cmp-rows td:first-child,.cmp-rows th:first-child{text-align:left}
 </style>
