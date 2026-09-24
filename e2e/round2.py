@@ -17,17 +17,17 @@ def main() -> int:
         session.page.get_by_text("系统运行正常").wait_for(timeout=15000)
         page = session.page
 
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         # 上传 fixture 影像（input 为 visually-hidden，可直接 set_input_files）
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         session.page.set_input_files("input[type=file]", FIRE_IMAGE)
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         session.page.get_by_text("影像已接入").wait_for(timeout=10000)
         ok &= report(2, "影像接入", True)
 
         # 启动智能研判（含真实环境查询，超时放宽）
-        page.get_by_role("button", name="火情监测").click()
-        session.page.get_by_role("button", name="启动智能研判").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
+        session.page.get_by_role("button", name="开始研判").click()
         page.get_by_role("button", name="机群调度").click()
         session.page.locator(".plan-summary").wait_for(timeout=120000)
         ok &= report(2, "方案生成", True)
@@ -37,7 +37,7 @@ def main() -> int:
             "document.querySelector('.task-badge')?.textContent?.includes('待确认')",
             timeout=15000,
         )
-        badge = session.page.locator(".task-badge").inner_text()
+        badge = session.page.locator(".task-badge").first.inner_text()  # 2026-09 改版双徽标取顶栏
         ok &= report(2, "任务状态=待确认", "待确认" in badge, badge)
 
         # 方案摘要：large-fire 档（12000m²）按冻结公式判不可控 → 显示缺口、时间区间为 '—'（不产虚假时间窗）
@@ -53,14 +53,15 @@ def main() -> int:
         # 可控场景：small-fire fixture（260m²）→ 判可控。FLP 含真实风因子（研判默认
         # environment_mode=real，Open-Meteo 实时风随日期变化），不硬编码 FLP 值，
         # 断言摘要切换为新方案（FLP 不再是 360）且时间窗口不再是 '—'。
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
+        page.evaluate("document.querySelector('.fm-tools-drawer')?.querySelector('summary')?.click()")
         session.page.get_by_role("button", name="清空并重新接入").click()
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         session.page.set_input_files("input[type=file]", str(Path(__file__).resolve().parent / "small-fire.jpg"))
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         session.page.get_by_text("影像已接入").wait_for(timeout=10000)
-        page.get_by_role("button", name="火情监测").click()
-        session.page.get_by_role("button", name="启动智能研判").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
+        session.page.get_by_role("button", name="开始研判").click()
         page.get_by_role("button", name="机群调度").click()
         session.page.wait_for_function(
             "(() => { const t = document.querySelector('.plan-summary')?.textContent || '';"
@@ -72,7 +73,8 @@ def main() -> int:
         window2 = summary2.split("时间区间：")[1].split("分钟")[0] if "时间区间" in summary2 else ""
         ok &= report(2, "可控→时间区间", "—" not in window2 and any(ch.isdigit() for ch in window2), f"window={window2!r}")
         callout2 = session.page.locator(".decision-callout").inner_text()
-        ok &= report(2, "可控→立即处置建议", "启动" in callout2 and "增援" not in callout2, callout2[:80].replace("\n", " "))
+        # 2026-09 改版：callout"启动一级处置响应"文案并入 hero（"可控制 · 建议立即出动"）
+        ok &= report(2, "可控→立即处置建议", ("可控制" in callout2 or "启动" in callout2) and "增援" not in callout2, callout2[:80].replace("\n", " "))
 
         # 调度建议 explanation 与任务 chips
         page.get_by_role("button", name="机群调度").click()

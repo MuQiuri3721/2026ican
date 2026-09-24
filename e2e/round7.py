@@ -16,7 +16,7 @@ def main() -> int:
         session.page.get_by_text("系统运行正常").wait_for(timeout=15000)
 
         # 多选：fire2.jpg（序列帧）+ fire.jpg（主文件/最新一帧）
-        session.page.get_by_role("button", name="火情监测").click()
+        session.page.get_by_role("button", name="火情监测", exact=True).click()
         session.page.set_input_files("input[type=file]", [str(base / "fire2.jpg"), str(base / "fire.jpg")])
         session.page.wait_for_function(
             "document.querySelector('.dropzone strong')?.textContent?.includes('序列 2 帧')", timeout=10000
@@ -24,8 +24,8 @@ def main() -> int:
         ok &= report(7, "序列帧计数提示", True)
 
         # 序列研判成功（默认火 1800m² 不可控，plan-summary 显示序列 FLP）
-        session.page.get_by_role("button", name="火情监测").click()
-        session.page.get_by_role("button", name="启动智能研判").click()
+        session.page.get_by_role("button", name="火情监测", exact=True).click()
+        session.page.get_by_role("button", name="开始研判").click()
         session.page.get_by_role("button", name="机群调度").click()
         session.page.wait_for_function(
             "document.querySelector('.plan-summary')?.textContent?.includes('FLP：')", timeout=300000

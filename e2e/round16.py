@@ -23,14 +23,14 @@ def main() -> int:
         page.get_by_text("系统运行正常").wait_for(timeout=15000)
 
         # ---- ① 视频 UI 上传：抽帧 → 研判 ----
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         page.set_input_files("input[type=file]", VIDEO)
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         page.get_by_text("影像已接入").wait_for(timeout=15000)  # 单视频无「· 序列」后缀（那是多图提示）
         ok &= report(16, "视频接入", True)
 
-        page.get_by_role("button", name="火情监测").click()
-        page.get_by_role("button", name="启动智能研判").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
+        page.get_by_role("button", name="开始研判").click()
         page.get_by_role("button", name="机群调度").click()
         page.locator(".plan-summary").wait_for(timeout=180000)
         ok &= report(16, "视频研判完成", True)
@@ -56,11 +56,13 @@ def main() -> int:
             session.api("POST", f"/api/tasks/{tid}/approval", {"action": "terminate", "reason": "round16 清理"})
 
         # ---- ② 风变演练 → 动作 等待二次审批 ----
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
+        # 2026-09 改版：接入影像后工具抽屉自动收起，先展开再点抽屉内按钮
+        page.evaluate("document.querySelector('.fm-tools-drawer').open = true")
         page.get_by_role("button", name="清空并重新接入").click()
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         import re
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         page.get_by_role("button", name="生成随机火情").click()
         page.locator(".scenario-facts").wait_for(timeout=8000)
         shifted = False

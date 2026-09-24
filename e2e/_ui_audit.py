@@ -52,7 +52,7 @@ def main():
             except Exception as e:
                 print("恢复任务失败:", str(e)[:80])
 
-        session.page.get_by_role("button", name="火情监测").click()
+        session.page.get_by_role("button", name="火情监测", exact=True).click()
         session.page.wait_for_timeout(1200)
         session.page.screenshot(path=str(OUT / "2-command-analyzed.png"), full_page=True)
 

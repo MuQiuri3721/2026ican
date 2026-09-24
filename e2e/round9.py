@@ -13,12 +13,12 @@ def main() -> int:
     try:
         session.goto_app()
         session.page.get_by_text("系统运行正常").wait_for(timeout=15000)
-        session.page.get_by_role("button", name="火情监测").click()
+        session.page.get_by_role("button", name="火情监测", exact=True).click()
         session.page.set_input_files("input[type=file]", "e2e/small-fire.jpg")
-        session.page.get_by_role("button", name="火情监测").click()
+        session.page.get_by_role("button", name="火情监测", exact=True).click()
         session.page.get_by_text("影像已接入").wait_for(timeout=10000)
-        session.page.get_by_role("button", name="火情监测").click()
-        session.page.get_by_role("button", name="启动智能研判").click()
+        session.page.get_by_role("button", name="火情监测", exact=True).click()
+        session.page.get_by_role("button", name="开始研判").click()
         session.page.get_by_role("button", name="机群调度").click()
         session.page.wait_for_function(
             "document.querySelector('.plan-summary')?.textContent?.includes('FLP：')", timeout=300000
@@ -42,9 +42,10 @@ def main() -> int:
         # 判为不可控：hero 结论为增援（hero 面板在火情监测页）
         # OPT-P0-04/P3-01：时限缺口场景三态归入「维持压制 · 时限内未完成」，
         # 不再误报「暂不可控」（方案本身可控，只是超时限）——旧断言锁的是矛盾结论
-        session.page.get_by_role("button", name="火情监测").click()
+        session.page.get_by_role("button", name="火情监测", exact=True).click()
+        # 2026-09 改版：hero 面板删除，三态结论徽标迁至火情量化卡头（controlVerdictView.hint）
         session.page.wait_for_function(
-            "document.querySelector('.hero-footer strong')?.textContent?.includes('维持压制')",
+            "document.querySelector('[aria-label=\"火情量化\"] .dt-chip')?.textContent?.includes('维持压制')",
             timeout=20000,
         )
         ok &= report(9, "超时→维持压制(时限内未完成)", True)

@@ -35,7 +35,7 @@ def main() -> int:
         # 自动开始模拟（无需点开始按钮）
         page.get_by_role("button", name="机群调度").click()
         page.locator(".plan-summary").wait_for(timeout=300000)
-        badge = page.locator(".task-badge").inner_text()
+        badge = page.locator(".task-badge").first.inner_text()  # 2026-09 改版后顶栏+调度页头双徽标，取顶栏（DOM 第一个）
         ok &= report(22, "一键自动研判", "待确认" in badge, badge)
 
         # FE-75：证据窗（真实检测模式才渲染；当前后端未带端点则跳过该断言）

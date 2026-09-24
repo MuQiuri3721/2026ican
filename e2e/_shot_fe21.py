@@ -20,7 +20,7 @@ try:
     page.screenshot(path="e2e/artifacts/fe21_halo_b.png",
                     clip={"x": cx - 240, "y": cy - 170, "width": 480, "height": 340})
     # 工具栏(语音开关 + 来源标注在指挥中枢,分开截)
-    page.get_by_role("button", name="火情监测").click()
+    page.get_by_role("button", name="火情监测", exact=True).click()
     page.locator(".src-note").wait_for(timeout=30000)
     page.screenshot(path="e2e/artifacts/fe21_srcnote.png", full_page=False)
     print("shots ok")

@@ -21,29 +21,26 @@ def main() -> int:
             online = json.loads(resp.read().decode()).get("mode") == "glm"
 
         # 演训模拟建案（无影像路径，最快拿到可问答的任务）
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         page.get_by_role("button", name="生成随机火情").click()
         page.locator(".scenario-facts").wait_for(timeout=8000)
         page.get_by_role("button", name="开始模拟").click()
         page.get_by_role("button", name="机群调度").click()
         page.locator(".plan-summary").wait_for(timeout=300000)
 
-        # 问答面板模式标签与 /api/llm-status 一致
-        page.get_by_role("button", name="Agent 协作").click()
+        # 问答面板已迁至机群调度「Agent 协作 · 决策过程」折叠栏（2026-09 改版）
+        page.get_by_role("button", name="机群调度").click()
+        page.get_by_role("button", name="Agent 协作 · 决策过程").click()
         tag = page.locator(".chat-panel .llm-tag")
         tag.wait_for(timeout=8000)
         expect = "GLM 已接入" if online else "离线规则模式"
         ok &= report(15, f"问答面板模式标签({expect})", expect in tag.inner_text(), tag.inner_text())
 
-        # 首问：回答模式正确
-        page.get_by_role("button", name="Agent 协作").click()
+        # 首问：回答模式正确（折叠栏已展开，勿再点击折叠头以免收起）
         page.locator(".chat-input-row input").fill("现在火势控制住了吗？为什么出动这些无人机？")
-        page.get_by_role("button", name="Agent 协作").click()
         page.locator(".chat-send").click()
         # 等真实回答（排除"思考中…"占位气泡，它同样带 agent 类）
-        page.get_by_role("button", name="Agent 协作").click()
         page.wait_for_selector(".chat-bubble.agent:not(.typing)", timeout=60000)
-        page.get_by_role("button", name="Agent 协作").click()
         answer = page.locator(".chat-bubble.agent:not(.typing)").last.inner_text()
         if online:
             ok &= report(15, "GLM 真回答（无离线前缀）", "（离线规则模式）" not in answer,
@@ -53,16 +50,11 @@ def main() -> int:
             ok &= report(15, "离线确定性回答", "（离线规则模式）" in answer, answer[:110].replace("\n", " "))
 
         # 追问：历史保留、多轮可用
-        page.get_by_role("button", name="Agent 协作").click()
         page.locator(".chat-input-row input").fill("水剂还剩多少？")
-        page.get_by_role("button", name="Agent 协作").click()
         page.locator(".chat-send").click()
-        page.get_by_role("button", name="Agent 协作").click()
         page.wait_for_function("document.querySelectorAll('.chat-bubble.agent:not(.typing)').length >= 2", timeout=60000)
-        page.get_by_role("button", name="Agent 协作").click()
         bubbles = page.locator(".chat-bubble").count()
         ok &= report(15, "多轮问答历史", bubbles >= 4, f"bubbles={bubbles}")
-        page.get_by_role("button", name="Agent 协作").click()
         second = page.locator(".chat-bubble.agent:not(.typing)").last.inner_text()
         ok &= report(15, "回答接地库存数据", any(ch.isdigit() for ch in second), second[:90])
 

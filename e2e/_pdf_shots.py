@@ -26,7 +26,7 @@ s.page.wait_for_timeout(2500)
 shot("1-overview-map")
 
 # 2 火情监测（任务输入区）
-s.page.get_by_role("button", name="火情监测").click()
+s.page.get_by_role("button", name="火情监测", exact=True).click()
 shot("2-analysis-upload")
 
 # 3 资源管理

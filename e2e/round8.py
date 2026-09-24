@@ -13,12 +13,12 @@ def main() -> int:
     try:
         session.goto_app()
         session.page.get_by_text("系统运行正常").wait_for(timeout=15000)
-        session.page.get_by_role("button", name="火情监测").click()
+        session.page.get_by_role("button", name="火情监测", exact=True).click()
         session.page.set_input_files("input[type=file]", "e2e/small-fire.jpg")
-        session.page.get_by_role("button", name="火情监测").click()
+        session.page.get_by_role("button", name="火情监测", exact=True).click()
         session.page.get_by_text("影像已接入").wait_for(timeout=10000)
-        session.page.get_by_role("button", name="火情监测").click()
-        session.page.get_by_role("button", name="启动智能研判").click()
+        session.page.get_by_role("button", name="火情监测", exact=True).click()
+        session.page.get_by_role("button", name="开始研判").click()
         session.page.get_by_role("button", name="机群调度").click()
         session.page.wait_for_function(
             "document.querySelector('.plan-summary')?.textContent?.includes('FLP：')", timeout=300000

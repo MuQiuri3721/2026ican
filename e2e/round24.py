@@ -26,7 +26,7 @@ def main() -> int:
         ok &= report(24, "风向指示标", "风向" in page.locator(".map-wind-indicator").inner_text())
 
         # —— 火情监测：影像主舞台 + 趋势分析五联图 + 底部操作条（设计稿参考图第二版 2026-09-23）——
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         page.locator(".fm-stage").wait_for(timeout=10000)
         ok &= report(24, "影像主舞台", True)
         ok &= report(24, "趋势分析五联图", page.locator(".fm-trend-panel").count() == 5)

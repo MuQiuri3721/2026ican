@@ -23,7 +23,7 @@ def main() -> int:
         ok &= report(13, "GLM 状态标识", "在线" in badge_text or "离线" in badge_text, badge_text)
 
         # 演训模拟（scenario 路径，无影像）
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         page.get_by_role("button", name="生成随机火情").click()
         page.locator(".scenario-facts").wait_for(timeout=8000)
         page.get_by_role("button", name="开始模拟").click()

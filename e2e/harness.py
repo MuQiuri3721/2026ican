@@ -73,7 +73,7 @@ class Session:
         self.page.get_by_text("系统运行正常").wait_for(timeout=20000)
         # 默认落地页是态势总览（大屏）；绝大多数轮次的上传/研判流程在火情监测页——统一导航
         if self.page.locator(".upload-panel").count() == 0:
-            self.page.get_by_role("button", name="火情监测").first.click()
+            self.page.get_by_role("button", name="火情监测", exact=True).first.click()
             self.page.locator(".upload-panel").wait_for(timeout=8000)
 
     def api(self, method: str, path: str, payload: dict | None = None) -> dict:

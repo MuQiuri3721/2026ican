@@ -117,10 +117,12 @@ def main() -> int:
                      (head + " | " + body).replace("\n", " ")[:120])
 
         # 演示模式水源 GPS 精准标注（scene.json latitude/longitude 契约）
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
+        # 2026-09 改版：环境模式选择器迁入"模式与坐标"二级折叠（fm-env-controls），先展开
+        page.evaluate("document.querySelector('.fm-env-controls').open = true")
         page.locator(".environment-controls select").select_option("demo")
         page.wait_for_function(
-            "document.querySelector('.environment-meta')?.textContent?.includes('demo-data')", timeout=15000
+            "document.querySelector('.environment-meta')?.textContent?.includes('演示数据')", timeout=15000
         )
         page.get_by_role("button", name="态势总览").click()
         demo_water = page.locator(".tmap-water", has_text="北侧蓄水池")

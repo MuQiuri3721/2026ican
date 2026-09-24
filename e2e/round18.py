@@ -15,7 +15,7 @@ def main() -> int:
         session.goto_app()
 
         # 生成随机火情 → 开始模拟 → 批准（与 round12 同链路）
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         page.get_by_role("button", name="生成随机火情").click()
         page.locator(".scenario-facts").wait_for(timeout=8000)
         page.get_by_role("button", name="开始模拟").click()

@@ -68,7 +68,7 @@ def scenario_1_absent_logistics():
     try:
         page = s.page
         s.goto_app()
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         ok &= record(1, "随机到无人场景", reroll_until_people(page, "不在场"))
         page.get_by_role("button", name="开始模拟").click()
         page.get_by_role("button", name="机群调度").click()
@@ -95,7 +95,7 @@ def scenario_2_confirmed_guidance():
     try:
         page = s.page
         s.goto_app()
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         ok &= record(2, "随机到有人场景", reroll_until_people(page, "在场"))
         page.get_by_role("button", name="开始模拟").click()
         page.get_by_role("button", name="机群调度").click()
@@ -125,7 +125,7 @@ def scenario_3_adjust_new_version():
     try:
         page = s.page
         s.goto_app()
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         page.get_by_role("button", name="生成随机火情").click()
         page.get_by_role("button", name="开始模拟").click()
         page.get_by_role("button", name="机群调度").click()
@@ -154,7 +154,7 @@ def scenario_4_soc_return_and_swap():
     try:
         page = s.page
         s.goto_app()
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         page.get_by_role("button", name="生成随机火情").click()
         page.get_by_role("button", name="开始模拟").click()
         page.get_by_role("button", name="机群调度").click()
@@ -182,12 +182,12 @@ def scenario_5_insufficient_gap():
     try:
         page = s.page
         s.goto_app()
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         page.set_input_files("input[type=file]", str(Path(__file__).resolve().parent / "fire.jpg"))
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         page.get_by_text("影像已接入").wait_for(timeout=10000)
-        page.get_by_role("button", name="火情监测").click()
-        page.get_by_role("button", name="启动智能研判").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
+        page.get_by_role("button", name="开始研判").click()
         page.get_by_role("button", name="机群调度").click()
         page.locator(".plan-summary").wait_for(timeout=150000)
         page.get_by_role("button", name="机群调度").click()
@@ -221,7 +221,7 @@ def scenario_6_reject_releases_locks():
     try:
         page = s.page
         s.goto_app()
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         page.get_by_role("button", name="生成随机火情").click()
         page.get_by_role("button", name="开始模拟").click()
         page.get_by_role("button", name="机群调度").click()

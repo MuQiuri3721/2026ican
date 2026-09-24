@@ -78,13 +78,13 @@ def main() -> int:
                 print("恢复任务失败:", str(error)[:80])
 
         # —— 1. 地形键控缓存：先在 3D 建立 A 基线 → 改坐标至 B → 再进 3D → 键控清缓存重载 B ——
-        session.page.get_by_role("button", name="火情监测").click()
+        session.page.get_by_role("button", name="火情监测", exact=True).click()
         session.page.wait_for_timeout(600)
         session.page.get_by_role("button", name="态势总览").click()
         session.page.wait_for_timeout(2500)
         session.page.locator("button", has_text="三维").first.click()
         session.page.wait_for_timeout(3500)
-        session.page.get_by_role("button", name="火情监测").click()
+        session.page.get_by_role("button", name="火情监测", exact=True).click()
         session.page.wait_for_timeout(600)
         terrain_urls.clear()
         draft_lat = session.page.locator(".coordinate-editor input").nth(0)
@@ -97,7 +97,7 @@ def main() -> int:
         session.page.wait_for_timeout(2000)
         session.page.locator("button", has_text="三维").first.click()
         session.page.wait_for_timeout(3500)
-        session.page.get_by_role("button", name="火情监测").click()
+        session.page.get_by_role("button", name="火情监测", exact=True).click()
         session.page.wait_for_timeout(400)
         last = terrain_urls[-1] if terrain_urls else ""
         last_is_b = f"latitude={LOC_B['latitude']}" in last
@@ -117,7 +117,7 @@ def main() -> int:
             ok &= report("F", "等高线来源标签", False, source.inner_text()[:40] if source.count() else "未找到")
 
         # —— 2. 疏散模拟路径标注 ——
-        session.page.get_by_role("button", name="火情监测").click()
+        session.page.get_by_role("button", name="火情监测", exact=True).click()
         session.page.wait_for_timeout(800)
         summary = session.page.locator(".evacuation-summary")
         try:

@@ -15,12 +15,12 @@ def main() -> int:
     try:
         session.goto_app()
         # 小火场景（可控）→ 研判 → 批准
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         page.set_input_files("input[type=file]", "e2e/small-fire.jpg")
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         page.get_by_text("影像已接入").wait_for(timeout=10000)
-        page.get_by_role("button", name="火情监测").click()
-        page.get_by_role("button", name="启动智能研判").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
+        page.get_by_role("button", name="开始研判").click()
         page.get_by_role("button", name="机群调度").click()
         page.locator(".plan-summary").wait_for(timeout=300000)
         ok &= report(11, "研判完成", True)
@@ -80,7 +80,7 @@ def main() -> int:
         ok &= report(11, "相位快照", True, str(phases_now[:5]))
 
         # 终止任务 → 推演停止；若火已提前扑灭归档（已完成），终止 409 属预期，跳过
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         already_done = page.evaluate("() => (document.querySelector('.task-badge') || {}).textContent?.includes('已完成') || false")
         if not already_done:
             page.get_by_role("button", name="机群调度").click()

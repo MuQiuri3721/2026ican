@@ -15,7 +15,7 @@ def main() -> int:
         session.goto_app()
 
         # 生成随机火情
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         page.get_by_role("button", name="生成随机火情").click()
         page.locator(".scenario-facts").wait_for(timeout=8000)
         facts = page.locator(".scenario-facts").inner_text()
@@ -28,11 +28,11 @@ def main() -> int:
         ok &= report(12, "火点地图预览", "演训火点" in preview.inner_text(), preview.inner_text())
 
         # 开始模拟（无影像，scenario 驱动研判）
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         page.get_by_role("button", name="开始模拟").click()
         page.get_by_role("button", name="机群调度").click()
         page.locator(".plan-summary").wait_for(timeout=300000)
-        badge = page.locator(".task-badge").inner_text()
+        badge = page.locator(".task-badge").first.inner_text()
         ok &= report(12, "开始模拟→待确认", "待确认" in badge, badge)
 
         # 批准 → 出动推演
@@ -63,7 +63,7 @@ def main() -> int:
                 timeout=90000,
             )
             clock = page.locator(".sim-clock").inner_text() if page.locator(".sim-clock").count() else ""
-            badge = page.locator(".task-badge").inner_text()
+            badge = page.locator(".task-badge").first.inner_text()
             if "待确认" in badge:
                 path = "replan"
             elif "已完成" in badge:

@@ -21,19 +21,19 @@ def main() -> int:
     try:
         session.goto_app()
         page.get_by_text("系统运行正常").wait_for(timeout=20000)
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         page.set_input_files("input[type=file]", "e2e/_real_images/fire1.jpg")
-        page.get_by_role("button", name="火情监测").click()
+        page.get_by_role("button", name="火情监测", exact=True).click()
         page.get_by_text("影像已接入").wait_for(timeout=10000)
-        page.get_by_role("button", name="火情监测").click()
-        page.get_by_role("button", name="启动智能研判").click()
-        # FE-82 七页 IA：detector-live 与 hero 决策条在火情监测页，先读再切页
-        page.locator(".detector-live").first.wait_for(timeout=300000)
+        page.get_by_role("button", name="火情监测", exact=True).click()
+        page.get_by_role("button", name="开始研判").click()
+        # FE-82 七页 IA：detector-live 在火情监测页工具抽屉内（接入后抽屉收起，元素 hidden），等 attached 用 evaluate 读
+        page.locator(".detector-live").first.wait_for(state="attached", timeout=300000)
         live = page.evaluate("document.querySelector('.detector-live')?.textContent || ''")
         ok &= report(23, "检测状态行(real)", "real" in live and "yolo11n-dfire-v1" in live and "local-yolo-service" in live, live.strip())
 
-        area = page.evaluate("document.querySelector('.hero-decision')?.textContent || ''")
-        ok &= report(23, "面积随检测框变化", "火势" in area or "FLP" in area, area[:80].replace("\n", " "))
+        area = page.evaluate("""document.querySelector('[aria-label="火情量化"]')?.textContent || ''""")
+        ok &= report(23, "面积随检测框变化", "火势" in area or "FLP" in area or "过火面积" in area, area[:80].replace("\n", " "))
 
         page.get_by_role("button", name="机群调度").click()
         page.locator(".plan-summary").wait_for(timeout=120000)
