@@ -386,9 +386,15 @@
 .arc-filter:hover{color:var(--ink);border-color:var(--accent)}
 .arc-filter.on{color:#eaf3ff;border-color:var(--accent);background:linear-gradient(180deg,#123364,#0d2140);box-shadow:0 0 10px #2f7bff33 inset}
 .arc-filter.on i{background:#1c4aa0;color:#dce8f8}
-.arc-grid{display:grid;grid-template-columns:34px 70px 96px 82px 86px 74px 136px 88px 76px minmax(58px,1fr);align-items:center;gap:6px;padding:8px 14px;min-width:880px}
+.arc-grid{display:grid;grid-template-columns:28px minmax(56px,.9fr) minmax(0,1.3fr) 54px minmax(44px,.6fr) max-content minmax(0,1.4fr) minmax(48px,.7fr) max-content minmax(64px,max-content);align-items:center;gap:6px;padding:8px 12px}
+/* 任务管理页复用 .full-logs 容器：提权压过 style.css 的 .full-logs .history-row 四列日志模板，
+   否则 10 个单元格被塞进 4 列 → 行超宽出横向滚动（队友拉取后页面显示异常的根因） */
+.full-logs .arc-grid{display:grid;grid-template-columns:28px minmax(56px,.9fr) minmax(0,1.3fr) 54px minmax(44px,.6fr) max-content minmax(0,1.4fr) minmax(48px,.7fr) max-content minmax(64px,max-content);gap:6px;padding:8px 12px;border-radius:0}
 .arc-head{position:sticky;top:47px;z-index:2;background:#0c2547;border-bottom:1px solid #1e4276;color:#8fb0d9;font:600 12px var(--font-ui);white-space:nowrap}
 .arc-head .ah-pick{text-align:center}
+.arc-grid>.arc-no,.arc-grid>.arc-time,.arc-grid>.arc-area,.arc-grid>.arc-dur,.arc-grid>.dt-chip,.arc-grid>.arc-lv{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.arc-grid>.dt-chip,.arc-grid>.arc-lv{display:block;text-align:center}
+.arc-head>*{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .arc-row{border-bottom:1px solid rgba(26,58,104,.55);cursor:pointer;transition:background var(--speed) ease}
 .arc-row:hover{background:rgba(47,123,255,.09)}
 .arc-row .cmp-pick{justify-self:center}
@@ -408,7 +414,7 @@
 .arc-row .hr-detail{padding:3px 8px;font-size:12px;gap:3px}
 .arc-row .hr-go{color:var(--ink-3)}
 .archive-list .empty-hint{margin:14px}
-@media(max-width:1240px){.history-two-col{grid-template-columns:1fr}.archive-list .arc-grid{min-width:880px}}
+@media(max-width:1240px){.history-two-col{grid-template-columns:1fr}}
 
 /* =====================================================================
    火情监测页 · 设计稿参考图第二版（2026-09-23）
