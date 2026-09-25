@@ -240,7 +240,7 @@ for i, (t, c) in enumerate(loop_nodes):
 loop_html += '<div style="margin:2px 0 0 40px;font-size:14px;color:#7b2cbf;">↺ 评估后回到执行（紫虚线=反馈回路）</div>'
 
 html6 = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{BASE_CSS}
-.wrap {{ position:relative; width:1680px; height:900px; padding:24px 30px; }}
+.wrap {{ position:relative; width:1680px; height:930px; padding:24px 30px; }}
 .lg-cell {{ flex:1; background:#fff; border:1.5px solid #b9cbd8; border-radius:9px; text-align:center; padding:8px 4px; }}
 .lg-cell small {{ display:block; font-size:13px; color:#5c7186; }}
 .lg-cell b {{ font-size:22px; }}
@@ -258,10 +258,9 @@ html6 = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{BASE_CSS}
       <line x1="60" y1="20" x2="60" y2="255" stroke="#8aa2b5" stroke-width="2"/>
       <polyline points="{pts}" fill="none" stroke="#1b5fa8" stroke-width="3.5"/>
       {dots}
-      <text x="620" y="278" text-anchor="end" font-size="13" fill="#5c7186">反馈轮次（5 分钟/轮）</text>
       <text x="14" y="34" font-size="13" fill="#5c7186">FLP</text>
     </svg>
-    <div style="font-size:13.5px;color:#5c7186;"><span style="color:#1b5fa8;font-weight:700;">蓝点 = 有效压制轮</span> · <span style="color:#e76f51;font-weight:700;">橙点 = 补给间歇回升轮（suppression=0）</span> —— 账本如实反映间歇</div>
+    <div style="font-size:13.5px;color:#5c7186;"><span style="color:#1b5fa8;font-weight:700;">蓝点 = 有效压制轮</span> · <span style="color:#e76f51;font-weight:700;">橙点 = 补给间歇回升轮（suppression=0）</span> · 横轴 = 反馈轮次（5 分钟/轮）—— 账本如实反映间歇</div>
   </div>
   <div style="position:absolute;left:1210px;top:20px;width:440px;">
     <div style="font-size:18px;font-weight:700;color:#22384c;margin-bottom:10px;">单轮账本（第 {b_r0["r"]} 轮真实数据）</div>
@@ -281,7 +280,7 @@ html6 = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{BASE_CSS}
         ("报告归档", "全生命周期证据", "#1b5fa8"),
     ])}
   </div>
-  <div style="position:absolute;left:30px;top:920px;width:1620px;background:#f6f0fb;border:1.5px solid #7b2cbf;border-radius:10px;padding:12px 18px;font-size:16px;color:#3d4c5c;">
+  <div style="position:absolute;left:30px;top:846px;width:1620px;background:#f6f0fb;border:1.5px solid #7b2cbf;border-radius:10px;padding:12px 18px;font-size:16px;color:#3d4c5c;">
     <b style="color:#7b2cbf;">触发器：</b>负荷超基线 20% · 风速跨档 · 人员状态变化 · SOC 低于返航阈值 · 单机失能 · 信号下降 · 水源失效 · 连续 3 轮净涨
     —— <b>新方案 = 新环境快照 + 新资源状态 + 再审批</b>，关键事件可提前触发评估，不必机械等待完整轮次。
   </div>
@@ -289,5 +288,5 @@ html6 = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{BASE_CSS}
 
 p36 = ASSETS / "fig3-6.html"
 p36.write_text(html6, encoding="utf-8")
-shot(p36, ASSETS / "fig3-6.png", 1680, 900)
+shot(p36, ASSETS / "fig3-6.png", 1680, 930)
 print("ALL FIGS DONE")
