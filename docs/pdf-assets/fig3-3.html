@@ -1,0 +1,57 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:"Microsoft YaHei","SimHei",sans-serif; }
+body { background:#fff; color:#3d4c5c; }
+.card { background:#f7fafc; border:1.5px solid #b9cbd8; border-radius:10px; padding:10px 12px; text-align:center; }
+.card b { display:block; font-size:19px; color:#22384c; }
+.card span { font-size:13px; color:#5c7186; }
+.arrow-r { position:absolute; height:3px; background:#8aa2b5; }
+.arrow-r::after { content:""; position:absolute; right:-1px; top:-5px; border-left:11px solid #8aa2b5; border-top:6.5px solid transparent; border-bottom:6.5px solid transparent; }
+.tag { display:inline-block; font-size:13px; padding:2px 10px; border-radius:10px; }
+
+.wrap { position:relative; width:1680px; height:1490px; padding:26px 30px; }
+.col-t { font-size:20px; font-weight:700; color:#22384c; margin-bottom:14px; text-align:center; }
+.col-t small { font-weight:400; font-size:13px; color:#5c7186; }
+</style></head><body><div class="wrap">
+  <div style="position:absolute;left:60px;top:24px;width:340px;">
+    <div class="col-t">多源输入<small>蓝/青=环境 · 红=火情 · 绿=机群 · 金=约束</small></div><div class="card" style="border-color:#1b5fa8;margin-bottom:12px;"><b style="color:#1b5fa8;">地形</b><span>SRTM 30米 高程/坡度/坡向</span></div><div class="card" style="border-color:#1b5fa8;margin-bottom:12px;"><b style="color:#1b5fa8;">气象</b><span>风速/风向/温湿度/降水</span></div><div class="card" style="border-color:#1b5fa8;margin-bottom:12px;"><b style="color:#1b5fa8;">植被</b><span>WorldCover 土地覆盖</span></div><div class="card" style="border-color:#2a9d8f;margin-bottom:12px;"><b style="color:#2a9d8f;">水体与取水</b><span>OSM 水体 · 候选水源</span></div><div class="card" style="border-color:#2a9d8f;margin-bottom:12px;"><b style="color:#2a9d8f;">道路</b><span>OSM 路网与通行性</span></div><div class="card" style="border-color:#d62828;margin-bottom:12px;"><b style="color:#d62828;">火情感知</b><span>航拍影像 · YOLO/VLM</span></div><div class="card" style="border-color:#2f9e44;margin-bottom:12px;"><b style="color:#2f9e44;">机群状态</b><span>12 架 UAV · SOC/载荷</span></div><div class="card" style="border-color:#b8860b;margin-bottom:12px;"><b style="color:#b8860b;">库存与约束</b><span>W20/C6/电池 · 用户要求</span></div>
+  </div>
+  <div style="position:absolute;left:520px;top:24px;width:300px;">
+    <div class="col-t">统一化处理管线<small>协同层五步</small></div>
+    <div style="position:absolute;left:20px;top:46px;width:250px;" class="card">
+      <b style="font-size:18px;">1 坐标关联</b><span>报警点为入口<br>半径检索 5 千米</span>
+    </div><div style="position:absolute;left:138px;top:138px;width:3px;height:26px;background:#8aa2b5;"></div>
+    <div style="position:absolute;left:20px;top:164px;width:250px;" class="card">
+      <b style="font-size:18px;">2 单位统一</b><span>米/度/升/千克/%<br>字段口径对齐</span>
+    </div><div style="position:absolute;left:138px;top:256px;width:3px;height:26px;background:#8aa2b5;"></div>
+    <div style="position:absolute;left:20px;top:282px;width:250px;" class="card">
+      <b style="font-size:18px;">3 来源标注</b><span>source · mode<br>采集时间 · 坐标系</span>
+    </div><div style="position:absolute;left:138px;top:374px;width:3px;height:26px;background:#8aa2b5;"></div>
+    <div style="position:absolute;left:20px;top:400px;width:250px;" class="card">
+      <b style="font-size:18px;">4 环境快照</b><span>snapshot_id = envsnap-哈希<br>不可变 · 随方案版本绑定</span>
+    </div><div style="position:absolute;left:138px;top:492px;width:3px;height:26px;background:#8aa2b5;"></div>
+    <div style="position:absolute;left:20px;top:518px;width:250px;" class="card">
+      <b style="font-size:18px;">5 黑板共享</b><span>六角色读取同一份<br>结构化任务上下文</span>
+    </div>
+  </div>
+  <div style="position:absolute;left:960px;top:24px;width:300px;">
+    <div class="col-t">统一任务态势<small>五类状态输出</small></div><div class="card" style="width:250px;margin-bottom:11px;border-color:#1b5fa8;"><b style="font-size:17px;color:#1b5fa8;">火情状态</b></div><div class="card" style="width:250px;margin-bottom:11px;border-color:#1b5fa8;"><b style="font-size:17px;color:#1b5fa8;">环境状态</b></div><div class="card" style="width:250px;margin-bottom:11px;border-color:#1b5fa8;"><b style="font-size:17px;color:#1b5fa8;">人员状态</b></div><div class="card" style="width:250px;margin-bottom:11px;border-color:#1b5fa8;"><b style="font-size:17px;color:#1b5fa8;">资源状态</b></div><div class="card" style="width:250px;margin-bottom:11px;border-color:#1b5fa8;"><b style="font-size:17px;color:#1b5fa8;">任务约束</b></div>
+    <div class="card" style="width:250px;border-color:#b8860b;border-width:2px;background:#fdf8ec;">
+      <b style="color:#b8860b;">进入控制层</b><span>预测火势 · 生成调度方案</span>
+    </div>
+  </div>
+  <div style="position:absolute;left:1330px;top:24px;width:320px;height:600px;background:#f2f7fb;border:1.5px dashed #b9cbd8;border-radius:12px;padding:16px;font-size:14.5px;color:#3d4c5c;line-height:1.9;">
+    <b style="font-size:17px;color:#22384c;">来源标注契约</b><br>
+    每项数据同时保留<br>
+    <b>source</b>（来源服务）<br>
+    <b>mode</b>（在线 / 离线）<br>
+    <b>采集时间</b>（含 stale 标注）<br>
+    <b>坐标系</b>（EPSG:32650 / 4326）<br>
+    <b>状态</b>（verified 等）<br><br>
+    环境刷新产生新观测并生成<b>新快照</b>；<br>
+    新方案引用新快照，历史方案<br>保留原决策依据，全程可追溯。
+  </div>
+  <div style="position:absolute;left:30px;top:706px;width:1620px;">
+    <div class="col-t" style="text-align:left;">地形证据 · 南京 SRTM 30 米离线交付成果<small>　高程 / 坡度 / 坡向三联 · 红框为紫金山示范林区任务点（32.0688°N, 118.8432°E）· 坡度→K_slope · 植被→K_fuel · 风速→K_wind · 水体→取水候选</small></div>
+    <img src="fig3-3-srtm-zh.png" style="width:1620px;border:1px solid #d7e0e8;border-radius:8px;">
+  </div>
+</div></body></html>

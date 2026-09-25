@@ -1,0 +1,49 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:"Microsoft YaHei","SimHei",sans-serif; }
+body { background:#fff; color:#3d4c5c; }
+.card { background:#f7fafc; border:1.5px solid #b9cbd8; border-radius:10px; padding:10px 12px; text-align:center; }
+.card b { display:block; font-size:19px; color:#22384c; }
+.card span { font-size:13px; color:#5c7186; }
+.arrow-r { position:absolute; height:3px; background:#8aa2b5; }
+.arrow-r::after { content:""; position:absolute; right:-1px; top:-5px; border-left:11px solid #8aa2b5; border-top:6.5px solid transparent; border-bottom:6.5px solid transparent; }
+.tag { display:inline-block; font-size:13px; padding:2px 10px; border-radius:10px; }
+
+.wrap { position:relative; width:1680px; height:900px; padding:24px 30px; }
+.lg-cell { flex:1; background:#fff; border:1.5px solid #b9cbd8; border-radius:9px; text-align:center; padding:8px 4px; }
+.lg-cell small { display:block; font-size:13px; color:#5c7186; }
+.lg-cell b { font-size:22px; }
+.tl-node { text-align:center; width:150px; }
+.tl-node b { display:block; font-size:15px; color:#22384c; }
+.tl-node span { font-size:12.5px; color:#5c7186; }
+</style></head><body><div class="wrap">
+  <div style="position:absolute;left:30px;top:20px;width:400px;">
+    <div style="font-size:20px;font-weight:700;color:#22384c;margin-bottom:12px;">反馈复盘闭环</div><div class="card" style="width:280px;border:2px solid #2f9e44;margin:0 0 0 40px;"><b style="color:#2f9e44;">1 执行</b></div><div style="margin:6px 0 6px 165px;font-size:22px;color:#7b2cbf;">↓</div><div class="card" style="width:280px;border:2px solid #1b5fa8;margin:0 0 0 40px;"><b style="color:#1b5fa8;">2 状态更新</b></div><div style="margin:6px 0 6px 165px;font-size:22px;color:#7b2cbf;">↓</div><div class="card" style="width:280px;border:2px solid #e76f51;margin:0 0 0 40px;"><b style="color:#e76f51;">3 效果评估</b></div><div style="margin:6px 0 6px 165px;font-size:22px;color:#7b2cbf;">↓</div><div class="card" style="width:280px;border:2px solid #7b2cbf;margin:0 0 0 40px;"><b style="color:#7b2cbf;">4 重规划</b></div><div style="margin:6px 0 6px 165px;font-size:22px;color:#7b2cbf;">↓</div><div class="card" style="width:280px;border:2px solid #b8860b;margin:0 0 0 40px;"><b style="color:#b8860b;">5 新方案确认</b></div><div style="margin:2px 0 0 40px;font-size:14px;color:#7b2cbf;">↺ 评估后回到执行（紫虚线=反馈回路）</div>
+  </div>
+  <div style="position:absolute;left:520px;top:20px;width:660px;border:1.5px solid #b9cbd8;border-radius:12px;padding:10px;">
+    <div style="font-size:18px;font-weight:700;color:#22384c;">逐轮 after FLP 曲线（真实任务 8 轮 × 5 分钟）</div>
+    <svg width="640" height="270">
+      <line x1="60" y1="255" x2="640" y2="255" stroke="#8aa2b5" stroke-width="2"/>
+      <line x1="60" y1="20" x2="60" y2="255" stroke="#8aa2b5" stroke-width="2"/>
+      <polyline points="66,240 145,221 225,165 304,162 384,140 463,81 543,74 622,50 " fill="none" stroke="#1b5fa8" stroke-width="3.5"/>
+      <circle cx="66" cy="240" r="6" fill="#1b5fa8"/><text x="66" y="228" text-anchor="middle" font-size="13" fill="#5c7186">810</text><circle cx="145" cy="221" r="6" fill="#1b5fa8"/><text x="145" y="209" text-anchor="middle" font-size="13" fill="#5c7186">820</text><circle cx="225" cy="165" r="6" fill="#e76f51"/><text x="225" y="153" text-anchor="middle" font-size="13" fill="#5c7186">849</text><circle cx="304" cy="162" r="6" fill="#1b5fa8"/><text x="304" y="150" text-anchor="middle" font-size="13" fill="#5c7186">851</text><circle cx="384" cy="140" r="6" fill="#1b5fa8"/><text x="384" y="128" text-anchor="middle" font-size="13" fill="#5c7186">862</text><circle cx="463" cy="81" r="6" fill="#e76f51"/><text x="463" y="69" text-anchor="middle" font-size="13" fill="#5c7186">893</text><circle cx="543" cy="74" r="6" fill="#1b5fa8"/><text x="543" y="62" text-anchor="middle" font-size="13" fill="#5c7186">896</text><circle cx="622" cy="50" r="6" fill="#1b5fa8"/><text x="622" y="38" text-anchor="middle" font-size="13" fill="#5c7186">909</text>
+      <text x="620" y="278" text-anchor="end" font-size="13" fill="#5c7186">反馈轮次（5 分钟/轮）</text>
+      <text x="14" y="34" font-size="13" fill="#5c7186">FLP</text>
+    </svg>
+    <div style="font-size:13.5px;color:#5c7186;"><span style="color:#1b5fa8;font-weight:700;">蓝点 = 有效压制轮</span> · <span style="color:#e76f51;font-weight:700;">橙点 = 补给间歇回升轮（suppression=0）</span> —— 账本如实反映间歇</div>
+  </div>
+  <div style="position:absolute;left:1210px;top:20px;width:440px;">
+    <div style="font-size:18px;font-weight:700;color:#22384c;margin-bottom:10px;">单轮账本（第 1 轮真实数据）</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;"><div class="lg-cell"><small>before 起始</small><b style="color:#5c7186;">810.0</b></div><div class="lg-cell"><small>growth 增长</small><b style="color:#e76f51;">28.6</b></div><div class="lg-cell"><small>suppression 压制</small><b style="color:#2f9e44;">28.1</b></div><div class="lg-cell"><small>net 净变化</small><b style="color:#1b5fa8;">0.5</b></div><div class="lg-cell"><small>after 结束</small><b style="color:#d62828;">810.5</b></div></div>
+    <div style="font-size:13.5px;color:#5c7186;margin-top:10px;line-height:1.6;">before + growth − suppression = after<br>账本守恒由测试 test_P003 / test_T07 背书</div>
+  </div>
+  <div style="position:absolute;left:30px;top:620px;width:1620px;border-top:2px dashed #b9cbd8;"></div>
+  <div style="position:absolute;left:30px;top:646px;font-size:19px;font-weight:700;color:#22384c;">一次任务的方案版本时间线（示例口径）</div>
+  <div style="position:absolute;left:60px;top:806px;width:1540px;height:3px;background:#8aa2b5;"></div>
+  <div style="position:absolute;left:60px;top:722px;display:flex;gap:96px;">
+    <div class="tl-node"><div style="width:17px;height:17px;border-radius:50%;background:#b8860b;margin:0 auto 8px;"></div><b>v1 方案确认</b><span>用户批准 · 资源锁定</span></div><div class="tl-node"><div style="width:17px;height:17px;border-radius:50%;background:#2f9e44;margin:0 auto 8px;"></div><b>执行推演</b><span>分钟推进 · 逐轮账本</span></div><div class="tl-node"><div style="width:17px;height:17px;border-radius:50%;background:#7b2cbf;margin:0 auto 8px;"></div><b>风变触发</b><span>风速跨档 · 事件上报</span></div><div class="tl-node"><div style="width:17px;height:17px;border-radius:50%;background:#b8860b;margin:0 auto 8px;"></div><b>v2 方案再确认</b><span>新环境快照 · 再审批</span></div><div class="tl-node"><div style="width:17px;height:17px;border-radius:50%;background:#2f9e44;margin:0 auto 8px;"></div><b>任务完成</b><span>FLP 压平 · 返航回收</span></div><div class="tl-node"><div style="width:17px;height:17px;border-radius:50%;background:#1b5fa8;margin:0 auto 8px;"></div><b>报告归档</b><span>全生命周期证据</span></div>
+  </div>
+  <div style="position:absolute;left:30px;top:920px;width:1620px;background:#f6f0fb;border:1.5px solid #7b2cbf;border-radius:10px;padding:12px 18px;font-size:16px;color:#3d4c5c;">
+    <b style="color:#7b2cbf;">触发器：</b>负荷超基线 20% · 风速跨档 · 人员状态变化 · SOC 低于返航阈值 · 单机失能 · 信号下降 · 水源失效 · 连续 3 轮净涨
+    —— <b>新方案 = 新环境快照 + 新资源状态 + 再审批</b>，关键事件可提前触发评估，不必机械等待完整轮次。
+  </div>
+</div></body></html>

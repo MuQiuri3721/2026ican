@@ -1,0 +1,79 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:"Microsoft YaHei","SimHei",sans-serif; }
+body { background:#fff; color:#3d4c5c; }
+.card { background:#f7fafc; border:1.5px solid #b9cbd8; border-radius:10px; padding:10px 12px; text-align:center; }
+.card b { display:block; font-size:19px; color:#22384c; }
+.card span { font-size:13px; color:#5c7186; }
+.arrow-r { position:absolute; height:3px; background:#8aa2b5; }
+.arrow-r::after { content:""; position:absolute; right:-1px; top:-5px; border-left:11px solid #8aa2b5; border-top:6.5px solid transparent; border-bottom:6.5px solid transparent; }
+.tag { display:inline-block; font-size:13px; padding:2px 10px; border-radius:10px; }
+
+.wrap { position:relative; width:1680px; height:1240px; padding:24px 30px; }
+.layer { position:absolute; border-radius:12px; padding:12px 16px; }
+.lt { font-size:19px; font-weight:700; }
+.chip { display:inline-block; border-radius:9px; padding:6px 13px; font-size:15px; margin:4px 3px; }
+</style></head><body><div class="wrap">
+  <div class="layer" style="left:30px;top:20px;width:1620px;background:#f2f7fb;border:1.5px solid #1b5fa8;">
+    <div class="lt" style="color:#1b5fa8;">输入 · 统一任务态势（来自协同层）</div>
+    <span class="chip" style="background:#fff;border:1.5px solid #1b5fa8;color:#1b5fa8;">统一态势</span><span class="chip" style="background:#fff;border:1.5px solid #1b5fa8;color:#1b5fa8;">人员状态</span><span class="chip" style="background:#fff;border:1.5px solid #1b5fa8;color:#1b5fa8;">机群资源</span><span class="chip" style="background:#fff;border:1.5px solid #1b5fa8;color:#1b5fa8;">药剂库存</span><span class="chip" style="background:#fff;border:1.5px solid #1b5fa8;color:#1b5fa8;">用户约束</span>
+  </div>
+
+  <div class="layer" style="left:30px;top:130px;width:1040px;height:300px;background:#fff7f2;border:2px solid #d62828;">
+    <div class="lt" style="color:#d62828;">预测层 · 火势负荷与发展（统一分钟推进）</div>
+    <div style="background:#fff;border-radius:9px;padding:12px 16px;margin:10px 0;font-size:20px;text-align:center;">
+      单格负荷 <b>B<sub>i</sub> = 10 × I<sub>i</sub> × K<sub>fuel</sub> × K<sub>wind</sub> × K<sub>slope</sub></b>
+      <span style="font-size:14px;color:#5c7186;">（火焰强度 × 植被 × 风速 × 坡度，100m² 网格）</span>
+    </div>
+    <div style="background:#fff;border-radius:9px;padding:12px 16px;margin:10px 0;font-size:20px;text-align:center;">
+      分钟推进 <b>FLP<sub>t+1</sub> = FLP<sub>t</sub> × (1 + g/60) − S<sub>t</sub></b>
+      <span style="font-size:14px;color:#5c7186;">（自然增长 − 有效压制，1 分钟步长）</span>
+    </div>
+    <div style="font-size:15px;color:#5c7186;">输出：当前火情负荷 · 发展趋势（增长/压制/净变化）· 重点处置方向 · 控制时间区间</div>
+  </div>
+  <div class="layer" style="left:1100px;top:130px;width:550px;height:300px;background:#f2fbf4;border:2px solid #2f9e44;">
+    <div class="lt" style="color:#2f9e44;">约束层 · 硬约束校验</div>
+    <div style="font-size:15.5px;margin:5px 0;color:#2f9e44;">✓ SOC ≥ 35% 出动</div><div style="font-size:15.5px;margin:5px 0;color:#2f9e44;">✓ 返航 SOC ≥ 25%</div><div style="font-size:15.5px;margin:5px 0;color:#2f9e44;">✓ W20↔植被 · C6↔电气</div><div style="font-size:15.5px;margin:5px 0;color:#2f9e44;">✓ 航程/速度可行</div><div style="font-size:15.5px;margin:5px 0;color:#2f9e44;">✓ 健康度 ≥ 60</div><div style="font-size:15.5px;margin:5px 0;color:#2f9e44;">✓ 库存足额扣减</div>
+    <div style="font-size:15.5px;margin:5px 0;color:#d62828;">✗ SOC 不足淘汰</div><div style="font-size:15.5px;margin:5px 0;color:#d62828;">✗ 药剂不匹配淘汰</div><div style="font-size:15.5px;margin:5px 0;color:#d62828;">✗ 故障/信号弱淘汰</div><div style="font-size:15.5px;margin:5px 0;color:#d62828;">✗ 超出动上限淘汰</div>
+  </div>
+
+  <div class="layer" style="left:30px;top:460px;width:1620px;background:#f4f6f9;border:1.5px solid #8aa2b5;">
+    <div class="lt" style="color:#3d4c5c;">优化层 · 候选枚举 → 硬过滤 → 评分比较</div>
+    <div style="display:flex;align-items:center;gap:14px;margin-top:8px;">
+      <div class="card" style="flex:1;"><b>组合枚举</b><span>满足出动上限内<br>全部无人机组合</span></div>
+      <div style="font-size:26px;color:#8aa2b5;">→</div>
+      <div class="card" style="flex:1;"><b>完整航次校验</b><span>出发/作业/返航/补给<br>全程 SOC 预算</span></div>
+      <div style="font-size:26px;color:#8aa2b5;">→</div>
+      <div class="card" style="flex:1;"><b>统一分钟仿真</b><span>120 分钟处置过程<br>逐分钟预测</span></div>
+      <div style="font-size:26px;color:#8aa2b5;">→</div>
+      <div class="card" style="flex:1.4;border-color:#b8860b;"><b>评分 J</b><span>J = 0.40·时间 + 0.30·负荷<br>+ 0.15·能耗 + 0.10·物资 + 0.05·变化</span></div>
+    </div>
+  </div>
+
+  <div class="layer" style="left:30px;top:650px;width:1620px;background:#fdf8ec;border:2px solid #b8860b;">
+    <div class="lt" style="color:#b8860b;">输出层 · 三态结论与方案</div>
+    <div style="display:flex;gap:14px;margin-top:8px;">
+      <div class="card" style="flex:1;border-color:#2f9e44;"><b style="color:#2f9e44;">可控制</b><span>输出时间区间</span></div>
+      <div class="card" style="flex:1;border-color:#e76f51;"><b style="color:#e76f51;">维持压制</b><span>时限内未完成</span></div>
+      <div class="card" style="flex:1;border-color:#d62828;"><b style="color:#d62828;">不可控制</b><span>资源不足 · 请求增援</span></div>
+      <div class="card" style="flex:1;border-color:#d62828;border-style:dashed;"><b style="color:#d62828;">资源缺口</b><span>缺什么 · 缺多少</span></div>
+      <div class="card" style="flex:1.2;"><b>推荐 + 备选方案</b><span>机群/药剂/航线/补给</span></div>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:30px;top:768px;width:700px;border-top:3px dashed #8aa2b5;"></div>
+  <div style="position:absolute;left:742px;top:754px;font-size:13px;color:#5c7186;">生成 ▼</div>
+  <div style="position:absolute;left:950px;top:768px;width:700px;border-top:3px dashed #8aa2b5;"></div>
+  <div style="position:absolute;left:800px;top:798px;width:0;height:0;border-left:44px solid transparent;border-right:44px solid transparent;border-bottom:76px solid #b8860b;"></div>
+  <div style="position:absolute;left:800px;top:822px;width:88px;text-align:center;color:#fff;font-size:15px;font-weight:700;">用户<br>确认</div>
+  <div style="position:absolute;left:843px;top:878px;width:3px;height:44px;background:#2f9e44;"></div>
+  <div style="position:absolute;left:836px;top:920px;border-left:11px solid #2f9e44;border-top:6.5px solid transparent;border-bottom:6.5px solid transparent;"></div>
+  <div style="position:absolute;left:866px;top:888px;font-size:17px;color:#2f9e44;font-weight:700;">批准后锁定资源 → 进入执行层</div>
+  <div style="position:absolute;left:30px;top:800px;width:700px;font-size:15px;color:#5c7186;line-height:1.7;">
+    拒绝 / 调整 → 回到候选生成，原因必填留痕；<br>方案进入 awaiting_confirmation 状态等待确认。
+  </div>
+
+  <div style="position:absolute;left:30px;top:1080px;width:1620px;background:#22384c;border-radius:10px;padding:14px 20px;text-align:center;">
+    <span style="color:#e9c46a;font-size:19px;font-weight:700;">规则引擎计算全部安全关键数字（FLP · SOC · 药剂 · 数量 · 时间）</span>
+    <span style="color:#cdd9e4;font-size:17px;">　多智能体负责组织工具调用、分工解释与建议</span>
+  </div>
+</div></body></html>
