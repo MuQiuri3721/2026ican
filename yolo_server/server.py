@@ -23,7 +23,9 @@ from fastapi.responses import JSONResponse
 
 from ultralytics import YOLO
 
-MODEL_NAME = "yolo11n-dfire-v1"
+# 对外产品代号 PWM-YOLO（团队自定义命名，PDF/演示与文档统一口径）；
+# 内部权重文件、训练脚本与仓库文档仍保留工程名 yolo11n-dfire-v1 可追溯
+MODEL_NAME = "pwm-yolo"
 SOURCE = "local-yolo-service"
 # D-Fire 类别序（训练 data.yaml 锁定；WEB05512 画框目检实证）：0=smoke 1=fire
 CLASS_NAMES = {0: "smoke", 1: "fire"}

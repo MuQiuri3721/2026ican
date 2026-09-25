@@ -3,7 +3,7 @@
 前置（训练完成后）：
 1. python yolo_server/server.py --port 9000   （加载 yolo_server/best.pt）
 2. 后端以 FIRE_YOLO_ENDPOINT=http://127.0.0.1:9000/detect 启动
-断言：上传真实火情图 → detector-live 显示 real/yolo11n-dfire-v1/local-yolo-service
+断言：上传真实火情图 → detector-live 显示 real/pwm-yolo(产品代号,内部权重 yolo11n-dfire-v1)/local-yolo-service
       → 证据窗渲染真实检测框 → 面积由检测框推算（非 fixture 定值）。
 """
 import sys
@@ -30,7 +30,7 @@ def main() -> int:
         # FE-82 七页 IA：detector-live 在火情监测页工具抽屉内（接入后抽屉收起，元素 hidden），等 attached 用 evaluate 读
         page.locator(".detector-live").first.wait_for(state="attached", timeout=300000)
         live = page.evaluate("document.querySelector('.detector-live')?.textContent || ''")
-        ok &= report(23, "检测状态行(real)", "real" in live and "yolo11n-dfire-v1" in live and "local-yolo-service" in live, live.strip())
+        ok &= report(23, "检测状态行(real)", "real" in live and "pwm-yolo" in live and "local-yolo-service" in live, live.strip())
 
         area = page.evaluate("""document.querySelector('[aria-label="火情量化"]')?.textContent || ''""")
         ok &= report(23, "面积随检测框变化", "火势" in area or "FLP" in area or "过火面积" in area, area[:80].replace("\n", " "))
