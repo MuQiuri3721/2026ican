@@ -32,6 +32,14 @@ const map = shallowRef(null)
 // AMap 命名空间只挂实例上，避免被 Vue 深响应式代理（官方 Vue3 建议 shallowRef）。
 const AMapNS = shallowRef(null)
 const layerOverlays = { fire: [], contour: [], water: [], drone: [], road: [], evacuation: [], scenario: [], planning: [] }
+// 静态图层（等高线/道路/规划区）签名守卫：数据未变时跳过「清空+重建」，消灭随轮次刷新的闪烁
+const layerSigs = new Map()
+function layerSigChanged(key, value) {
+  const sig = JSON.stringify(value)
+  if (layerSigs.get(key) === sig) return false
+  layerSigs.set(key, sig)
+  return true
+}
 const markerIndex = new Map()
 // 无人机渲染位置平滑插值（FE-20，firepatrol 式 lerp）：吸收相位校准/重渲染带来的跳变
 const animPos = new Map()
@@ -190,6 +198,7 @@ function startFirePulse(halo, baseRadius) {
 function clearAll() {
   for (const key of Object.keys(layerOverlays)) clearLayer(key)
   markerIndex.clear()
+  layerSigs.clear()
 }
 function addOverlay(key, overlay, meta) {
   map.value.add(overlay)
@@ -261,6 +270,7 @@ function renderFire() {
 }
 
 function renderContours() {
+  if (!layerSigChanged('contour', [props.contours, props.layerVisibility.contour])) return
   clearLayer('contour')
   if (!props.layerVisibility.contour) return
   const features = Array.isArray(props.contours?.features) ? props.contours.features : []
@@ -378,6 +388,7 @@ function renderDrones() {
 
 
 function renderRoad() {
+  if (!layerSigChanged('road', [props.environment?.road_context, props.layerVisibility.road])) return
   clearLayer('road')
   if (!props.layerVisibility.road) return
   const context = props.environment?.road_context
@@ -498,6 +509,7 @@ function fetchPlanningRegions() {
     .catch(() => { /* 离线地理数据不可用时不叠加，演示不受影响 */ })
 }
 function renderPlanning() {
+  if (!layerSigChanged('planning', [planningRegions, props.layerVisibility.planning])) return
   clearLayer('planning')
   if (!planningRegions) return
   const AMap = AMapNS.value
@@ -731,6 +743,7 @@ onMounted(async () => {
       mapStyle: 'amap://styles/dark', zooms: [10, 19],
     })
     map.value = instance
+    window.__tmap = instance // e2e/诊断观测句柄：覆盖物数量与身份断言用
     instance.add(new AMap.TileLayer.Satellite({ zIndex: 10 }))
     instance.add(new AMap.TileLayer.RoadNet({ zIndex: 12, opacity: 0.85 }))
     instance.addControl(new AMap.Scale({ position: 'RB' }))
