@@ -497,6 +497,12 @@
 
 /* ---------- 右侧三卡（识别 / 量化 / 环境） ---------- */
 .monitor-right .fm-card{margin:0}
+/* FE-85e 残留留白治理：左舞台 flex:1 拉伸列高后，右列三卡自然高度堆叠、空腔全部
+   落在最后的环境卡下方——三卡 flex 等分列高，环境/量化卡内部 grid 拉伸吸收富余 */
+.monitor-right .fm-card{flex:1 1 auto;display:flex;flex-direction:column}
+.monitor-right .fm-card .panel-heading{flex-shrink:0}
+.monitor-right .environment-panel .environment-grid{flex:1;grid-auto-rows:1fr}
+.monitor-right .fm-card .fm-rows{flex:1}
 
 /* 环境卡：模式/坐标收纳为折叠行 */
 .fm-env-controls{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
