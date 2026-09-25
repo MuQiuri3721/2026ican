@@ -1,6 +1,7 @@
 import json
 import math
 import os
+import tempfile
 import urllib.request
 from datetime import datetime
 from collections import deque
@@ -506,6 +507,11 @@ def detect_fire(image_name: str = "default", image_path: Optional[str] = None, s
             })
             return result
         except Exception as error:
+            try:
+                with open(os.path.join(tempfile.gettempdir(), "yolo_err.log"), "a", encoding="utf-8") as _f:
+                    _f.write(str(error)[:400] + "\n")
+            except Exception:
+                pass
             if strict_real:
                 return {"status": "error", "mode": "real", "source": "pwm-yolo-adapter", "error": {"code": "detector_unavailable", "message": str(error)}, "detections": []}
             observation = demo_observation(image_name, image_path)
