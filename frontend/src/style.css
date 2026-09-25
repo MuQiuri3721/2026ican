@@ -969,7 +969,10 @@ nav button b{background:#ff6f3d;box-shadow:0 0 10px #ff6f3d66;border-radius:8px}
 .ana-stat.secondary b{font-size:16px}
 .ana-charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
 .ana-charts .evo-panel{height:100%}
-.ana-rounds-scroll{max-height:320px;overflow:auto}
+.analysis-grid + .panel{margin-top:16px}
+.ana-rounds-scroll{max-height:320px;overflow-y:auto;overflow-x:hidden}
+.ana-rounds-scroll .data-table{width:100%}
+.ana-rounds-scroll .data-table th,.ana-rounds-scroll .data-table td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ana-rounds-scroll .data-table th,.ana-rounds-scroll .data-table td{white-space:nowrap}
 .ana-stock{font:500 11.5px var(--font-data);color:var(--ink-2)}
 .ana-bottom{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start;margin-top:16px}

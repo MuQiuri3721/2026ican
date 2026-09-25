@@ -638,12 +638,13 @@
 .squadron-tables.dsp3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
 .squadron-tables.dsp3 .gt-scroll{max-height:248px;overflow-x:hidden}
 .squadron-tables.dsp3 .data-table th,.squadron-tables.dsp3 .data-table td{padding:6px 5px;font-size:12px}
-/* 窄卡片内 fixed 布局 + 任务列单行省略（悬停看全文，td 自带 title）：行高恒定，卡片零滚动 */
-.squadron-tables.dsp3 .data-table{table-layout:fixed}
+/* 窄卡片内 fixed 布局 + 全列单行省略（悬停看全文，td 自带 title）：行高恒定，卡片零滚动 */
+.squadron-tables.dsp3 .data-table{table-layout:fixed;width:100%}
 .squadron-tables.dsp3 .data-table th:nth-child(1){width:24%}
 .squadron-tables.dsp3 .data-table th:nth-child(2){width:36%}
 .squadron-tables.dsp3 .data-table th:nth-child(3){width:16%}
 .squadron-tables.dsp3 .data-table th:nth-child(4){width:24%}
+.squadron-tables.dsp3 .data-table td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .squadron-tables.dsp3 .gt-task{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .squadron-tables.dsp3 .gt-task{max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gt-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
