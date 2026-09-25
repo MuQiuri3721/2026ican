@@ -240,6 +240,7 @@ function contourColor(elevation, min, max) {
 }
 
 function renderFire() {
+  if (!layerSigChanged('fire', [props.scenarioPreview, fireGps(), fireRadiusM(), props.layerVisibility.fire])) return
   clearLayer('fire')
   if (!props.layerVisibility.fire) return
   if (props.scenarioPreview) return // 演训预览态：随机火点替代默认火点标记
@@ -312,6 +313,7 @@ function renderContours() {
 }
 
 function renderWater() {
+  if (!layerSigChanged('water', [props.waterList, props.layerVisibility.water])) return
   clearLayer('water')
   if (!props.layerVisibility.water) return
   const items = props.waterList
@@ -435,6 +437,7 @@ function renderRoad() {
 }
 
 function renderEvacuation() {
+  if (!layerSigChanged('evacuation', [props.result?.evacuation, props.layerVisibility.evacuation])) return
   clearLayer('evacuation')
   if (!props.layerVisibility.evacuation) return
   const eva = props.result?.agent?.skill_chain?.evacuation
