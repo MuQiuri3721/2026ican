@@ -118,9 +118,11 @@ children.push(body("用法：先按「录制前检查单」备场；再按「逐
 // ── 一、录制前检查单 ──
 children.push(h1("一、录制前检查单"));
 const checks = [
-  "三个服务在线：① python yolo_server/server.py --port 9000　② cd backend && set FIRE_YOLO_ENDPOINT=http://127.0.0.1:9000/detect && python -m uvicorn app.main:app --port 8000　③ cd frontend && npx vite --port 5173",
+  "三个服务在线：① python yolo_server/server.py --port 9000　② cd backend 后启动后端（cmd 用 set FIRE_YOLO_ENDPOINT=http://127.0.0.1:9000/detect，bash 用 export ...）再 python -m uvicorn app.main:app --port 8000　③ cd frontend && npx vite --port 5173",
   "YOLO 预热：服务刚启动后先随意传一张图完成一次研判（或命令行调一次 /detect），避免首帧超时",
-  "浏览器 1920×1080 全屏、隐藏书签栏、只留一个标签页、开启系统勿扰",
+  "★ 清理在途任务（关键）：到任务管理页，把「执行中/待确认」的旧任务全部终止——否则资源锁被占，镜头 3 的批准会一直失败",
+  "★ 库里有已推演的历史任务（镜头 1/5/7 需要数据）：没有就先把镜头 2-3 的流程完整跑一遍",
+  "浏览器 1920×1080 全屏、隐藏书签栏、只留一个标签页、系统缩放 100%、开启系统勿扰",
   "主素材图：e2e/real/AoF07718.jpg（5 个检测框，镜头 2 用）；备用剧情图：AoF07719.jpg（III 级大火·请求增援）",
   "录屏 30 帧 + 麦克风，先试录 10 秒检查底噪",
   "开录前 30 分钟内若没调过 VLM，一次即可成；若界面出现「规则映射」回落标注，等 2 分钟重录",
@@ -178,7 +180,7 @@ children.push(body("操作：切到火情监测 → 工具抽屉默认展开。"
 children.push(figure("command_drawer", 560));
 children.push(legend(L.command_drawer));
 children.push(step("步骤 1：勾选「上传时调用 VLM 解释」（③）。"));
-children.push(step("步骤 2：点拖拽区（①）选择 e2e/real/AoF07718.jpg，出现「影像已接入」。"));
+children.push(step("步骤 2：点拖拽区（①）选择 e2e/real/AoF07718.jpg，出现「影像已接入」（注意：上传成功后工具抽屉会自动收起，属正常设计）。"));
 children.push(step("步骤 3：点吸底操作条上的「开始研判」，进度条走完约 40 秒（素材 4 倍速）。"));
 children.push(figure("command_assess"));
 children.push(legend(L.command_assess));
@@ -189,7 +191,7 @@ children.push(voTable([
   ["0:47", "平台用自训的 YOLO 模型做视觉检测：画面上自动框出了四处火焰和一片烟雾，置信度最高 84%。"],
   ["1:02", "同时接入视觉大模型 GLM-4.6V，对火场做语义解读：火焰面积、烟雾规模、火势趋势，一眼可读。"],
   ["1:15", "请注意，安全关键数值不由大模型拍脑袋——FLP 火情负荷、过火面积，全部由确定性规则引擎计算，每个数都可复算、可追溯。"],
-  ["1:31", "火情量化结论：II 级中等火情，当前可控，可以立即出动。"],
+  ["1:31", "火情量化结论直接给出等级与建议（按屏幕念，两版皆有可能）：白天风小时多为「II 级中等火情，可控，立即出动」；夜间风大时可能为「III 级高风险，失控可能，请求增援」。"],
 ]));
 children.push(voNote());
 
@@ -208,7 +210,7 @@ children.push(voNote());
 children.push(body("操作：向下滚动，展示审批表单与编组表。", { noIndent: true }));
 children.push(figure("dispatch_approval", 560));
 children.push(legend(L.dispatch_approval));
-children.push(step("步骤：点「批准主方案」→ 任务徽章变「执行中」（此瞬间保留原速）。"));
+children.push(step("步骤：先向下滚动让「批准主方案」按钮露出（它在首屏折叠线下），再点击 → 任务徽章变「执行中」（此瞬间保留原速）。"));
 children.push(voTable([["2:36", "指挥员一键批准，方案立即进入执行。"]]));
 children.push(voNote());
 
@@ -254,6 +256,7 @@ children.push(voNote());
 
 // 镜头 7
 children.push(h2("镜头 7 ｜ 5:25–6:05 ｜ 任务管理 · 归档与报告"));
+children.push(body("操作：点状态过滤器切换 → 点任务行恢复任务 → 勾两行开对比 → 点「详情」看全流程并找到「导出图文报告」。", { noIndent: true }));
 children.push(figure("history"));
 children.push(legend(L.history));
 children.push(voTable([
