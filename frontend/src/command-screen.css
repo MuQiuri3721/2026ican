@@ -330,8 +330,8 @@
 .ev-toggle{display:inline-flex;gap:2px;border:1px solid var(--line);border-radius:8px;padding:2px;background:var(--surface-2)}
 .ev-toggle .legend-item{padding:4px 10px;color:var(--ink-3)}
 .ev-toggle .legend-item.on{background:var(--accent-soft);color:var(--accent)}
-.fm-rows{display:flex;flex-direction:column;margin-top:12px}
-.fm-row{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:7px 0;border-bottom:1px dashed #16345e;font:400 12.5px var(--font-data)}
+.fm-rows{display:flex;flex-direction:column;margin-top:8px}
+.fm-row{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:4px 0;border-bottom:1px dashed #16345e;font:400 12.5px var(--font-data)}
 .fm-row:last-child{border-bottom:none}
 .fm-row i{font-style:normal;color:var(--ink-3);flex-shrink:0}
 .fm-row b{color:var(--ink);font-weight:500;text-align:right;overflow-wrap:anywhere}
@@ -340,8 +340,8 @@
 .fm-row b.ok{color:var(--ok)}
 .fm-summary{margin:10px 0 0;padding:10px 13px;background:var(--surface-2);border-left:3px solid var(--accent);border-radius:var(--radius-s);font-size:12.5px;line-height:1.65;color:var(--ink-2)}
 .fm-summary i{display:block;font-style:normal;font:600 11.5px var(--font-ui);color:var(--ink-3);margin-bottom:4px}
-.model-badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-.model-badges span{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border:1px solid var(--line);border-radius:999px;background:var(--surface-2);font:400 11.5px var(--font-data);color:var(--ink-3)}
+.model-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.model-badges span{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border:1px solid var(--line);border-radius:999px;background:var(--surface-2);font:400 11.5px var(--font-data);color:var(--ink-3)}
 .model-badges span b{color:var(--ink-2);font-weight:600}
 .model-badges span small{color:var(--ink-3);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .model-badges span.ok{border-color:var(--ok-line);background:#0a2620}
@@ -429,7 +429,7 @@
 /* ---------- 主栅格：左舞台伸展填满 ---------- */
 .monitor-grid{align-items:stretch}
 .monitor-left{flex:1;min-width:0}
-.fm-stage{display:flex;flex-direction:column;min-height:520px;border:1px solid var(--panel-border,#1c4076);border-radius:12px;background:var(--panel-grad,var(--surface));box-shadow:var(--shadow-1);overflow:hidden}
+.fm-stage{display:flex;flex-direction:column;min-height:440px;border:1px solid var(--panel-border,#1c4076);border-radius:12px;background:var(--panel-grad,var(--surface));box-shadow:var(--shadow-1);overflow:hidden}
 
 /* ---------- 舞台头：来源信息 + 原图/检测切换 ---------- */
 .fm-stage-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--panel-border,#16345e);background:rgba(8,22,40,.55)}
@@ -443,7 +443,7 @@
 .fm-src-item b{color:var(--ink-2);font-weight:500;margin-left:4px}
 
 /* ---------- 舞台画面区 ---------- */
-.fm-stage-body{position:relative;flex:1;min-height:380px;display:flex;align-items:center;justify-content:center;background:#050d18;overflow:hidden}
+.fm-stage-body{position:relative;flex:1;min-height:320px;display:flex;align-items:center;justify-content:center;background:#050d18;overflow:hidden}
 .fm-stage-body>img{display:block;width:100%;height:100%;max-height:560px;object-fit:contain}
 .fm-stage-body .ew-box{border-width:2.5px}
 .fm-stage-body .ew-box em{font-size:11px;padding:2px 6px}
@@ -507,7 +507,16 @@
    落在最后的环境卡下方——三卡 flex 等分列高，环境/量化卡内部 grid 拉伸吸收富余 */
 .monitor-right .fm-card{flex:1 1 auto;display:flex;flex-direction:column}
 .monitor-right .fm-card .panel-heading{flex-shrink:0}
+.monitor-right .fm-card{padding:12px 14px}
+.monitor-right .fm-card .panel-heading{min-height:26px}
+.monitor-right .environment-panel .environment-item{padding:6px 8px}
+.monitor-right .environment-panel .environment-item strong{font-size:11.5px}
+.monitor-right .environment-panel .src-note,.monitor-right .environment-panel .environment-meta{font-size:10.5px;line-height:1.45}
 .monitor-right .environment-panel .environment-grid{flex:1;grid-auto-rows:1fr}
+.monitor-right .environment-panel .environment-item{padding:7px 9px}
+.monitor-right .environment-panel .environment-item strong{font-size:12px}
+.monitor-right .environment-panel .panel-heading{padding:9px 13px 0}
+.monitor-right .environment-panel .environment-meta{margin:6px 0 0}
 .monitor-right .fm-card .fm-rows{flex:1}
 
 /* 环境卡：模式/坐标收纳为折叠行 */
@@ -519,7 +528,7 @@
 
 /* ---------- 底部：趋势分析五联图 ---------- */
 .fm-trend-section{margin-top:16px;border:1px solid var(--panel-border,#1c4076);border-radius:12px;background:var(--panel-grad,var(--surface));box-shadow:var(--shadow-1);overflow:hidden}
-.fm-trend-head{display:flex;align-items:baseline;gap:12px;padding:11px 16px;border-bottom:1px solid var(--panel-border,#16345e);flex-wrap:wrap}
+.fm-trend-head{display:flex;align-items:baseline;gap:12px;padding:9px 16px;border-bottom:1px solid var(--panel-border,#16345e);flex-wrap:wrap}
 .fm-trend-head h3{margin:0;font:700 14px var(--font-ui);color:var(--ink)}
 .fm-frame-trend{margin-left:auto;color:var(--ink-2);font:400 11.5px var(--font-data)}
 .fm-trend-strip{display:grid;grid-template-columns:1.25fr repeat(4,1fr);gap:1px;background:var(--panel-border,#16345e)}
@@ -533,13 +542,13 @@
 .fm-tp-legend i.solid{border-top-style:solid;border-color:#ff9f43}
 .fm-tp-legend i.dash{border-top-style:dashed;border-color:#3d8bff}
 .fm-tp-legend i.sw{width:9px;height:9px;border-radius:2px;border:0}
-.fm-tp-svg{width:100%;height:96px;display:block;flex:1}
-.fm-tp-empty{flex:1;display:grid;place-items:center;min-height:86px;color:#5c7797;font:400 11.5px/1.7 var(--font-data);text-align:center}
+.fm-tp-svg{width:100%;height:72px;display:block;flex:1}
+.fm-tp-empty{flex:1;display:grid;place-items:center;min-height:64px;color:#5c7797;font:400 11.5px/1.7 var(--font-data);text-align:center}
 .fm-tp-last{margin-top:6px;color:var(--ink-3);font:400 11px var(--font-data)}
 .fm-tp-last b{color:var(--ink);font-weight:600}
 
 /* 面板1 · 图像时间序列 */
-.fm-tp-thumbs{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:86px}
+.fm-tp-thumbs{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:64px}
 .fm-tt-rail{display:flex;align-items:stretch;gap:6px}
 .fm-tt-cell{flex:1;min-width:0;aspect-ratio:16/10;padding:0;border:2px solid var(--line);border-radius:7px;overflow:hidden;background:#0a1626;cursor:pointer;transition:border-color var(--speed) ease}
 .fm-tt-cell img{width:100%;height:100%;object-fit:cover;display:block}
@@ -558,7 +567,9 @@
 .fm-people-note{margin:6px 0 0;color:#5c7797;font:400 10.5px var(--font-data);line-height:1.5}
 
 /* ---------- 底部操作条：四钮（生成调度方案 = 绿色主行动） ---------- */
-.fm-action-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding:12px 16px;border:1px solid var(--panel-border,#1c4076);border-radius:12px;background:var(--panel-grad,var(--surface));box-shadow:var(--shadow-1)}
+.fm-action-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding:10px 16px;border:1px solid var(--panel-border,#1c4076);border-radius:12px;background:var(--panel-grad,var(--surface));box-shadow:var(--shadow-1)}
+/* FE-88 演示滚动时指挥动作常驻可视区（火情监测页内吸底） */
+.main-command .fm-action-bar{position:sticky;bottom:10px;z-index:30}
 .fm-action-bar .primary,.fm-action-bar .outline-btn{margin-top:0}
 .fm-action-bar .ma-gap{width:1px;align-self:stretch;background:var(--line)}
 .fm-ab-analyze{min-width:128px}

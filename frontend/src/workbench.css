@@ -8,6 +8,13 @@
 .plan-summary b{color:var(--plan)}
 .plan-summary .src-note{color:#5f6b77;font-size:11.5px;white-space:normal;line-height:1.5}
 .plan-summary .src-note::before{content:"⌗ ";color:var(--plan)}
+/* FE-88 技术明细折叠：结论行只留中文结论，方案 ID/备选/溯源收进 details（默认收起） */
+.plan-summary .plan-tech{flex-basis:100%;display:block}
+.plan-summary .plan-tech summary{cursor:pointer;color:#5f6b77;font-size:11.5px;user-select:none;list-style:none}
+.plan-summary .plan-tech summary::before{content:"▸ ";color:var(--plan)}
+.plan-summary .plan-tech[open] summary::before{content:"▾ "}
+.plan-summary .plan-tech summary:hover{color:var(--ink-2)}
+.plan-summary .plan-tech > span{display:block;margin-top:4px}
 /* 留白优化（FE-31 自查）：hero 内容少于同行的上传面板时不再被网格拉伸出大片空白 */
 .hero-panel{display:flex;flex-direction:column}
 .hero-panel .hero-footer{margin-top:auto}

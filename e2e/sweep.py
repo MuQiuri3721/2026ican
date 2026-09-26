@@ -262,8 +262,8 @@ def b2_r1(s: Sweep):
     s.session.goto_app()  # goto_app 兜底切到火情监测
     s.page.locator(".upload-panel").wait_for(timeout=10000)
     d = s.audit()
-    # fm-nav-btn = 抽帧导航（上一帧/下一帧），空态无帧时禁用属正确 UX
-    s.audit_checks("火情监测·上传", d, allow_disabled=("fm-nav-btn",))
+    # 空态禁用豁免：抽帧导航无帧；开始研判未选文件；修正观察结果未上传——均正确 UX
+    s.audit_checks("火情监测·上传", d, allow_disabled=("fm-nav-btn", "fm-ab-analyze", "fm-ab-fix"))
     s.report("上传面板存在", s.page.locator(".upload-panel").count() == 1)
     s.report("拖拽区存在", s.page.locator(".dropzone").count() >= 1)
     s.report("模型状态行存在", s.page.locator(".model-status").count() >= 1)
@@ -352,8 +352,8 @@ def b3_prep(s: Sweep) -> str:
 def b3_r1(s: Sweep):
     aid = b3_prep(s)
     d = s.audit()
-    # fm-nav-btn = 抽帧导航，单帧时禁用属正确 UX
-    s.audit_checks("火情监测·决策", d, allow_disabled=("fm-nav-btn",))
+    # 空态禁用豁免：fm-nav-btn 单帧；fm-ab-analyze/fm-ab-fix 恢复任务后无本地文件属正确 UX
+    s.audit_checks("火情监测·决策", d, allow_disabled=("fm-nav-btn", "fm-ab-analyze", "fm-ab-fix"))
     n_recog = s.page.locator("[aria-label='火情识别结果'] .fm-row").count()
     s.report("识别结果面板有行", n_recog >= 4, f"{n_recog}")
     s.report("量化面板有行", s.page.locator("[aria-label='火情量化'] .fm-row").count() >= 4)
@@ -642,13 +642,13 @@ def b7_r2(s: Sweep):
     s.nav("资源管理")
     s.page.locator(".drone-card").first.wait_for(timeout=15000)
     card = s.page.locator(".drone-card").first
-    tele = card.locator(".dc-foot button")
+    tele = card.locator(".dc-tele")
     tele.click(); s.page.wait_for_timeout(400)
     s.report("遥测展开详情", s.page.locator(".drone-card").first.locator(".dc-extra").count() == 1)
     tele.click(); s.page.wait_for_timeout(300)
     s.report("遥测收起", s.page.locator(".drone-card").first.locator(".dc-extra").count() == 0)
     card2 = s.page.locator(".drone-card").nth(5)
-    card2.locator(".dc-foot button").click(); s.page.wait_for_timeout(400)
+    card2.locator(".dc-tele").click(); s.page.wait_for_timeout(400)
     s.report("换机遥测展开", s.page.locator(".drone-card").nth(5).locator(".dc-extra").count() == 1)
     s.console_clean("资源管理·交互")
 
