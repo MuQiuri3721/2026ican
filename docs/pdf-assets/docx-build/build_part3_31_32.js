@@ -37,7 +37,7 @@ function body(segs, opts = {}) {
 }
 function caption(text) {
   return new Paragraph({
-    alignment: AlignmentType.CENTER, spacing: { before: 80, after: 240, line: 280 },
+    alignment: AlignmentType.CENTER, spacing: { before: 80, after: 240, line: 312 },
     children: [new TextRun({ text, bold: true, size: 21, color: "000000", font: F.song })],
   });
 }
@@ -50,10 +50,42 @@ function figure(path, displayWidth) {
     children: [new ImageRun({ data: buf, transformation: { width: w, height: h }, type: "png" })],
   });
 }
+const cellMargins = { top: 70, bottom: 70, left: 130, right: 130 };
+function tcell(text, { bold = false, fill = null, w = null } = {}) {
+  return new TableCell({
+    children: [new Paragraph({ spacing: { line: 312 },
+      children: [new TextRun({ text, bold, size: 21, color: "000000", font: F.song })] })],
+    shading: fill ? { type: ShadingType.CLEAR, fill } : undefined,
+    margins: cellMargins,
+    width: w ? { size: w, type: WidthType.PERCENTAGE } : undefined,
+  });
+}
+function table(headers, rows, widths) {
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.SINGLE, size: 4, color: "8fa3b8" },
+      bottom: { style: BorderStyle.SINGLE, size: 4, color: "8fa3b8" },
+      left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 2, color: "d5dde5" },
+      insideVertical: { style: BorderStyle.NONE },
+    },
+    rows: [
+      new TableRow({ tableHeader: true, cantSplit: true,
+        children: headers.map((t, i) => tcell(t, { bold: true, fill: "eef3f8", w: widths[i] })) }),
+      ...rows.map(r => new TableRow({ cantSplit: true,
+        children: r.map((t, i) => tcell(t, { w: widths[i] })) })),
+    ],
+  });
+}
+function tableTitle(text) {
+  return new Paragraph({ keepNext: true, alignment: AlignmentType.CENTER, spacing: { before: 160, after: 80 },
+    children: [new TextRun({ text, bold: true, size: 21, color: "000000", font: F.song })] });
+}
 function codeLine(text) {
   return new Paragraph({
     alignment: AlignmentType.LEFT,
-    spacing: { line: 280, after: 60 },
+    spacing: { line: 312, after: 60 },
     indent: { left: 480 },
     children: [new TextRun({ text, size: 20, color: "333333", font: { ascii: "Courier New", eastAsia: "SimSun" } })],
   });
@@ -69,7 +101,17 @@ const children = [
   sub("（二）PWM-Net 检测"),
   body([["航拍森林火灾检测存在三重难点：目标尺度变化大（远距小火点与近距大面积火场并存）、烟雾边界模糊半透明、林区纹理与山影持续干扰。"]]),
   body([["感知层采用 PWM-Net 应对：以 YOLOv11n 为基础架构，主干替换为 ", false], ["PartialNet", true], ["，以部分通道注意力突出火焰与烟雾的关键语义通道；颈部嵌入 ", false], ["WTConv", true], [" 小波频域卷积，扩大感受野以联合增强烟雾的大尺度形态与火焰的高频边缘；检测头前引入 ", false], ["M2S", true], [" 多谱多尺度注意力，按低中高三谱带分解特征并生成门控，与三级空间尺度交互，兼顾局部细节与全局语义。"]]),
-  body([["模型职责仅为火焰与烟雾两类目标检测，输出类别、检测框与置信度；真实火场面积、增长率与调度方案由后续层计算。论文完整训练设置下：D-Fire mAP@50 81.3±0.18%、mAP@50:95 53.7±0.22%；自建 CQ-Fire 88.6±0.21%、70.4±0.26%；参数量 7.8M；RTX 4090、batch=1、FP32 条件 145 FPS（桌面实测值，不代表机载端速度）。"]]),
+  body([["模型职责仅为火焰与烟雾两类目标检测，输出类别、检测框与置信度；真实火场面积、增长率与调度方案由后续层计算。模型参数量 7.8M，论文完整训练设置下在两个数据集上的精度指标如下表所示（推理速度为 RTX 4090、batch=1、FP32 桌面实测条件，不代表无人机机载端部署速度）："]], { after: 40 }),
+  tableTitle("表 3-1  PWM-Net 在公开数据集上的检测精度（三轮训练均值±标准差）"),
+  table(
+    ["评测数据集", "mAP@50", "mAP@50:95"],
+    [
+      ["D-Fire（公开数据集）", "81.3±0.18%", "53.7±0.22%"],
+      ["CQ-Fire（自建数据集）", "88.6±0.21%", "70.4±0.26%"],
+    ],
+    [40, 30, 30],
+  ),
+  body([["推理性能：RTX 4090、batch=1、FP32 条件下实测 145 FPS。上述结果为论文报告的完整训练设置产物；部署侧检测服务以独立进程接入，单帧推理延迟与调用状态经接口实时上报，前端如实展示。"]], { after: 40 }),
   figure(`${ROOT}/docs/图3-1_PWM-Net检测流程与结果.png`, 590),
   caption("图 3-1  PWM-Net 森林火灾航拍检测流程与结果"),
 
