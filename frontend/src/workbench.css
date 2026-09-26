@@ -78,7 +78,7 @@
 @media(max-width:700px){.coordinate-editor{flex-wrap:wrap}}
 
 /* ---------- 监测轮次 / 遥测 ---------- */
-.round-list{display:grid;gap:8px;margin-top:12px;max-height:300px;overflow-y:auto;padding-right:4px;scrollbar-width:thin;scrollbar-color:#2b4a72 transparent}
+.round-list{display:grid;gap:6px;margin-top:10px;max-height:200px;overflow-y:auto;padding-right:4px;scrollbar-width:thin;scrollbar-color:#2b4a72 transparent}
 .round-list::-webkit-scrollbar{width:6px}
 .round-list::-webkit-scrollbar-thumb{background:#2b4a72;border-radius:3px}
 .round-list::-webkit-scrollbar-track{background:transparent}
@@ -233,7 +233,7 @@
 .water-panel::-webkit-scrollbar-thumb,.deploy-panel::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:3px}
 
 /* ---------- SVG 分支专属浮层 ---------- */
-.fire-zone-ring{position:absolute;transform:translate(-50%,-50%);aspect-ratio:1;border-radius:50%;border:1.5px dashed var(--fire);background:radial-gradient(circle,#d9541e33 0%,#d9541e08 70%);z-index:2;pointer-events:none;animation:zonePulse 2.4s ease-in-out infinite}
+.fire-zone-ring{position:absolute;transform:translate(-50%,-50%);aspect-ratio:1;border-radius:50%;border:2.5px dashed var(--fire);background:radial-gradient(circle,#d9541e55 0%,#d9541e12 70%);box-shadow:0 0 26px #d9541e3d,inset 0 0 18px #d9541e21;z-index:2;pointer-events:none;animation:zonePulse 2.4s ease-in-out infinite}
 @keyframes zonePulse{0%,100%{opacity:.85}50%{opacity:.55}}
 .fire-zone-label{position:absolute;left:50%;top:100%;transform:translate(-50%,4px);white-space:nowrap;font:400 11.5px var(--font-data);color:var(--fire-deep);background:var(--fire-soft);padding:3px 6px;border-radius:5px;border:1px solid var(--fire-line)}
 .evacuation-overlay{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none}
@@ -285,6 +285,7 @@
 @keyframes tmapWorkPulse{0%{transform:scale(.65);opacity:.95}100%{transform:scale(1.55);opacity:0}}
 /* SVG 回退分支：.map-node.drone 的迷你四旋翼（SOC 环取 currentColor，由内联 style 提供子群色） */
 .node-quad{width:22px;height:22px;display:block;overflow:visible;flex-shrink:0}
+.map-node .node-quad{width:28px;height:28px}
 .nq-track{fill:none;stroke:#ffffff26;stroke-width:3.4}
 .nq-arc{fill:none;stroke:currentColor;stroke-width:3.4;stroke-linecap:round}
 .nq-arms{stroke:#9db2c9;stroke-width:2.4;stroke-linecap:round}

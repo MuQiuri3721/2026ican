@@ -227,7 +227,7 @@ main{grid-area:main;overflow-y:auto;padding:22px 26px 48px;max-width:1720px;marg
 .settings-rows .outline-btn{padding:4px 10px;font-size:11.5px}
 
 /* ---------- 舰队花名册（FE-15） ---------- */
-.fleet-roster{margin-top:18px;display:flex;flex-direction:column;gap:18px}
+.fleet-roster{margin-top:12px;display:flex;flex-direction:column;gap:12px}
 .roster-group-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;color:var(--ink-2)}
 .roster-group-head b{font-size:13.5px;font-weight:700}
 .roster-group-head small{font:400 12px var(--font-data);color:var(--ink-3)}
@@ -736,7 +736,7 @@ nav button b{background:#ff6f3d;box-shadow:0 0 10px #ff6f3d66;border-radius:8px}
 
 /* ---- 8 KPI 卡（大屏 skpi + 资源总览 res-kpi） ---- */
 .skpi{border-radius:10px}
-.res-kpi{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--panel-grad);border:1px solid var(--panel-border);border-radius:10px;box-shadow:var(--shadow-1);min-width:0}
+.res-kpi{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--panel-grad);border:1px solid var(--panel-border);border-radius:var(--radius);box-shadow:var(--shadow-1);min-width:0}
 .res-kpi .rk-icon{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;background:#0d274e;color:#6fb0ff;border:1px solid #2a5fc4}
 .res-kpi.tone-green .rk-icon{background:#0a2620;color:var(--ok);border-color:var(--ok-line)}
 .res-kpi.tone-orange .rk-icon{background:#0d274e;color:#6fb0ff;border-color:#2a5fc4}
@@ -796,7 +796,7 @@ nav button b{background:#ff6f3d;box-shadow:0 0 10px #ff6f3d66;border-radius:8px}
 .report-out-btn:hover{border-color:var(--accent);box-shadow:var(--glow-blue)}
 .report-out-btn small{display:block;margin-top:3px;font:400 11px var(--font-data);color:var(--ink-3)}
 .report-out-btn .ro-icon{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;background:#0d274e;color:#6fb0ff;border:1px solid #2a5fc4}
-.ana-pick{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.ana-pick{display:flex;flex-direction:column;gap:6px;margin-top:10px;max-height:340px;overflow-y:auto;padding-right:4px;scrollbar-width:thin;scrollbar-color:#2b4a72 transparent}
 .ana-pick label{display:flex;align-items:center;gap:9px;padding:8px 11px;background:#0d2140;border:1px solid #16345e;border-radius:var(--chip-radius);font:400 12px var(--font-data);color:var(--ink-2);cursor:pointer}
 .ana-pick label:hover{border-color:var(--accent-line)}
 .ana-pick input{accent-color:var(--accent)}
@@ -823,7 +823,8 @@ nav button b{background:#ff6f3d;box-shadow:0 0 10px #ff6f3d66;border-radius:8px}
 .data-table td b.warn{color:#ffb26b}
 .squadron-tables{display:flex;flex-direction:column;gap:12px;margin-top:14px}
 .gt-scroll{max-height:300px;overflow-y:auto}
-.fleet-bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+.fleet-bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.fleet-bottom-grid .data-table th,.fleet-bottom-grid .data-table td{padding:7px 9px}
 @media(max-width:1100px){.fleet-bottom-grid{grid-template-columns:1fr}}
 .analysis-evo{margin-top:14px}
 .ana-down{color:var(--ok);font-weight:600}
@@ -911,7 +912,7 @@ nav button b{background:#ff6f3d;box-shadow:0 0 10px #ff6f3d66;border-radius:8px}
 .drone-cards{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-top:8px}
 @media(max-width:1700px){.drone-cards{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:1100px){.drone-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.drone-card{display:flex;flex-direction:column;gap:7px;padding:10px 11px;background:var(--panel-grad);border:1px solid var(--panel-border);border-radius:10px;box-shadow:var(--shadow-1);transition:border-color var(--speed) ease}
+.drone-card{display:flex;flex-direction:column;gap:7px;padding:10px 11px;background:var(--panel-grad);border:1px solid var(--panel-border);border-radius:var(--radius);box-shadow:var(--shadow-1);transition:border-color var(--speed) ease}
 .drone-card:hover{border-color:var(--accent-line)}
 .drone-card .dc-head{display:flex;align-items:center;gap:10px}
 .drone-card .dc-icon{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:#0d2140;border:1px solid #1d4076;flex-shrink:0}
@@ -979,12 +980,14 @@ nav button b{background:#ff6f3d;box-shadow:0 0 10px #ff6f3d66;border-radius:8px}
 .ana-rounds-scroll{max-height:320px;overflow-y:auto;overflow-x:hidden}
 .ana-rounds-scroll .data-table{width:100%}
 .ana-rounds-scroll .data-table th,.ana-rounds-scroll .data-table td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ana-bottom .data-table th,.ana-bottom .data-table td{padding:7px 9px}
+.ana-bottom .report-output{gap:10px}
 .ana-rounds-scroll .data-table th,.ana-rounds-scroll .data-table td{white-space:nowrap}
 .ana-stock{font:500 11.5px var(--font-data);color:var(--ink-2)}
 .ana-bottom{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start;margin-top:16px}
 .ana-bottom-left{display:flex;flex-direction:column;gap:0;min-width:0}
-.ana-bottom-left .replay-panel{margin-top:0;height:100%;display:flex;flex-direction:column}
-.ana-bottom-left .replay-body{flex:1}
+.ana-bottom-left .replay-panel{margin-top:0;height:100%;max-height:500px;display:flex;flex-direction:column}
+.ana-bottom-left .replay-body{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#2b4a72 transparent}
 @media(max-width:1240px){.ana-bottom{grid-template-columns:1fr}.ana-charts{grid-template-columns:1fr}.ana-kpis-5{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
 /* ---- 16 细节对齐：地图锚定修正 / 风向标 / 资源卡四旋翼 / 方案按钮 ---- */

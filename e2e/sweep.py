@@ -23,7 +23,7 @@ os.makedirs(ART, exist_ok=True)
 
 # 历史判定为"合理保留"的滚动容器（前一专项清扫的结论），滚动巡检豁免：
 # 地图侧栏内容高于屏、水源浮层面板定高、档案列表/任务详情事件流自然增长、页面级主滚动
-SCROLL_ALLOWLIST = (".map-side-rail", ".water-panel", ".archive-list", ".full-logs", "main", "body", "html")
+SCROLL_ALLOWLIST = (".map-side-rail", ".water-panel", ".archive-list", ".full-logs", ".replay-body", ".ana-pick", ".round-list", "main", "body", "html")
 # 地图标记的徽章/标签有意伸出锚点盒（相位徽章悬于标记上方），剪裁巡检豁免
 CLIP_ALLOWLIST = ("amap-marker", "tmap-drone", "tmap-badge", "map-node")
 
@@ -325,7 +325,8 @@ def b2_r3(s: Sweep):
     s.page.wait_for_function("document.querySelectorAll('.fm-row').length >= 3", timeout=120000)
     s.page.wait_for_timeout(800)
     d = s.audit()
-    s.audit_checks("火情监测·研判后", d)
+    # 研判后开始研判仍禁用=恢复/已研判态无本地文件，正确 UX
+    s.audit_checks("火情监测·研判后", d, allow_disabled=("fm-nav-btn", "fm-ab-analyze", "fm-ab-fix"))
     detector = s.page.locator(".detector-live").inner_text() if s.page.locator(".detector-live").count() else ""
     obs_note = "detector-live: " + (detector[:60] if detector else "未显示（回落 fixture 路径）")
     s.report("YOLO 检测来源如实标注", True, obs_note)  # real=理想；回落=架构允许，但会记录在案
@@ -491,6 +492,7 @@ def b4_r3(s: Sweep):
     badge = s.page.locator(".task-badge").first.inner_text()
     s.report("批准幂等·状态执行中", "执行中" in badge, badge)
     s.session.bad_responses[:] = [u for u in s.session.bad_responses if not (u.startswith("409 ") and "/approval" in u)]
+    s.session.console_errors[:] = [e for e in s.session.console_errors if "409 (Conflict)" not in e]
     ev = s.session.api("GET", f"/api/analyze/{aid}/events")
     approves = [e for e in (ev if isinstance(ev, list) else ev.get("events", [])) if "approve" in json.dumps(e, ensure_ascii=False)]
     s.report("批准事件恰 1 条", len(approves) == 1, f"{len(approves)}")
@@ -758,8 +760,8 @@ def b8_r3(s: Sweep):
 def b9_r1(s: Sweep):
     s.session.goto_app()
     d = s.audit()
-    # goto_app 兜底切到火情监测页，空态抽帧导航禁用属正确 UX
-    s.audit_checks("壳层", d, allow_disabled=("fm-nav-btn",))
+    # goto_app 兜底切到火情监测页，空态抽帧导航/开始研判/修正观察禁用属正确 UX
+    s.audit_checks("壳层", d, allow_disabled=("fm-nav-btn", "fm-ab-analyze", "fm-ab-fix"))
     s.report("主导航 6 项", s.page.locator("nav[aria-label=主导航] button").count() == 6,
              f"{s.page.locator('nav[aria-label=主导航] button').count()}")
     s.report("天气芯片存在", s.page.locator(".weather-chip").count() == 1)
@@ -778,7 +780,7 @@ def b9_r2(s: Sweep):
     # 六页逐个切换并验证标志性元素
     marks = {
         "态势总览": ".map-toolbar",
-        "火情监测": ".upload-panel",
+        "火情监测": ".fm-action-bar",
         "机群调度": ".plan-summary",
         "任务管理": ".arc-row",
         "资源管理": ".drone-card",
